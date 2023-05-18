@@ -1,0 +1,29 @@
+{
+  "name": "mint-club-v2",
+  "version": "0.0.1",
+  "description": "Mint Club V2",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Steemhunt/mint.club-v2-contract.git"
+  },
+  "author": "Sebastian Kim",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/Steemhunt/mint.club-v2-contract/issues"
+  },
+  "homepage": "https://github.com/Steemhunt/mint.club-v2-contract#readme",
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "hardhat": "^2.14.0"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^2.0.2",
+    "@nomiclabs/hardhat-solhint": "^3.0.1",
+    "@openzeppelin/contracts": "^4.8.3",
+    "solidity-coverage": "^0.8.2"
+  }
+}
