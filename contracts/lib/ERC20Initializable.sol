@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts//utils/Context.sol";
 
 /**
- * @notice A slightly modified version of ERC20 (from OpenZeppelin 4.8.0) for initialization pattern.
+ * @notice A slightly modified version of ERC20 (from OpenZeppelin 4.9.2) for initialization pattern.
  * Modifications are marekd with the MODIFIED tag.
  */
 contract ERC20 is Context, IERC20, IERC20Metadata {
@@ -24,7 +24,7 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
     // constructor(string memory name_, string memory symbol_) {
     //     _name = name_;
     //     _symbol = symbol_;
-    //}
+    // }
 
     /**
      * @dev Returns the name of the token.
