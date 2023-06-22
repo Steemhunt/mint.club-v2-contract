@@ -157,7 +157,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
             }
         }
 
-        if (buyAmount !== 0 || newSupply > bond.maxSupply) revert MCV2_Bond__ExceedMaxSupply();
+        if (buyAmount != 0 || newSupply > bond.maxSupply) revert MCV2_Bond__ExceedMaxSupply();
 
         return (newSupply - currentSupply, creatorFee, protocolFee);
     }
