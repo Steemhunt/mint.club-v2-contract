@@ -4,13 +4,13 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts//utils/Context.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 
 /**
  * @notice A slightly modified version of ERC20 (from OpenZeppelin 4.9.2) for initialization pattern.
  * Modifications are marekd with the MODIFIED tag.
  */
-contract ERC20 is Context, IERC20, IERC20Metadata {
+contract ERC20Initializable is Context, IERC20, IERC20Metadata {
     mapping(address => uint256) private _balances;
 
     mapping(address => mapping(address => uint256)) private _allowances;
