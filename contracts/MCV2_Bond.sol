@@ -133,6 +133,10 @@ contract MCV2_Bond is MCV2_FeeCollector {
         return tokenBond[tokenAddress].maxSupply > 0;
     }
 
+    function getSteps(address tokenAddress) external view returns (BondStep[] memory) {
+        return tokenBond[tokenAddress].steps;
+    }
+
     // MARK: - Utility functions for Bonding Curve
 
     modifier _checkBondExists(address tokenAddress) {
