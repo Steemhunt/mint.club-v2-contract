@@ -101,11 +101,19 @@ contract MCV2_Bond is MCV2_FeeCollector {
         bond.reserveToken = reserveToken;
         bond.maxSupply = maxSupply;
         bond.creatorFee = creatorFee;
+
+        // Last value or the rangeTo must be the same as the maxSupply
+        if (stepRanges[stepRanges.length - 1] != maxSupply) revert MCV2_Bond__InvalidTokenCreationParams();
+
         for (uint256 i = 0; i < stepRanges.length; i++) {
+            if (stepRanges[i] == 0) revert MCV2_Bond__InvalidTokenCreationParams();
+
+            // Ranges and prices must be strictly increasing
             if (i > 0) {
                 if (stepRanges[i] <= stepRanges[i - 1]) revert MCV2_Bond__InvalidTokenCreationParams();
                 if (stepPrices[i] <= stepPrices[i - 1]) revert MCV2_Bond__InvalidTokenCreationParams();
             }
+
             bond.steps.push(BondStep({
                 rangeTo: stepRanges[i],
                 price: stepPrices[i]

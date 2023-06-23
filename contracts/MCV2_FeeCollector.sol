@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BSD-3-Clause
 
 pragma solidity ^0.8.20;
 
@@ -32,6 +32,10 @@ abstract contract MCV2_FeeCollector is Context {
         userTokenFeeBalance[_msgSender()][tokenAddress] = 0;
         if(!IERC20(tokenAddress).transfer(_msgSender(), amount)) revert MCV2_FeeCollector__TokenTransferFailed();
     }
+
+    // TODO: Add updateProtocolBeneficiary function
+
+    // MARK: - Internal utility functions
 
     function getAmountAfterFees(uint256 amount, uint8 creatorFee) internal pure returns (uint256) {
         return amount * (MAX_FEE_BASE - (creatorFee + PROTOCOL_FEE)) / MAX_FEE_BASE;
