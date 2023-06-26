@@ -85,4 +85,8 @@ describe('Bond', function () {
         .withArgs(this.token.target, BABY_TOKEN.name, BABY_TOKEN.symbol);
     });
   });
+
+  // Buy
+
+  // Sell
 });
