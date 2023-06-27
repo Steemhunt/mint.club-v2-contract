@@ -327,14 +327,15 @@ contract MCV2_Bond is MCV2_FeeCollector {
         // Burn tokens from the seller
         MCV2_Token(tokenAddress).burnByBond(receiver, tokensToSell);
 
-        // Transfer reserve tokens to the seller
-        IERC20 reserveToken = IERC20(bond.reserveToken);
-        if(!reserveToken.transfer(receiver, refundAmount)) revert MCV2_Bond__ReserveTokenTransferFailed();
-
-        (uint256 creatorFee, uint256 protocolFee) = getFees(refundAmount, bond.creatorFee);
+        // TODO: Is `getFeesFromAfterAmount` a double calculation?
+        (uint256 creatorFee, uint256 protocolFee) = getFeesFromAfterAmount(refundAmount, bond.creatorFee);
         bond.reserveBalance -= (refundAmount + creatorFee + protocolFee);
         addFee(tokenAddress, bond.creator, creatorFee);
         addFee(tokenAddress, protocolBeneficiary, protocolFee);
+
+        // Transfer reserve tokens to the seller
+        IERC20 reserveToken = IERC20(bond.reserveToken);
+        if(!reserveToken.transfer(receiver, refundAmount)) revert MCV2_Bond__ReserveTokenTransferFailed();
 
         emit Sell(tokenAddress, receiver, tokensToSell, bond.reserveToken, refundAmount);
     }

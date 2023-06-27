@@ -2,23 +2,41 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { anyValue } = require('@nomicfoundation/hardhat-chai-matchers/withArgs');
 const { expect } = require('chai');
 
+const BENEFICIARY = '0x00000B655d573662B9921e14eDA96DBC9311fDe6'; // a random address for testing
+const PROTOCOL_FEE = 10n; // 0.1%
+const BABY_TOKEN = {
+  name: 'Baby Token',
+  symbol: 'BABY',
+  reserveToken: null, // Should be set later
+  maxSupply: wei(10000000), // supply: 10M
+  creatorFee: 100n, // creator fee: 1.0%
+  stepRanges: [wei(10000), wei(100000), wei(200000), wei(500000), wei(1000000), wei(2000000), wei(5000000), wei(10000000) ],
+  stepPrices: [wei(0), wei(2), wei(3), wei(4), wei(5), wei(7), wei(10), wei(15) ]
+};
+
 function wei(num) {
   return BigInt(num) * BigInt(1e18);
 }
 
-describe('Bond', function () {
-  const BENEFICIARY = '0x00000B655d573662B9921e14eDA96DBC9311fDe6'; // a random address for testing
-  const PROTOCOL_FEE = 10n; // 0.1%
-  const BABY_TOKEN = {
-    name: 'Baby Token',
-    symbol: 'BABY',
-    reserveToken: null, // Should be set later
-    maxSupply: wei(10000000), // supply: 10M
-    creatorFee: 100n, // creator fee: 1.0%
-    stepRanges: [wei(10000), wei(100000), wei(200000), wei(500000), wei(1000000), wei(2000000), wei(5000000), wei(10000000) ],
-    stepPrices: [wei(0), wei(2), wei(3), wei(4), wei(5), wei(7), wei(10), wei(15) ]
-  };
+function calculatePurchase(reserveToPurchase, stepPrice) {
+  const creatorFee = reserveToPurchase * BABY_TOKEN.creatorFee / 10000n;
+  const protocolFee = reserveToPurchase * PROTOCOL_FEE / 10000n;
+  const reserveOnBond = reserveToPurchase - creatorFee - protocolFee;
+  const tokensToMint = 10n**18n * reserveOnBond / stepPrice;
 
+  return { creatorFee, protocolFee, reserveOnBond, tokensToMint };
+}
+
+function calculateSell(tokensToSell, stepPrice) {
+  const reserveFromBond = tokensToSell * stepPrice / 10n**18n;
+  const creatorFee = reserveFromBond * BABY_TOKEN.creatorFee / 10000n;
+  const protocolFee = reserveFromBond * PROTOCOL_FEE / 10000n;
+  const reserveToRefund = reserveFromBond - creatorFee - protocolFee;
+
+  return { reserveFromBond, creatorFee, protocolFee, reserveToRefund };
+}
+
+describe('Bond', function () {
   async function deployFixtures() {
     const TokenImplementation = await ethers.deployContract('MCV2_Token');
     await TokenImplementation.waitForDeployment();
@@ -89,13 +107,13 @@ describe('Bond', function () {
 
     describe('Buy', function () {
       beforeEach(async function () {
-        // Start with 10000 BaseToken, purchasing 1000 BABY with 1000 BASE
+        // Start with 10000 BaseToken, purchasing BABY tokens with 1000 BaseToken
         this.initialBaseBalance = wei(10000);
         this.reserveToPurchase = wei(1000);
-        this.creatorFee = this.reserveToPurchase * BABY_TOKEN.creatorFee / 10000n;
-        this.protocolFee = this.reserveToPurchase * PROTOCOL_FEE / 10000n;
-        this.reserveOnBond = this.reserveToPurchase - this.creatorFee - this.protocolFee;
-        this.tokensToMint = this.reserveOnBond / 2n; // price = 2 on step[1] range
+
+        // { creatorFee, protocolFee, reserveOnBond, tokensToMint }
+        this.buyTest = calculatePurchase(this.reserveToPurchase, BABY_TOKEN.stepPrices[1]);
+        // should be minted: (1000 - 11)/2 = 494.5 BABY tokens
 
         await BaseToken.transfer(alice.address, this.initialBaseBalance);
         await BaseToken.connect(alice).approve(Bond.target, this.reserveToPurchase);
@@ -103,7 +121,7 @@ describe('Bond', function () {
       });
 
       it('should mint correct amount after fees', async function () {
-        expect(await this.token.balanceOf(alice.address)).to.equal(this.tokensToMint); // excluding 1.1% fee
+        expect(await this.token.balanceOf(alice.address)).to.equal(this.buyTest.tokensToMint); // excluding 1.1% fee
       });
 
       it('should transfer BASE tokens to the bond', async function () {
@@ -113,25 +131,81 @@ describe('Bond', function () {
 
       it('should increase the total supply', async function () {
         // BABY_TOKEN.stepRanges[0] is automatically minted to the creator on initialization
-        expect(await this.token.totalSupply()).to.equal(BABY_TOKEN.stepRanges[0] + this.tokensToMint);
+        expect(await this.token.totalSupply()).to.equal(BABY_TOKEN.stepRanges[0] + this.buyTest.tokensToMint);
       });
 
       it('should add reserveBalance to the bond', async function () {
         const bond = await Bond.tokenBond(this.token.target);
-        expect(bond.reserveBalance).to.equal(this.reserveOnBond);
+        expect(bond.reserveBalance).to.equal(this.buyTest.reserveOnBond);
       });
 
       it('should add claimable balance to the creator', async function () {
-        expect(await Bond.userTokenFeeBalance(owner.address, this.token.target)).to.equal(this.creatorFee);
+        expect(await Bond.userTokenFeeBalance(owner.address, this.token.target)).to.equal(this.buyTest.creatorFee);
       });
 
       it('should add claimable balance to the protocol beneficiary', async function () {
-        expect(await Bond.userTokenFeeBalance(BENEFICIARY, this.token.target)).to.equal(this.protocolFee);
+        expect(await Bond.userTokenFeeBalance(BENEFICIARY, this.token.target)).to.equal(this.buyTest.protocolFee);
       });
 
+      // TODO: reverse functions
+      // TODO: massive buys through multiple steps
       // TODO: edge cases
-    });
 
-    // Sell
-  });
-});
+      describe('Sell', function () {
+        beforeEach(async function () {
+          this.originalSupply = await this.token.totalSupply();
+          this.initialBaseBalance = await BaseToken.balanceOf(alice.address);
+          this.initialTokenBalance = await this.token.balanceOf(alice.address);
+          this.initialBondBalance = await BaseToken.balanceOf(Bond.target);
+          this.initialBondReserve = (await Bond.tokenBond(this.token.target)).reserveBalance;
+
+          this.tokensToSell = wei(100);
+
+          // { reserveFromBond, creatorFee, protocolFee, reserveToRefund }
+          this.sellTest = calculateSell(this.tokensToSell, BABY_TOKEN.stepPrices[1]);
+
+          // should be 989, 200
+          // console.log(this.initialBondReserve, this.sellTest.reserveFromBond);
+
+          await this.token.connect(alice).approve(Bond.target, this.tokensToSell);
+          await Bond.connect(alice).sellWithSetTokenAmount(this.token.target, this.tokensToSell, 0);
+        });
+
+        it('should decrease the BABY tokens from Alice', async function () {
+          expect(await this.token.balanceOf(alice.address)).to.equal(this.initialTokenBalance - this.tokensToSell);
+        });
+
+        it('should transfer correct amount of BASE tokens to Alice', async function () {
+          // should receive (100 - 1.1) * 2 = 197.8 BASE tokens for return
+          expect(await BaseToken.balanceOf(alice.address)).to.equal(this.initialBaseBalance + this.sellTest.reserveToRefund);
+        });
+
+        it('should decrease the BASE tokens balance from the bond', async function () {
+          expect(await BaseToken.balanceOf(Bond.target)).to.equal(this.initialBondBalance - this.sellTest.reserveToRefund);
+        });
+
+        it('should decrease the total supply of BABY token', async function () {
+          expect(await this.token.totalSupply()).to.equal(this.originalSupply - this.tokensToSell);
+        });
+
+        it('should deduct reserveBalance from the bond', async function () {
+          const bond = await Bond.tokenBond(this.token.target);
+          expect(bond.reserveBalance).to.equal(this.initialBondReserve - this.sellTest.reserveFromBond);
+        });
+
+        it('should add claimable balance to the creator', async function () {
+          expect(await Bond.userTokenFeeBalance(owner.address, this.token.target)).to.equal(this.buyTest.creatorFee + this.sellTest.creatorFee);
+        });
+
+        it('should add claimable balance to the protocol beneficiary', async function () {
+          expect(await Bond.userTokenFeeBalance(BENEFICIARY, this.token.target)).to.equal(this.buyTest.protocolFee + this.sellTest.protocolFee);
+        });
+
+        // TODO: reverse functions
+        // TODO: massive buys through multiple steps
+        // TODO: edge cases
+
+      }); // Sell
+    }); // Buy
+  }); // Create token
+}); // Bond
