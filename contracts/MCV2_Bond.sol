@@ -226,7 +226,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
         assert(tokensLeft == 0); // Cannot be greater than 0 because of the ExceedMaxSupply check above
 
-        return getAmountWithFees(reserveAmount, bond.creatorFee);
+        return getAmountBeforeFees(reserveAmount, bond.creatorFee);
     }
 
     // Internal function for the rest of the buy logic after all calculations are done
