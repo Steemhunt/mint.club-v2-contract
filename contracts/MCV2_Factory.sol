@@ -7,10 +7,9 @@ import "./MCV2_FeeCollector.sol";
 import "./MCV2_Token.sol";
 
 /**
-* @title MintClub Bond V2
-* Providing liquidity for MintClubV2 tokens with a bonding curve.
+* @title MintClubV2 Factory
 */
-contract MCV2_Bond is MCV2_FeeCollector {
+contract MCV2_Factory is MCV2_FeeCollector {
     error MCV2_Bond__InvalidTokenCreationParams();
     error MCV2_Bond__TokenNotFound();
     error MCV2_Bond__ExceedMaxSupply();
@@ -65,7 +64,9 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
     /**
      * @dev Create a new token contract that maintains separate storage but delegates all function calls to tokenImplementation
-     * Reference: https://github.com/optionality/clone-factory
+     * Reference:
+     *  - https://eips.ethereum.org/EIPS/eip-1167
+     *  - https://github.com/optionality/clone-factory
      */
     function _createClone(address target) private returns (address result) {
         bytes20 targetBytes = bytes20(target);
@@ -77,6 +78,10 @@ contract MCV2_Bond is MCV2_FeeCollector {
             result := create(0, clone, 0x37)
         }
     }
+
+    // TODO: OZ's proxy/Clones.sol contract - predictDeterministicAddress
+    // Token contract's salt = keccak256(abi.encodePacked(address(this), tokenSymbol)) // to ensure uniqueness of token symbol
+    // LP address's salt = keccak256(abi.encodePacked(baseAddress, tokenAddress)) // to be able to calculate the LP address without storing it
 
     function createToken(
         string memory name,
@@ -241,7 +246,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
         MCV2_Token(tokenAddress).mintByBond(receiver, tokensToMint);
 
         (uint256 creatorFee, uint256 protocolFee) = getFees(reserveAmount, bond.creatorFee);
-        bond.reserveBalance += (reserveAmount - creatorFee - protocolFee);
+        bond.reserveBalance += (reserveAmount - creatorFee - protocolFee); // Should revert if 
         addFee(tokenAddress, bond.creator, creatorFee);
         addFee(tokenAddress, protocolBeneficiary, protocolFee);
 
