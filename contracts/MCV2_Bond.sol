@@ -19,6 +19,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
     error MCV2_Bond__InvalidTokenAmount();
     error MCV2_Bond__InvalidRefundAmount();
     error MCV2_Bond__InvalidCurrentSupply();
+    error MCV2_Bond__InvalidReserveAmount();
 
     uint256 private constant MAX_STEPS = 1000;
 
@@ -33,7 +34,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
         address creator;
         address reserveToken;
         uint128 maxSupply;
-        uint8 creatorFee; // 56bit left
+        uint8 creatorFeeRate; // 56bit left
         uint256 reserveBalance;
         BondStep[] steps;
     }
@@ -83,13 +84,13 @@ contract MCV2_Bond is MCV2_FeeCollector {
         string memory symbol,
         address reserveToken,
         uint128 maxSupply,
-        uint8 creatorFee,
+        uint8 creatorFeeRate,
         uint128[] calldata stepRanges,
         uint128[] calldata stepPrices
     ) external returns (address) {
         if (reserveToken == address(0)) revert MCV2_Bond__InvalidTokenCreationParams();
         if (maxSupply == 0) revert MCV2_Bond__InvalidTokenCreationParams();
-        if (creatorFee > FEE_MAX) revert MCV2_Bond__InvalidTokenCreationParams();
+        if (creatorFeeRate > FEE_MAX) revert MCV2_Bond__InvalidTokenCreationParams();
         if (stepRanges.length == 0 || stepRanges.length > MAX_STEPS) revert MCV2_Bond__InvalidTokenCreationParams();
         if (stepRanges.length != stepPrices.length) revert MCV2_Bond__InvalidTokenCreationParams();
 
@@ -105,7 +106,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
         bond.creator = _msgSender();
         bond.reserveToken = reserveToken;
         bond.maxSupply = maxSupply;
-        bond.creatorFee = creatorFee;
+        bond.creatorFeeRate = creatorFeeRate;
 
         // Last value or the rangeTo must be the same as the maxSupply
         if (stepRanges[stepRanges.length - 1] != maxSupply) revert MCV2_Bond__InvalidTokenCreationParams();
@@ -127,9 +128,9 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
         emit TokenCreated(tokenAddress, name, symbol);
 
-        // TODO: Send free tokens to the creator if exists
+        // Send free tokens to the creator if exists
         if (stepPrices[0] == 0) {
-            _buy(tokenAddress, bond.creator, 0, stepRanges[0]);
+            newToken.mintByBond(bond.creator, stepRanges[0]);
         }
 
         return tokenAddress;
@@ -173,14 +174,20 @@ contract MCV2_Bond is MCV2_FeeCollector {
     // MARK: - Buy
 
     // Returns token amount to be minted with given reserve amount
-    function getTokensForReserve(address tokenAddress, uint256 reserveAmount) public view _checkBondExists(tokenAddress) returns (uint256) {
+    function getTokensForReserve(address tokenAddress, uint256 reserveAmount) public view _checkBondExists(tokenAddress)
+        returns (uint256 tokensToMint, uint256 creatorFee, uint256 protocolFee)
+    {
+        if (reserveAmount == 0) revert MCV2_Bond__InvalidReserveAmount();
+
         Bond storage bond = tokenBond[tokenAddress];
 
         uint256 currentSupply = MCV2_Token(tokenAddress).totalSupply();
         uint256 currentStep = getCurrentStep(tokenAddress, currentSupply);
 
         uint256 newSupply = currentSupply;
-        uint256 buyAmount = getAmountAfterFees(reserveAmount, bond.creatorFee);
+        (creatorFee, protocolFee) = getFees(reserveAmount, bond.creatorFeeRate);
+
+        uint256 buyAmount = reserveAmount - creatorFee - protocolFee;
         for (uint256 i = currentStep; i < bond.steps.length; i++) {
             uint256 supplyLeft = bond.steps[i].rangeTo - newSupply;
             uint256 reserveRequired = supplyLeft * bond.steps[i].price / 1e18;
@@ -197,75 +204,39 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
         if (buyAmount != 0 || newSupply > bond.maxSupply) revert MCV2_Bond__ExceedMaxSupply();
 
-        return (newSupply - currentSupply);
+        tokensToMint = newSupply - currentSupply;
     }
 
-    // Returns reserve amount required to mint tokens
-    function getReserveForTokens(address tokenAddress, uint256 tokensToMint) public view _checkBondExists(tokenAddress) returns (uint256) {
+    function buy(address tokenAddress, uint256 reserveAmount, uint256 minTokens) public {
+        (uint256 tokensToMint, uint256 creatorFee, uint256 protocolFee) = getTokensForReserve(tokenAddress, reserveAmount);
+        if (tokensToMint < minTokens) revert MCV2_Bond__SlippageLimitExceeded();
+
         Bond storage bond = tokenBond[tokenAddress];
-        uint256 currentSupply = MCV2_Token(tokenAddress).totalSupply();
-
-        if (currentSupply + tokensToMint > bond.maxSupply) revert MCV2_Bond__ExceedMaxSupply();
-
-        uint256 currentStep = getCurrentStep(tokenAddress, currentSupply);
-
-        uint256 reserveAmount = 0;
-        uint256 tokensLeft = tokensToMint;
-        for (uint256 i = currentStep; i < bond.steps.length; i++) {
-            uint256 supplyLeft = bond.steps[i].rangeTo - currentSupply;
-
-            if(supplyLeft < tokensLeft) {
-                reserveAmount += supplyLeft * bond.steps[i].price / 1e18;
-                tokensLeft -= supplyLeft;
-            } else {
-                reserveAmount += tokensLeft * bond.steps[i].price / 1e18;
-                tokensLeft = 0;
-                break;
-            }
-        }
-
-        assert(tokensLeft == 0); // Cannot be greater than 0 because of the ExceedMaxSupply check above
-
-        return getAmountBeforeFees(reserveAmount, bond.creatorFee);
-    }
-
-    // Internal function for the rest of the buy logic after all calculations are done
-    function _buy(address tokenAddress, address receiver, uint256 reserveAmount, uint256 tokensToMint) private {
-        Bond storage bond = tokenBond[tokenAddress];
+        address buyer = _msgSender();
 
         // Transfer reserve tokens
         IERC20 reserveToken = IERC20(bond.reserveToken);
-        if(!reserveToken.transferFrom(receiver, address(this), reserveAmount)) revert MCV2_Bond__ReserveTokenTransferFailed();
+        if(!reserveToken.transferFrom(buyer, address(this), reserveAmount)) revert MCV2_Bond__ReserveTokenTransferFailed();
 
-        // Mint reward tokens to the buyer
-        MCV2_Token(tokenAddress).mintByBond(receiver, tokensToMint);
-
-        (uint256 creatorFee, uint256 protocolFee) = getFees(reserveAmount, bond.creatorFee);
+        // Update reserve & fee balances
         bond.reserveBalance += (reserveAmount - creatorFee - protocolFee);
         addFee(tokenAddress, bond.creator, creatorFee);
         addFee(tokenAddress, protocolBeneficiary, protocolFee);
 
-        emit Buy(tokenAddress, receiver, tokensToMint, bond.reserveToken, reserveAmount);
-    }
+        // Mint reward tokens to the buyer
+        MCV2_Token(tokenAddress).mintByBond(buyer, tokensToMint);
 
-    function buyWithSetReserveAmount(address tokenAddress, uint256 reserveAmount, uint256 minTokens) public {
-        uint256 tokensToMint = getTokensForReserve(tokenAddress, reserveAmount);
-        if (tokensToMint < minTokens) revert MCV2_Bond__SlippageLimitExceeded();
-
-        _buy(tokenAddress, _msgSender(), reserveAmount, tokensToMint);
-    }
-
-    function buyWithSetTokenAmount(address tokenAddress, uint256 tokensToMint, uint256 maxReserve) public {
-        uint256 reserveRequired = getReserveForTokens(tokenAddress, tokensToMint);
-        if (reserveRequired > maxReserve) revert MCV2_Bond__SlippageLimitExceeded();
-
-        _buy(tokenAddress, _msgSender(), reserveRequired, tokensToMint);
+        emit Buy(tokenAddress, buyer, tokensToMint, bond.reserveToken, reserveAmount);
     }
 
     // MARK: - Sell
 
     // Returns reserve amount to refund with given token amount
-    function getRefundForTokens(address tokenAddress, uint256 tokensToSell) public view _checkBondExists(tokenAddress) returns (uint256) {
+    function getRefundForTokens(address tokenAddress, uint256 tokensToSell) public view _checkBondExists(tokenAddress)
+        returns (uint256 refundAmount, uint256 creatorFee, uint256 protocolFee)
+    {
+        if (tokensToSell == 0) revert MCV2_Bond__InvalidTokenAmount();
+
         Bond storage bond = tokenBond[tokenAddress];
         uint256 currentSupply = MCV2_Token(tokenAddress).totalSupply();
 
@@ -273,84 +244,45 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
         uint256 currentStep = getCurrentStep(tokenAddress, currentSupply);
 
-        uint256 reserveAmount = 0;
+        uint256 reserveFromBond = 0;
         uint256 tokensLeft = tokensToSell;
         for (uint256 i = currentStep; i >= 0 && tokensLeft > 0; i--) {
             uint256 supplyLeft = (i == 0) ? currentSupply : currentSupply - bond.steps[i-1].rangeTo;
 
             if (supplyLeft < tokensLeft) {
-                reserveAmount += supplyLeft * bond.steps[i].price / 1e18;
+                reserveFromBond += supplyLeft * bond.steps[i].price / 1e18;
                 tokensLeft -= supplyLeft;
             } else {
-                reserveAmount += tokensLeft * bond.steps[i].price / 1e18;
+                reserveFromBond += tokensLeft * bond.steps[i].price / 1e18;
                 tokensLeft = 0;
             }
         }
 
         assert(tokensLeft == 0); // Cannot be greater than 0 because of the InvalidTokenAmount check above
 
-        return getAmountAfterFees(reserveAmount, bond.creatorFee);
+        (creatorFee, protocolFee) = getFees(reserveFromBond, bond.creatorFeeRate);
+        refundAmount = reserveFromBond - creatorFee - protocolFee;
     }
 
-    // Returns tokens required to get given refund amount
-    function getTokensForRefund(address tokenAddress, uint256 refundAmount) public view _checkBondExists(tokenAddress) returns (uint256) {
+    function sell(address tokenAddress, uint256 tokensToSell, uint256 minRefund) public {
+        (uint256 refundAmount, uint256 creatorFee, uint256 protocolFee) = getRefundForTokens(tokenAddress, tokensToSell);
+        if (refundAmount < minRefund) revert MCV2_Bond__SlippageLimitExceeded();
+
         Bond storage bond = tokenBond[tokenAddress];
-
-        uint256 currentSupply = MCV2_Token(tokenAddress).totalSupply();
-        uint256 currentStep = getCurrentStep(tokenAddress, currentSupply);
-
-        uint256 newSupply = currentSupply;
-        uint256 sellAmount = getAmountAfterFees(refundAmount, bond.creatorFee);
-        for (uint256 i = currentStep; i >= 0; i--) {
-            uint256 supplyLeft = newSupply - (i == 0 ? 0 : bond.steps[i - 1].rangeTo);
-            uint256 reserveRequired = supplyLeft * bond.steps[i].price / 1e18;
-
-            if (reserveRequired <= sellAmount) {
-                sellAmount -= reserveRequired;
-                newSupply -= supplyLeft;
-            } else {
-                newSupply -= 1e18 * sellAmount / bond.steps[i].price;
-                sellAmount = 0;
-                break;
-            }
-        }
-
-        if (sellAmount != 0) revert MCV2_Bond__InvalidRefundAmount();
-
-        return (currentSupply - newSupply);
-    }
-
-    // Internal function for the rest of the sell logic after all calculations are done
-    function _sell(address tokenAddress, address receiver, uint256 tokensToSell, uint256 refundAmount) private {
-        Bond storage bond = tokenBond[tokenAddress];
+        address seller = _msgSender();
 
         // Burn tokens from the seller
-        MCV2_Token(tokenAddress).burnByBond(receiver, tokensToSell);
+        MCV2_Token(tokenAddress).burnByBond(seller, tokensToSell);
 
-        // TODO: Is `getFeesFromAfterAmount` a double calculation?
-        (uint256 creatorFee, uint256 protocolFee) = getFeesFromAfterAmount(refundAmount, bond.creatorFee);
+        // Update reserve & fee balances
         bond.reserveBalance -= (refundAmount + creatorFee + protocolFee);
         addFee(tokenAddress, bond.creator, creatorFee);
         addFee(tokenAddress, protocolBeneficiary, protocolFee);
 
         // Transfer reserve tokens to the seller
         IERC20 reserveToken = IERC20(bond.reserveToken);
-        if(!reserveToken.transfer(receiver, refundAmount)) revert MCV2_Bond__ReserveTokenTransferFailed();
+        if(!reserveToken.transfer(seller, refundAmount)) revert MCV2_Bond__ReserveTokenTransferFailed();
 
-        emit Sell(tokenAddress, receiver, tokensToSell, bond.reserveToken, refundAmount);
-    }
-
-    function sellWithSetTokenAmount(address tokenAddress, uint256 tokensToSell, uint256 minReserve) public {
-        uint256 refundAmount = getRefundForTokens(tokenAddress, tokensToSell);
-        if (refundAmount < minReserve) revert MCV2_Bond__SlippageLimitExceeded();
-
-        _sell(tokenAddress, _msgSender(), tokensToSell, refundAmount);
-    }
-
-    function sellWithSetRefundAmount(address tokenAddress, uint256 refundAmount, uint256 maxTokens) public {
-        uint256 tokensToSell = getTokensForRefund(tokenAddress, refundAmount);
-        if (tokensToSell > maxTokens) revert MCV2_Bond__SlippageLimitExceeded();
-
-        _sell(tokenAddress, _msgSender(), tokensToSell, refundAmount);
+        emit Sell(tokenAddress, seller, tokensToSell, bond.reserveToken, refundAmount);
     }
 }
