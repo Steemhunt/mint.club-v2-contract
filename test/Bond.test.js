@@ -223,24 +223,28 @@ describe('Bond', function () {
           await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
         });
 
-        it('can have rounding errors at the last digit of reserve amount 1', async function () {
+        it('should be the correct calculation', async function () {
           await Bond.connect(alice).buy(this.token.target, this.reserveToPurchase, 0);
           expect(await this.token.balanceOf(alice.address)).to.equal(this.tokensToMint); // minted 1000 BABY tokens
 
           const bond = await Bond.tokenBond(this.token.target);
-
-          console.log(bond);
           expect(await bond.reserveBalance).to.equal(this.reserveOnBond);
         });
 
-        it('can have rounding errors at the last digit of reserve amount 2', async function () {
+        it('sould have an additional 1e-18 BASE token in the collateral bond, even if the minting amount remains the same', async function () {
           await Bond.connect(alice).buy(this.token.target, this.reserveToPurchase + 1n, 0);
           expect(await this.token.balanceOf(alice.address)).to.equal(this.tokensToMint); // minted 1000 BABY tokens
 
           const bond = await Bond.tokenBond(this.token.target);
-
-          console.log(bond);
           expect(await bond.reserveBalance).to.equal(this.reserveOnBond + 1n);
+        });
+
+        it('should mint 1e-18 more BABY tokens', async function () {
+          await Bond.connect(alice).buy(this.token.target, this.reserveToPurchase + 2n, 0);
+          expect(await this.token.balanceOf(alice.address)).to.equal(this.tokensToMint + 1n); // minted 1000 + 1e-18 BABY tokens
+
+          const bond = await Bond.tokenBond(this.token.target);
+          expect(await bond.reserveBalance).to.equal(this.reserveOnBond + 2n);
         });
       }); // Rounding errors
     }); // General edge cases
