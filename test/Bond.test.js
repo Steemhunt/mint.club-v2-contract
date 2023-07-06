@@ -109,7 +109,7 @@ describe('Bond', function () {
     describe('Buy', function () {
       beforeEach(async function () {
         // Start with 10000 BaseToken, purchasing BABY tokens with 1000 BaseToken
-        this.initialBaseBalance = wei(10000);
+        this.initialBaseBalance = wei(1000000); // 1M BASE tokens
         this.reserveToPurchase = wei(1000);
 
         // { creatorFee, protocolFee, reserveOnBond, tokensToMint }
@@ -117,7 +117,7 @@ describe('Bond', function () {
         // should be minted: (1000 - 11)/2 = 494.5 BABY tokens
 
         await BaseToken.transfer(alice.address, this.initialBaseBalance);
-        await BaseToken.connect(alice).approve(Bond.target, this.reserveToPurchase);
+        await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
         await Bond.connect(alice).buy(this.token.target, this.reserveToPurchase, 0);
       });
 
@@ -148,8 +148,64 @@ describe('Bond', function () {
         expect(await Bond.userTokenFeeBalance(BENEFICIARY, this.token.target)).to.equal(this.buyTest.protocolFee);
       });
 
-      // TODO: event emissions
-      // TODO: massive buys through multiple steps
+      it('should emit Buy event', async function () {
+        await expect(Bond.connect(alice).buy(this.token.target, this.reserveToPurchase, 0))
+          .emit(Bond, 'Buy')
+          .withArgs(this.token.target, alice.address, this.buyTest.tokensToMint, BaseToken.target, this.reserveToPurchase);
+      });
+
+      describe('Massive buy through multiple steps', function () {
+        beforeEach(async function () {
+          // 494.5 BABY already purchased with 1,000 BASE tokens (after fee: 989 BASE tokens)
+          const additionalPurchase = this.initialBaseBalance - this.reserveToPurchase; // All left reserve balance: wei(999000)
+          await Bond.connect(alice).buy(this.token.target, additionalPurchase, 0);
+
+          // stepRanges: [wei(10K), wei(100K), wei(200K), wei(500K), wei(1M), wei(2M), wei(5M), wei(10M) ],
+          // stepPrices: [wei(0), wei(2), wei(3), wei(4), wei(5), wei(7), wei(10), wei(15) ],
+          // -> Reserve required: [0, wei(180K), wei(480K), wei(1680K)... ]
+          this.sum = {
+            creatorFee: this.initialBaseBalance * BABY_TOKEN.creatorFeeRate / 10000n,
+            protocolFee: this.initialBaseBalance * PROTOCOL_FEE / 10000n,
+          }
+          this.sum.reserveOnBond = this.initialBaseBalance - this.sum.creatorFee - this.sum.protocolFee; // 989,000
+          // Until 200K BABY tokens, reserve required is 480K, thus
+          // -> 200,000 + (989,000 - 480,000) / 4 = 327,250
+          this.sum.totalSupply = wei(327250);
+          this.sum.tokensToMint = this.sum.totalSupply - BABY_TOKEN.stepRanges[0]; // 10,000 is the initial free mint
+        });
+
+        it('should be at price of step 3', async function () {
+          expect(await Bond.currentPrice(this.token.target)).to.equal(BABY_TOKEN.stepPrices[3]);
+        });
+
+        it('should mint correct amount after fees', async function () {
+          expect(await this.token.balanceOf(alice.address)).to.equal(this.sum.tokensToMint);
+        });
+
+        it('should transfer BASE tokens to the bond', async function () {
+          expect(await BaseToken.balanceOf(alice.address)).to.equal(0);
+          expect(await BaseToken.balanceOf(Bond.target)).to.equal(this.initialBaseBalance); // including fee until claimed
+        });
+
+        it('should add reserveBalance to the bond', async function () {
+          const bond = await Bond.tokenBond(this.token.target);
+          expect(bond.reserveBalance).to.equal(this.sum.reserveOnBond);
+        });
+
+        it('should increase the total supply', async function () {
+          // BABY_TOKEN.stepRanges[0] is automatically minted to the creator on initialization
+          expect(await this.token.totalSupply()).to.equal(BABY_TOKEN.stepRanges[0] + this.sum.tokensToMint);
+        });
+
+        it('should add claimable balance to the creator', async function () {
+          expect(await Bond.userTokenFeeBalance(owner.address, this.token.target)).to.equal(this.sum.creatorFee);
+        });
+
+        it('should add claimable balance to the protocol beneficiary', async function () {
+          expect(await Bond.userTokenFeeBalance(BENEFICIARY, this.token.target)).to.equal(this.sum.protocolFee);
+        });
+      }); // Massive buy through multiple steps
+
       // TODO: edge cases
 
       describe('Sell', function () {
@@ -239,7 +295,7 @@ describe('Bond', function () {
           expect(await bond.reserveBalance).to.equal(this.reserveOnBond + 1n);
         });
 
-        it('should mint 1e-18 more BABY tokens', async function () {
+        it('should mint 1e-18 more BABY token', async function () {
           await Bond.connect(alice).buy(this.token.target, this.reserveToPurchase + 2n, 0);
           expect(await this.token.balanceOf(alice.address)).to.equal(this.tokensToMint + 1n); // minted 1000 + 1e-18 BABY tokens
 
