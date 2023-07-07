@@ -1,6 +1,7 @@
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
-const { anyValue } = require('@nomicfoundation/hardhat-chai-matchers/withArgs');
+// const { anyValue } = require('@nomicfoundation/hardhat-chai-matchers/withArgs');
 const { expect } = require('chai');
+const web3 = require('web3');
 
 const MAX_INT_256 = 2n**256n - 1n;
 const BENEFICIARY = '0x00000B655d573662B9921e14eDA96DBC9311fDe6'; // a random address for testing
@@ -14,6 +15,14 @@ const BABY_TOKEN = {
   stepRanges: [wei(10000), wei(100000), wei(200000), wei(500000), wei(1000000), wei(2000000), wei(5000000), wei(10000000) ],
   stepPrices: [wei(0), wei(2), wei(3), wei(4), wei(5), wei(7), wei(10), wei(15) ]
 };
+
+function computeCreate2Address(saltHex, bytecode, deployer) {
+  return web3.utils.toChecksumAddress(
+    `0x${web3.utils
+      .sha3(`0x${['ff', deployer, saltHex, web3.utils.soliditySha3(bytecode)].map(x => x.replace(/0x/, '')).join('')}`)
+      .slice(-40)}`,
+  );
+}
 
 function wei(num, decimals = 18) {
   return BigInt(num) * 10n**BigInt(decimals);
@@ -73,6 +82,22 @@ describe('Bond', function () {
       this.creationTx = await Bond.createToken(...Object.values(BABY_TOKEN));
       this.token = await Token.attach(await Bond.tokens(0));
       this.bond = await Bond.tokenBond(this.token.target);
+    });
+
+    it('should create a contract addreess deterministically', async function() {
+      const creationCode = [
+        '0x3d602d80600a3d3981f3363d3d373d3d3d363d73',
+        TokenImplementation.target.replace(/0x/, '').toLowerCase(),
+        '5af43d82803e903d91602b57fd5bf3',
+      ].join('');
+
+      const salt = web3.utils.soliditySha3(
+        { t: 'address', v: Bond.target },
+        { t: 'string', v: BABY_TOKEN.symbol }
+      );
+      const predicted = computeCreate2Address(salt, creationCode, Bond.target);
+
+      expect(this.token.target).to.be.equal(predicted);
     });
 
     it('should create token with correct parameters', async function() {

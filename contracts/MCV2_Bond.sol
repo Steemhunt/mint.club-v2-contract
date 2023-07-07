@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./MCV2_FeeCollector.sol";
 import "./MCV2_Token.sol";
@@ -64,21 +65,6 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
     // MARK: - Factory
 
-    /**
-     * @dev Create a new token contract that maintains separate storage but delegates all function calls to tokenImplementation
-     * Reference: https://github.com/optionality/clone-factory
-     */
-    function _createClone(address target) private returns (address result) {
-        bytes20 targetBytes = bytes20(target);
-        assembly {
-            let clone := mload(0x40)
-            mstore(clone, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
-            mstore(add(clone, 0x14), targetBytes)
-            mstore(add(clone, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
-            result := create(0, clone, 0x37)
-        }
-    }
-
     function createToken(
         string memory name,
         string memory symbol,
@@ -94,7 +80,9 @@ contract MCV2_Bond is MCV2_FeeCollector {
         if (stepRanges.length == 0 || stepRanges.length > MAX_STEPS) revert MCV2_Bond__InvalidTokenCreationParams();
         if (stepRanges.length != stepPrices.length) revert MCV2_Bond__InvalidTokenCreationParams();
 
-        address tokenAddress = _createClone(tokenImplementation);
+        // Uniqueness of symbols on this network is guaranteed by the deterministic contract address
+        bytes32 salt = keccak256(abi.encodePacked(address(this), symbol));
+        address tokenAddress = Clones.cloneDeterministic(tokenImplementation, salt);
         MCV2_Token newToken = MCV2_Token(tokenAddress);
         newToken.init(name, symbol);
 
