@@ -227,23 +227,21 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
         Bond storage bond = tokenBond[tokenAddress];
         uint256 currentSupply = MCV2_Token(tokenAddress).totalSupply();
-
         if (tokensToSell > currentSupply) revert MCV2_Bond__InvalidTokenAmount();
 
         uint256 currentStep = getCurrentStep(tokenAddress, currentSupply);
 
-        uint256 reserveFromBond = 0;
+        uint256 reserveFromBond;
         uint256 tokensLeft = tokensToSell;
-        for (uint256 i = currentStep; i >= 0 && tokensLeft > 0; i--) {
-            uint256 supplyLeft = (i == 0) ? currentSupply : currentSupply - bond.steps[i-1].rangeTo;
+        while (currentStep >= 0 && tokensLeft > 0) {
+            uint256 supplyLeft = currentStep == 0 ? currentSupply : currentSupply - bond.steps[currentStep - 1].rangeTo;
 
-            if (supplyLeft < tokensLeft) {
-                reserveFromBond += supplyLeft * bond.steps[i].price / 1e18;
-                tokensLeft -= supplyLeft;
-            } else {
-                reserveFromBond += tokensLeft * bond.steps[i].price / 1e18;
-                tokensLeft = 0;
-            }
+            uint256 tokensToProcess = tokensLeft < supplyLeft ? tokensLeft : supplyLeft;
+            reserveFromBond += tokensToProcess * bond.steps[currentStep].price / 1e18;
+
+            tokensLeft -= tokensToProcess;
+            currentSupply -= tokensToProcess;
+            currentStep--;
         }
 
         assert(tokensLeft == 0); // Cannot be greater than 0 because of the InvalidTokenAmount check above

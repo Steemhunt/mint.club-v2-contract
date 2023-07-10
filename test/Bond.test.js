@@ -229,6 +229,32 @@ describe('Bond', function () {
         it('should add claimable balance to the protocol beneficiary', async function () {
           expect(await Bond.userTokenFeeBalance(BENEFICIARY, this.token.target)).to.equal(this.sum.protocolFee);
         });
+
+        describe('Massive sell through multiple steps', function () {
+          beforeEach(async function () {
+            this.initial = {
+              supply: await this.token.totalSupply(),
+              baseBalance: await BaseToken.balanceOf(alice.address),
+              tokenBalance: await this.token.balanceOf(alice.address),
+              bondBalance: await BaseToken.balanceOf(Bond.target),
+              bondReserve: (await Bond.tokenBond(this.token.target)).reserveBalance
+            };
+            console.log(this.initial);
+
+            // Sell all BABY tokens Alice has
+            await this.token.connect(alice).approve(Bond.target, MAX_INT_256);
+
+            console.log('estimate: ', await Bond.getRefundForTokens(this.token.target, this.initial.tokenBalance));
+
+            await Bond.connect(alice).sell(this.token.target, this.initial.tokenBalance, 0);
+          });
+
+          it('should burn all BABY tokens from alice', async function () {
+            expect(await this.token.balanceOf(alice.address)).to.equal(0);
+          });
+
+          // TODO:
+        });
       }); // Massive buy through multiple steps
 
       // TODO: edge cases
@@ -249,7 +275,7 @@ describe('Bond', function () {
           // should be 989, 200
           // console.log(this.initialBondReserve, this.sellTest.reserveFromBond);
 
-          await this.token.connect(alice).approve(Bond.target, this.tokensToSell);
+          await this.token.connect(alice).approve(Bond.target, MAX_INT_256);
           await Bond.connect(alice).sell(this.token.target, this.tokensToSell, 0);
         });
 
@@ -283,8 +309,12 @@ describe('Bond', function () {
           expect(await Bond.userTokenFeeBalance(BENEFICIARY, this.token.target)).to.equal(this.buyTest.protocolFee + this.sellTest.protocolFee);
         });
 
-        // TODO: event emissions
-        // TODO: massive sells through multiple steps
+        it('should emit Sell event', async function () {
+          await expect(Bond.connect(alice).sell(this.token.target, this.tokensToSell, 0))
+            .emit(Bond, 'Sell')
+            .withArgs(this.token.target, alice.address, this.tokensToSell, BaseToken.target, this.sellTest.reserveToRefund);
+        });
+
         // TODO: edge cases
 
       }); // Sell
