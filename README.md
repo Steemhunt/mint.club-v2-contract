@@ -1,6 +1,20 @@
 # Mint Club V2
 The inherited token creator employs a bonding curve to generate new tokens using base tokens as collateral
 
+### Design Choices
+Unlike Mint Club V1's bonding curve (`y = x` -> `total supply = token price`), the V2 contract uses a custom increasing price step array for the following reasons:
+1. Utilizing `y = ax^b` bonding curves is challenging to test because we have to use approximation to calculate the power function of `(_baseN / _baseD) ^ (_expN / _expD)` ([Reference: Banchor's Bonding Curve implementation](https://github.com/relevant-community/bonding-curve/blob/master/contracts/Power.sol))
+2. Employing a single bonding curve is hard to customize. Supporting various types of curve functions (e.g., Sigmoid, Logarithm, etc) might be too difficult to implement in Solidity, or even impossible in many cases
+3. Therefore, we decided to use an array of price steps (called `BondStep[] { rangeTo, price }`), that is simple to calculate and fully customizable.
+
+#### An example of the bond step:
+[Image attached]
+
+Parameters:
+- maxSupply: 1,000,000
+- stepRanges: []
+- stepPrices: []
+
 ## Contract addresses
 ### Ethereum Sepolia Testnet
 - MCV2_Token: [0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881](https://sepolia.etherscan.io/address/0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881#code)

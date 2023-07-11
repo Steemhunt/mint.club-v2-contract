@@ -27,7 +27,7 @@ async function main() {
 
   console.log(`
     npx hardhat verify --network ${hre.network.name} ${tokenImplementation.target}
-    npx hardhat verify --network ${hre.network.name} ${bond.target} ${PROTOCOL_BENEFIARY} ${DEFAULT_PROTOCOL_FEE}
+    npx hardhat verify --network ${hre.network.name} ${tokenImplementation.target} ${bond.target} ${PROTOCOL_BENEFIARY} ${DEFAULT_PROTOCOL_FEE}
   `);
 };
 
