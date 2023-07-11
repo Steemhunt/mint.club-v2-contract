@@ -13,10 +13,10 @@ module.exports = {
     }
   },
   networks: {
-    goerli: {
-      url: `https://eth-goerli.alchemyapi.io/v2/${process.env.ALCHEMY_GOERLI_API_KEY}`,
-      chainId: 5,
-      accounts: [process.env.GOERLI_TEST_PRIVATE_KEY]
+    sepolia: {
+      url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_SEPOLIA_API_KEY}`,
+      chainId: 11155111,
+      accounts: [process.env.TEST_PRIVATE_KEY]
     },
   },
   gasReporter: {
@@ -28,7 +28,7 @@ module.exports = {
   etherscan: {
     // network list: npx hardhat verify --list-networks
     apiKey: {
-      goerli: process.env.ETHERSCAN_API_KEY
+      sepolia: process.env.ETHERSCAN_API_KEY
     }
   }
 };

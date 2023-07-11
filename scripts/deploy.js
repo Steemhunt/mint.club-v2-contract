@@ -1,32 +1,46 @@
-// We require the Hardhat Runtime Environment explicitly here. This is optional
-// but useful for running the script in a standalone fashion through `node <script>`.
-//
-// You can also run a script with `npx hardhat run <script>`. If you do that, Hardhat
-// will compile your contracts, add the Hardhat Runtime Environment's members to the
-// global scope, and execute the script.
-const hre = require("hardhat");
+require('dotenv').config();
+const hre = require('hardhat');
+
+const PROTOCOL_BENEFIARY = process.env.PROTOCOL_BENEFIARY;
+const DEFAULT_PROTOCOL_FEE = 10;
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const unlockTime = currentTimestampInSeconds + 60;
+  const accounts = await hre.ethers.getSigners();
+  const deployer = accounts[0].address;
+  console.log(`Deploy from account: ${deployer}`);
 
-  const lockedAmount = hre.ethers.utils.parseEther("0.001");
+  const tokenImplementation = await hre.ethers.deployContract('MCV2_Token');
+  await tokenImplementation.waitForDeployment();
+  console.log(` -> MCV2_Token contract deployed at ${tokenImplementation.target}`);
 
-  const Lock = await hre.ethers.getContractFactory("Lock");
-  const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
+  const bond = await hre.ethers.deployContract('MCV2_Bond', [
+    tokenImplementation.target, PROTOCOL_BENEFIARY, DEFAULT_PROTOCOL_FEE
+  ]);
+  await bond.waitForDeployment();
+  console.log(` -> MCV2_Bond contract deployed at ${bond.target}`);
 
-  await lock.deployed();
+  console.log(`\n\nNetwork: ${hre.network.name}`);
+  console.log('```');
+  console.log(`- MCV2_Token: ${tokenImplementation.target}`);
+  console.log(`- MCV2_Bond: ${bond.target}`);
+  console.log('```');
 
-  console.log(
-    `Lock with ${ethers.utils.formatEther(
-      lockedAmount
-    )}ETH and unlock timestamp ${unlockTime} deployed to ${lock.address}`
-  );
-}
+  console.log(`
+    npx hardhat verify --network ${hre.network.name} ${tokenImplementation.target}
+    npx hardhat verify --network ${hre.network.name} ${bond.target} ${PROTOCOL_BENEFIARY} ${DEFAULT_PROTOCOL_FEE}
+  `);
+};
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+main()
+  .then(() => process.exit(0))
+  .catch(error => {
+    console.error(error);
+    process.exit(1);
+  });
+
+
+/* Deploy script
+
+npx hardhat compile && npx hardhat run --network sepolia scripts/deploy.js
+
+*/

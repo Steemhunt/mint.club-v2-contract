@@ -1,6 +1,11 @@
 # Mint Club V2
 The inherited token creator employs a bonding curve to generate new tokens using base tokens as collateral
 
+## Contract addresses
+### Ethereum Sepolia Testnet
+- MCV2_Token: [0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881](https://sepolia.etherscan.io/address/0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881#code)
+- MCV2_Bond: [0x905F3AE86108c6A3b1a345dACEaef6c4749Ec66a](https://sepolia.etherscan.io/address/0x905F3AE86108c6A3b1a345dACEaef6c4749Ec66a#code)
+
 ## Run Tests 🧪
 ```bash
 npx hardhat test
