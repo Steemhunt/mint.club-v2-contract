@@ -46,6 +46,13 @@ function calculateSell(tokensToSell, stepPrice) {
   return { creatorFee, protocolFee, reserveFromBond, reserveToRefund };
 }
 
+function calculateFees(reserveAmount) {
+  const creatorFee = reserveAmount * BABY_TOKEN.creatorFeeRate / 10000n;
+  const protocolFee = reserveAmount * PROTOCOL_FEE / 10000n;
+
+  return { creatorFee, protocolFee, totalFee: creatorFee + protocolFee };
+}
+
 describe('Bond', function () {
   async function deployFixtures() {
     const TokenImplementation = await ethers.deployContract('MCV2_Token');
@@ -239,12 +246,9 @@ describe('Bond', function () {
               bondBalance: await BaseToken.balanceOf(Bond.target),
               bondReserve: (await Bond.tokenBond(this.token.target)).reserveBalance
             };
-            console.log(this.initial);
 
             // Sell all BABY tokens Alice has
             await this.token.connect(alice).approve(Bond.target, MAX_INT_256);
-
-            console.log('estimate: ', await Bond.getRefundForTokens(this.token.target, this.initial.tokenBalance));
 
             await Bond.connect(alice).sell(this.token.target, this.initial.tokenBalance, 0);
           });
@@ -253,7 +257,40 @@ describe('Bond', function () {
             expect(await this.token.balanceOf(alice.address)).to.equal(0);
           });
 
-          // TODO:
+          it('should transfer BASE tokens to alice', async function () {
+            const fees = calculateFees(this.initial.bondReserve);
+            expect(await BaseToken.balanceOf(alice.address)).to.equal(this.initial.baseBalance + this.initial.bondReserve - fees.totalFee);
+          });
+
+          it('should decrease the total supply', async function () {
+            expect(await this.token.totalSupply()).to.equal(BABY_TOKEN.stepRanges[0]); // except the free minting amount
+          });
+
+          it('should decrease the reserveBalance on the bond', async function () {
+            const bond = await Bond.tokenBond(this.token.target);
+            expect(bond.reserveBalance).to.equal(0);
+          });
+
+          it('should add claimable balance to the creator', async function () {
+            expect(await Bond.userTokenFeeBalance(owner.address, this.token.target)).to.equal(
+              this.initialBaseBalance * BABY_TOKEN.creatorFeeRate / 10000n + // buy
+              this.initial.bondReserve * BABY_TOKEN.creatorFeeRate / 10000n // sell
+            );
+          });
+
+          it('should add claimable balance to the creator', async function () {
+            expect(await Bond.userTokenFeeBalance(BENEFICIARY, this.token.target)).to.equal(
+              this.initialBaseBalance * PROTOCOL_FEE / 10000n + // buy
+              this.initial.bondReserve * PROTOCOL_FEE / 10000n // sell
+            );
+          });
+
+          it('should leave claimable fee balance on the bond', async function () {
+            expect(await BaseToken.balanceOf(Bond.target)).to.equal(
+              this.initialBaseBalance * (BABY_TOKEN.creatorFeeRate + PROTOCOL_FEE) / 10000n + // buy
+              this.initial.bondReserve * (BABY_TOKEN.creatorFeeRate + PROTOCOL_FEE) / 10000n // sell
+            );
+          });
         });
       }); // Massive buy through multiple steps
 
