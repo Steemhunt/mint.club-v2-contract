@@ -1,6 +1,11 @@
 # Mint Club V2
 The inherited token creator employs a bonding curve to generate new tokens using base tokens as collateral
 
+## Contract addresses 📜
+### Ethereum Sepolia Testnet
+- MCV2_Token: [0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881](https://sepolia.etherscan.io/address/0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881#code)
+- MCV2_Bond: [0x905F3AE86108c6A3b1a345dACEaef6c4749Ec66a](https://sepolia.etherscan.io/address/0x905F3AE86108c6A3b1a345dACEaef6c4749Ec66a#code)
+
 ## Design Choices 📐
 Unlike Mint Club V1's bonding curve (`y = x` -> `total supply = token price`), the V2 contract uses a custom increasing price step array for the following reasons:
 1. Utilizing `y = ax^b` bonding curves is challenging to test because we have to use approximation to calculate the power function of `(_baseN / _baseD) ^ (_expN / _expD)` ([Reference: Banchor's Bonding Curve implementation](https://github.com/relevant-community/bonding-curve/blob/master/contracts/Power.sol))
@@ -14,11 +19,6 @@ Parameters:
 - maxSupply: 1,000,000
 - stepRanges: [...]
 - stepPrices: [...]
-
-## Contract addresses 📜
-### Ethereum Sepolia Testnet
-- MCV2_Token: [0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881](https://sepolia.etherscan.io/address/0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881#code)
-- MCV2_Bond: [0x905F3AE86108c6A3b1a345dACEaef6c4749Ec66a](https://sepolia.etherscan.io/address/0x905F3AE86108c6A3b1a345dACEaef6c4749Ec66a#code)
 
 ## Run Tests 🧪
 ```bash
