@@ -138,6 +138,11 @@ describe('Bond', function () {
         .withArgs(this.token.target, BABY_TOKEN.name, BABY_TOKEN.symbol);
     });
 
+    it('should revert if token symbol already exists', async function () {
+      await expect(Bond.createToken(...Object.values(BABY_TOKEN)))
+        .to.be.revertedWithCustomError(Bond, 'MCV2_Bond__TokenSymbolAlreadyExists');
+    });
+
     describe('Buy', function () {
       beforeEach(async function () {
         // Start with 10000 BaseToken, purchasing BABY tokens with 1000 BaseToken

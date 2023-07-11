@@ -13,6 +13,7 @@ import "./MCV2_Token.sol";
 */
 contract MCV2_Bond is MCV2_FeeCollector {
     error MCV2_Bond__InvalidTokenCreationParams();
+    error MCV2_Bond__TokenSymbolAlreadyExists();
     error MCV2_Bond__TokenNotFound();
     error MCV2_Bond__ExceedMaxSupply();
     error MCV2_Bond__SlippageLimitExceeded();
@@ -82,11 +83,18 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
         // Uniqueness of symbols on this network is guaranteed by the deterministic contract address
         bytes32 salt = keccak256(abi.encodePacked(address(this), symbol));
+
+        // NOTE: This check might not be necessary as the clone would fail with an 'ERC1167: create2 failed'
+        // error anyway, and the collision is nearly impossible (one in 2^160).
+        // However, we retain this check to provide a clearer error message, albeit at the expense of an additional 811 gas cost.
+        { // avoids stack too deep errors
+            address predicted = Clones.predictDeterministicAddress(tokenImplementation, salt);
+            if (tokenBond[predicted].maxSupply > 0) revert MCV2_Bond__TokenSymbolAlreadyExists();
+        }
+
         address tokenAddress = Clones.cloneDeterministic(tokenImplementation, salt);
         MCV2_Token newToken = MCV2_Token(tokenAddress);
         newToken.init(name, symbol);
-
-        // NOTE: We don't need to check the existence of the token because the collision is almost impossible (one in 2^160)
         tokens.push(tokenAddress);
 
         // Set token bond data
