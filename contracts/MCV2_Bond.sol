@@ -13,6 +13,7 @@ import "./MCV2_Token.sol";
 */
 contract MCV2_Bond is MCV2_FeeCollector {
     error MCV2_Bond__InvalidTokenCreationParams();
+    error MCV2_Bond__InvalidStepPrams(string reason);
     error MCV2_Bond__TokenSymbolAlreadyExists();
     error MCV2_Bond__TokenNotFound();
     error MCV2_Bond__ExceedMaxSupply();
@@ -78,8 +79,8 @@ contract MCV2_Bond is MCV2_FeeCollector {
         if (reserveToken == address(0)) revert MCV2_Bond__InvalidTokenCreationParams();
         if (maxSupply == 0) revert MCV2_Bond__InvalidTokenCreationParams();
         if (creatorFeeRate > FEE_MAX) revert MCV2_Bond__InvalidTokenCreationParams();
-        if (stepRanges.length == 0 || stepRanges.length > MAX_STEPS) revert MCV2_Bond__InvalidTokenCreationParams();
-        if (stepRanges.length != stepPrices.length) revert MCV2_Bond__InvalidTokenCreationParams();
+        if (stepRanges.length == 0 || stepRanges.length > MAX_STEPS) revert MCV2_Bond__InvalidStepPrams('INVALID_LENGTH');
+        if (stepRanges.length != stepPrices.length) revert MCV2_Bond__InvalidStepPrams('LENGTH_DO_NOT_MATCH');
 
         // Uniqueness of symbols on this network is guaranteed by the deterministic contract address
         bytes32 salt = keccak256(abi.encodePacked(address(this), symbol));
@@ -105,15 +106,15 @@ contract MCV2_Bond is MCV2_FeeCollector {
         bond.creatorFeeRate = creatorFeeRate;
 
         // Last value or the rangeTo must be the same as the maxSupply
-        if (stepRanges[stepRanges.length - 1] != maxSupply) revert MCV2_Bond__InvalidTokenCreationParams();
+        if (stepRanges[stepRanges.length - 1] != maxSupply) revert MCV2_Bond__InvalidStepPrams('MAX_SUPPLY_MISMATCH');
 
         for (uint256 i = 0; i < stepRanges.length; i++) {
-            if (stepRanges[i] == 0) revert MCV2_Bond__InvalidTokenCreationParams();
+            if (stepRanges[i] == 0) revert MCV2_Bond__InvalidStepPrams('CANNOT_BE_ZERO');
 
             // Ranges and prices must be strictly increasing
             if (i > 0) {
-                if (stepRanges[i] <= stepRanges[i - 1]) revert MCV2_Bond__InvalidTokenCreationParams();
-                if (stepPrices[i] <= stepPrices[i - 1]) revert MCV2_Bond__InvalidTokenCreationParams();
+                if (stepRanges[i] <= stepRanges[i - 1]) revert MCV2_Bond__InvalidStepPrams('DECREASING_RANGE');
+                if (stepPrices[i] <= stepPrices[i - 1]) revert MCV2_Bond__InvalidStepPrams('DECREASING_PRICE');
             }
 
             bond.steps.push(BondStep({

@@ -138,9 +138,133 @@ describe('Bond', function () {
         .withArgs(this.token.target, BABY_TOKEN.name, BABY_TOKEN.symbol);
     });
 
-    it('should revert if token symbol already exists', async function () {
-      await expect(Bond.createToken(...Object.values(BABY_TOKEN)))
-        .to.be.revertedWithCustomError(Bond, 'MCV2_Bond__TokenSymbolAlreadyExists');
+    describe('Validations', function () {
+      it('should check if reserve token is valid', async function () {
+        await expect(
+          Bond.createToken(
+            ...Object.values(
+              Object.assign({}, BABY_TOKEN, { reserveToken: '0x0000000000000000000000000000000000000000' })
+            )
+          )
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenCreationParams');
+      });
+
+      it('should check if max supply is valid', async function () {
+        await expect(
+          Bond.createToken(
+            ...Object.values(
+              Object.assign({}, BABY_TOKEN, { maxSupply: 0 })
+            )
+          )
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenCreationParams');
+      });
+
+      it('should check if creator fee rate is valid', async function () {
+        await expect(
+          Bond.createToken(
+            ...Object.values(
+              Object.assign({}, BABY_TOKEN, { creatorFeeRate: 101 })
+            )
+          )
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenCreationParams');
+      });
+
+      it('should check if step ranges are not empty', async function () {
+        await expect(
+          Bond.createToken(
+            ...Object.values(
+              Object.assign({}, BABY_TOKEN, { stepRanges: [] })
+            )
+          )
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepPrams')
+        .withArgs('INVALID_LENGTH');
+      });
+
+      it('should check if the length of step ranges are more than max steps', async function () {
+        await expect(
+          Bond.createToken(
+            ...Object.values(
+              Object.assign({}, BABY_TOKEN, { stepRanges: [...Array(1001).keys()] })
+            )
+          )
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepPrams')
+        .withArgs('INVALID_LENGTH');
+      });
+
+      it('should check if the length of step ranges has the same length with step prices', async function () {
+        await expect(
+          Bond.createToken(
+            ...Object.values(
+              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [100, 200], stepPrices: [1] })
+            )
+          )
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepPrams')
+        .withArgs('LENGTH_DO_NOT_MATCH');
+      });
+
+      it('should check if the max suppply matches with the last step range', async function () {
+        await expect(
+          Bond.createToken(
+            ...Object.values(
+              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [100, 200], stepPrices: [1, 2] })
+            )
+          )
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepPrams')
+        .withArgs('MAX_SUPPLY_MISMATCH');
+      });
+
+      it('should check if any of step ranges has zero value', async function () {
+        await expect(
+          Bond.createToken(
+            ...Object.values(
+              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [0, BABY_TOKEN.maxSupply], stepPrices: [1, 2] })
+            )
+          )
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepPrams')
+        .withArgs('CANNOT_BE_ZERO');
+      });
+
+      it('should check if any of step ranges is less than the previous step', async function () {
+        await expect(
+          Bond.createToken(
+            ...Object.values(
+              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [2, 1, BABY_TOKEN.maxSupply], stepPrices: [1, 2, 3] })
+            )
+          )
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepPrams')
+        .withArgs('DECREASING_RANGE');
+      });
+
+      it('should check if any of step prices is less than the previous step', async function () {
+        await expect(
+          Bond.createToken(
+            ...Object.values(
+              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [1, 2, BABY_TOKEN.maxSupply], stepPrices: [1, 3, 2] })
+            )
+          )
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepPrams')
+        .withArgs('DECREASING_PRICE');
+      });
+
+      it('should revert if token symbol already exists', async function () {
+        await expect(Bond.createToken(...Object.values(BABY_TOKEN)))
+          .to.be.revertedWithCustomError(Bond, 'MCV2_Bond__TokenSymbolAlreadyExists');
+      });
+    });
+
+    describe('Edge cases', function () {
+      it('should not mint any tokens if the first step price is not zero', async function () {
+        await Bond.createToken(
+          ...Object.values(
+            Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [1, 2, BABY_TOKEN.maxSupply], stepPrices: [1, 2, 3] })
+          )
+        );
+        const Token = await ethers.getContractFactory('MCV2_Token');
+        this.token2 = await Token.attach(await Bond.tokens(1));
+        expect(await this.token2.totalSupply()).to.equal(0);
+      });
+
+      // TODO: Add more edge cases
     });
 
     describe('Buy', function () {
