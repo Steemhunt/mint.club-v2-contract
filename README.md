@@ -13,7 +13,7 @@ Unlike Mint Club V1's bonding curve (`y = x` -> `total supply = token price`), t
 3. Therefore, we decided to use an array of price steps (called `BondStep[] { rangeTo, price }`), that is simple to calculate and fully customizable.
 
 ### An example of a price step array:
-![image](https://github.com/Steemhunt/mint.club-v2-contract/assets/1332279/e5123864-7316-4c3d-92a3-7e136c0ce098)
+![image](https://github.com/Steemhunt/mint.club-v2-contract/assets/1332279/d61607a2-39cc-433a-8cd2-3bbb627ab2aa)
 
 Parameters:
 - maxSupply: 10,000
