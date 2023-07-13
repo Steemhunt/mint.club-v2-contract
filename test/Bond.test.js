@@ -143,7 +143,7 @@ describe('Bond', function () {
         await expect(
           Bond.createToken(
             ...Object.values(
-              Object.assign({}, BABY_TOKEN, { reserveToken: '0x0000000000000000000000000000000000000000' })
+              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', reserveToken: '0x0000000000000000000000000000000000000000' })
             )
           )
         ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenCreationParams');
@@ -153,7 +153,7 @@ describe('Bond', function () {
         await expect(
           Bond.createToken(
             ...Object.values(
-              Object.assign({}, BABY_TOKEN, { maxSupply: 0 })
+              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', maxSupply: 0 })
             )
           )
         ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenCreationParams');
@@ -163,7 +163,7 @@ describe('Bond', function () {
         await expect(
           Bond.createToken(
             ...Object.values(
-              Object.assign({}, BABY_TOKEN, { creatorFeeRate: 101 })
+              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', creatorFeeRate: 101 })
             )
           )
         ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenCreationParams');
@@ -173,7 +173,7 @@ describe('Bond', function () {
         await expect(
           Bond.createToken(
             ...Object.values(
-              Object.assign({}, BABY_TOKEN, { stepRanges: [] })
+              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [] })
             )
           )
         ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepPrams')
@@ -184,7 +184,7 @@ describe('Bond', function () {
         await expect(
           Bond.createToken(
             ...Object.values(
-              Object.assign({}, BABY_TOKEN, { stepRanges: [...Array(1001).keys()] })
+              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [...Array(1002).keys()].splice(1) })
             )
           )
         ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepPrams')
@@ -264,7 +264,27 @@ describe('Bond', function () {
         expect(await this.token2.totalSupply()).to.equal(0);
       });
 
-      // TODO: Add more edge cases
+      // NOTE: This could cost up to ~13M gas, which is ~43% of the block gas limit
+      // Skipping this test because this exceptional case makes the average gas cost too high
+      it.skip('should check if it support up to max steps', async function () {
+        await Bond.createToken(
+          ...Object.values(
+            Object.assign({}, BABY_TOKEN, {
+              symbol: 'BABY2',
+              maxSupply: 1000,
+              stepRanges: [...Array(1001).keys()].splice(1),
+              stepPrices: [...Array(1001).keys()].splice(1)
+            })
+          )
+        );
+
+        const Token = await ethers.getContractFactory('MCV2_Token');
+        const token = await Token.attach(await Bond.tokens(1));
+        const bond = await Bond.tokenBond(token.target);
+
+        expect(await token.symbol()).to.equal('BABY2');
+        expect(bond.maxSupply).to.equal(1000);
+      });
     });
 
     describe('Buy', function () {
