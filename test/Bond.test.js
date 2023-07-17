@@ -252,7 +252,7 @@ describe('Bond', function () {
       });
     });
 
-    describe('Edge cases', function () {
+    describe('Create Token: Edge cases', function () {
       it('should not mint any tokens if the first step price is not zero', async function () {
         await Bond.createToken(
           ...Object.values(
@@ -443,8 +443,6 @@ describe('Bond', function () {
         });
       }); // Massive buy through multiple steps
 
-      // TODO: edge cases
-
       describe('Sell', function () {
         beforeEach(async function () {
           this.originalSupply = await this.token.totalSupply();
@@ -500,13 +498,55 @@ describe('Bond', function () {
             .emit(Bond, 'Sell')
             .withArgs(this.token.target, alice.address, this.tokensToSell, BaseToken.target, this.sellTest.reserveToRefund);
         });
-
-        // TODO: edge cases
-
       }); // Sell
     }); // Buy
 
-    describe('General edge cases', function() {
+    describe('Other Edge cases', function() {
+      describe.only('Buy: Edge cases', function() {
+        beforeEach(async function () {
+          // Start with 10000 BaseToken, purchasing 1000 BABY tokens
+          this.initialBaseBalance = wei(1000000);
+          await BaseToken.transfer(alice.address, this.initialBaseBalance);
+          await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
+        });
+
+        it('should revert if the pool does not exists', async function () {
+          await expect(
+            Bond.connect(alice).buy(BaseToken.target, 100n, 0)
+          ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__TokenNotFound');
+        });
+
+        it('should revert if the minTokens parameter is set more than the expected value', async function () {
+          const test = calculatePurchase(100n, BABY_TOKEN.stepPrices[1]);
+          await expect(
+            Bond.connect(alice).buy(this.token.target, 100n, test.tokensToMint + 1n)
+          ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__SlippageLimitExceeded');
+        });
+
+        it('should revert if the slippage limit exceeded due to a front-run', async function () {
+          const test = calculatePurchase(100n, BABY_TOKEN.stepPrices[1]);
+
+          // front-run till the next price step (price becomes 3 after 100k tokens, 180k reserve)
+          await Bond.connect(alice).buy(this.token.target, wei(200000), test.tokensToMint)
+
+          await expect(
+            Bond.connect(alice).buy(this.token.target, 100n, test.tokensToMint)
+          ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__SlippageLimitExceeded');
+        });
+
+        it('should revert if reserve token transfer fails', async function () {
+          await BaseToken.connect(alice).approve(Bond.target, 0);
+
+          await expect(
+            Bond.connect(alice).buy(this.token.target, 100n, 0)
+          ).to.be.revertedWith('ERC20: insufficient allowance');
+        });
+      });
+
+      describe('Sell: Edge cases', function() {
+        // TODO: edge cases
+      });
+
       describe('Rounding errors', function() {
         beforeEach(async function () {
           // Start with 10000 BaseToken, purchasing 1000 BABY tokens
