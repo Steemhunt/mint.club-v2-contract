@@ -502,10 +502,9 @@ describe('Bond', function () {
     }); // Buy
 
     describe('Other Edge cases', function() {
-      describe.only('Buy: Edge cases', function() {
+      describe('Buy: Edge cases', function() {
         beforeEach(async function () {
-          // Start with 10000 BaseToken, purchasing 1000 BABY tokens
-          this.initialBaseBalance = wei(1000000);
+          this.initialBaseBalance = wei(200000000); // 200M
           await BaseToken.transfer(alice.address, this.initialBaseBalance);
           await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
         });
@@ -541,10 +540,28 @@ describe('Bond', function () {
             Bond.connect(alice).buy(this.token.target, 100n, 0)
           ).to.be.revertedWith('ERC20: insufficient allowance');
         });
+
+        it('should revert if reserve amount is zero', async function () {
+          await expect(
+            Bond.connect(alice).buy(this.token.target, 0, 0)
+          ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidReserveAmount');
+        });
+
+        it('should revert if user try to buy more than the available supply', async function () {
+          // To mint 10M tokens, requires 116,180,000 reserve, 117,472,194.1 including fees
+          await expect(
+            Bond.connect(alice).buy(this.token.target, wei(117472195), 0)
+          ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__ExceedMaxSupply');
+
+          await expect(
+            Bond.connect(alice).buy(this.token.target, wei(117472194), 0)
+          ).not.to.be.reverted;
+        });
       });
 
       describe('Sell: Edge cases', function() {
-        // TODO: edge cases
+        // beforeEach(async function () {
+        // TODO:
       });
 
       describe('Rounding errors', function() {
