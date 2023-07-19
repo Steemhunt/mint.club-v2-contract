@@ -252,7 +252,7 @@ describe('Bond', function () {
       });
     });
 
-    describe('Create Token: Edge cases', function () {
+    describe('Create Token: Edge Cases', function () {
       it('should not mint any tokens if the first step price is not zero', async function () {
         await Bond.createToken(
           ...Object.values(
@@ -501,8 +501,8 @@ describe('Bond', function () {
       }); // Sell
     }); // Buy
 
-    describe('Other Edge cases', function() {
-      describe('Buy: Edge cases', function() {
+    describe('Other Edge Cases', function() {
+      describe('Buy: Edge Cases', function() {
         beforeEach(async function () {
           this.initialBaseBalance = wei(200000000); // 200M
           await BaseToken.transfer(alice.address, this.initialBaseBalance);
@@ -533,7 +533,7 @@ describe('Bond', function () {
           ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__SlippageLimitExceeded');
         });
 
-        it('should revert if reserve token transfer fails', async function () {
+        it('should revert if alice try to sell more than approved', async function () {
           await BaseToken.connect(alice).approve(Bond.target, 0);
 
           await expect(
@@ -557,12 +557,59 @@ describe('Bond', function () {
             Bond.connect(alice).buy(this.token.target, wei(117472194), 0)
           ).not.to.be.reverted;
         });
-      });
 
-      describe('Sell: Edge cases', function() {
-        // beforeEach(async function () {
-        // TODO:
-      });
+        it('should revert if user try to buy more than the balance', async function () {
+          // transfer 90% of the balance to owner
+          await BaseToken.connect(alice).transfer(owner.address, 9n * this.initialBaseBalance / 10n);
+          const balanceLeft = await BaseToken.balanceOf(alice.address);
+
+          await expect(
+            Bond.connect(alice).buy(this.token.target, balanceLeft + 1n, 0)
+          ).to.be.revertedWith('ERC20: transfer amount exceeds balance');
+        });
+      }); // Buy: Edge Cases
+
+      describe('Sell: Edge Cases', function() {
+        beforeEach(async function () {
+          this.initialBaseBalance = wei(200000000); // 200M
+          await BaseToken.transfer(alice.address, this.initialBaseBalance);
+          await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
+          await Bond.connect(alice).buy(this.token.target, wei(10000), 0); // Buys 4945
+        });
+
+        it('should revert if the sell amount is 0', async function () {
+          await expect(
+            Bond.connect(alice).sell(this.token.target, 0, 0)
+          ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenAmount');
+        });
+
+        it('should revert if it did not approve', async function () {
+          await expect(
+            Bond.connect(alice).sell(this.token.target, 100n, 0)
+          ).to.be.revertedWith('ERC20: insufficient allowance');
+        });
+
+        it('should revert if alice try to sell more than the total supply', async function () {
+          await this.token.transfer(alice.address, await this.token.balanceOf(owner.address));
+          const amount = await this.token.balanceOf(alice);
+          const totalSupply = await this.token.totalSupply();
+          expect(amount).to.equal(totalSupply);
+
+          await this.token.connect(alice).approve(Bond.target, amount + 1n);
+          await expect(
+            Bond.connect(alice).sell(this.token.target, amount + 1n, 0)
+          ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__ExceedTotalSupply');
+        });
+
+        it('should revert if alice try to sell more than the available balance', async function () {
+          const amount = await this.token.balanceOf(alice.address);
+          await this.token.connect(alice).approve(Bond.target, amount + 1n);
+
+          await expect(
+            Bond.connect(alice).sell(this.token.target, amount + 1n, 0)
+          ).to.be.revertedWith('ERC20: burn amount exceeds balance');
+        });
+      }); // Sell: Edge Cases
 
       describe('Rounding errors', function() {
         beforeEach(async function () {
@@ -601,6 +648,6 @@ describe('Bond', function () {
           expect(await bond.reserveBalance).to.equal(this.reserveOnBond + 2n);
         });
       }); // Rounding errors
-    }); // General edge cases
+    }); // Other Edge Cases
   }); // Create token
 }); // Bond
