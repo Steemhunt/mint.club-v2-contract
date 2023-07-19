@@ -207,7 +207,8 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
     function buy(address tokenAddress, uint256 reserveAmount, uint256 minTokens) public {
         // TODO: Handle Fee-on-transfer tokens (maybe include wrong return value on transferFrom)
-        // TODO: Hnalde rebasing tokens
+        // TODO: Handle rebasing tokens
+        // TODO: reentrancy handling for ERC777
 
         (uint256 tokensToMint, uint256 creatorFee, uint256 protocolFee) = getTokensForReserve(tokenAddress, reserveAmount);
         if (tokensToMint < minTokens) revert MCV2_Bond__SlippageLimitExceeded();
@@ -263,6 +264,10 @@ contract MCV2_Bond is MCV2_FeeCollector {
     }
 
     function sell(address tokenAddress, uint256 tokensToSell, uint256 minRefund) public {
+        // TODO: Handle Fee-on-transfer tokens (maybe include wrong return value on transferFrom)
+        // TODO: Handle rebasing tokens
+        // TODO: reentrancy handling for ERC777
+
         (uint256 refundAmount, uint256 creatorFee, uint256 protocolFee) = getRefundForTokens(tokenAddress, tokensToSell);
         if (refundAmount < minRefund) revert MCV2_Bond__SlippageLimitExceeded();
 
