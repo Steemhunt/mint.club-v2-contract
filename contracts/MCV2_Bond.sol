@@ -32,7 +32,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
      *  We use "EIP-1167: Minimal Proxy Contract" in order to save gas cost for each token deployment
      *  REF: https://github.com/optionality/clone-factory
      */
-    address public tokenImplementation;
+    address public immutable tokenImplementation;
 
     struct Bond {
         address creator;
@@ -206,6 +206,9 @@ contract MCV2_Bond is MCV2_FeeCollector {
     }
 
     function buy(address tokenAddress, uint256 reserveAmount, uint256 minTokens) public {
+        // TODO: Handle Fee-on-transfer tokens (maybe include wrong return value on transferFrom)
+        // TODO: Hnalde rebasing tokens
+
         (uint256 tokensToMint, uint256 creatorFee, uint256 protocolFee) = getTokensForReserve(tokenAddress, reserveAmount);
         if (tokensToMint < minTokens) revert MCV2_Bond__SlippageLimitExceeded();
 
