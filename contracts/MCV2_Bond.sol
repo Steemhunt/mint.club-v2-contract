@@ -3,6 +3,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/proxy/Clones.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./MCV2_FeeCollector.sol";
 import "./MCV2_Token.sol";
@@ -12,13 +13,14 @@ import "./MCV2_Token.sol";
 * Providing liquidity for MintClubV2 tokens with a bonding curve.
 */
 contract MCV2_Bond is MCV2_FeeCollector {
+    using SafeERC20 for IERC20;
+
     error MCV2_Bond__InvalidTokenCreationParams();
     error MCV2_Bond__InvalidStepPrams(string reason);
     error MCV2_Bond__TokenSymbolAlreadyExists();
     error MCV2_Bond__TokenNotFound();
     error MCV2_Bond__ExceedMaxSupply();
     error MCV2_Bond__SlippageLimitExceeded();
-    error MCV2_Bond__ReserveTokenTransferFailed();
     error MCV2_Bond__InvalidTokenAmount();
     error MCV2_Bond__ExceedTotalSupply();
     error MCV2_Bond__InvalidRefundAmount();
@@ -218,7 +220,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
         // Transfer reserve tokens
         IERC20 reserveToken = IERC20(bond.reserveToken);
-        if(!reserveToken.transferFrom(buyer, address(this), reserveAmount)) revert MCV2_Bond__ReserveTokenTransferFailed();
+        reserveToken.safeTransferFrom(buyer, address(this), reserveAmount);
 
         // Update reserve & fee balances
         bond.reserveBalance += (reserveAmount - creatorFee - protocolFee);
@@ -284,7 +286,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
         // Transfer reserve tokens to the seller
         IERC20 reserveToken = IERC20(bond.reserveToken);
-        if(!reserveToken.transfer(seller, refundAmount)) revert MCV2_Bond__ReserveTokenTransferFailed();
+        reserveToken.safeTransfer(seller, refundAmount);
 
         emit Sell(tokenAddress, seller, tokensToSell, bond.reserveToken, refundAmount);
     }
