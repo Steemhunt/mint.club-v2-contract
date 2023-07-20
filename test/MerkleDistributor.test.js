@@ -28,7 +28,13 @@ describe.only('MerkleDistributor', function () {
   describe('Create distribution', function () {
     beforeEach(async function () {
       this.endTime = Math.floor(Date.now() / 1000) + 60 * 60 * 24; // 24 hours from now
-      await MerkleDistributor.connect(owner).createDistribution(Token.target, ZERO_BYTES32, this.endTime);
+      await MerkleDistributor.connect(owner).createDistribution(
+        Token.target,
+        wei(100),
+        10,
+        this.endTime,
+        ZERO_BYTES32
+      );
     });
 
     it('should create a distribution correctly', async function() {
@@ -37,6 +43,8 @@ describe.only('MerkleDistributor', function () {
       expect(distribution.merkleRoot).to.equal(ZERO_BYTES32);
       expect(distribution.endTime).to.equal(this.endTime);
       expect(distribution.owner).to.equal(owner.address);
+
+      // TODO: more checks
     });
   });
 
