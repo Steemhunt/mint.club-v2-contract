@@ -6,7 +6,7 @@ function wei(num, decimals = 18) {
   return BigInt(num) * 10n**BigInt(decimals);
 }
 
-describe.only('MerkleDistributor', function () {
+describe('MerkleDistributor', function () {
   async function deployFixtures() {
     const Token = await ethers.deployContract('TestToken', [wei(1000000)]); // supply: 1M
     await Token.waitForDeployment();
