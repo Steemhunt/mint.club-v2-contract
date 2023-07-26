@@ -11,11 +11,12 @@ contract MerkleDistributor {
     error MerkleDistributor__ClaimWindowFinished();
     error MerkleDistributor__AlreadyClaimed();
     error MerkleDistributor__InvalidProof();
-    error MerkleDistributor__EndTimeInPast();
-    error MerkleDistributor__NoWithdrawDuringClaim();
+    error MerkleDistributor__InvalidDistributionParams();
+    error MerkleDistributor__NoRefundDuringClaim();
+    error MerkleDistributor__NothingToRefund();
 
-    event Withdrawn(uint256 distributionId, uint256 amount);
-    event Claimed(uint256 distributionId, uint256 index, address account, uint256 amount);
+    event Refunded(uint256 distributionId, uint256 amount);
+    event Claimed(uint256 distributionId, address account);
 
     struct Distribution {
         address token;
@@ -27,7 +28,7 @@ contract MerkleDistributor {
         address owner; // 24 + 24 + 40 + 8 + 160 = 256 bits
         bytes32 merkleRoot; // 256 bits
 
-        mapping(uint256 => uint256) claimedBitMap;
+        mapping(address => bool) isClaimed;
     }
 
     Distribution[] public distributions;
@@ -44,8 +45,15 @@ contract MerkleDistributor {
         uint40 endTime,
         bytes32 merkleRoot
     ) external {
-        if (endTime <= block.timestamp) revert MerkleDistributor__EndTimeInPast();
+        if (token == address(0)) revert MerkleDistributor__InvalidDistributionParams();
+        if (amountPerClaim == 0) revert MerkleDistributor__InvalidDistributionParams();
+        if (whitelistCount == 0) revert MerkleDistributor__InvalidDistributionParams();
+        if (endTime <= block.timestamp) revert MerkleDistributor__InvalidDistributionParams();
 
+        // Deposit total amount of tokens to this contract
+        IERC20(token).safeTransferFrom(msg.sender, address(this), amountPerClaim * whitelistCount);
+
+        // Create a new distribution
         distributions.push();
         Distribution storage distribution = distributions[distributions.length - 1];
         distribution.token = token;
@@ -56,53 +64,54 @@ contract MerkleDistributor {
         // distribution.refunded = false;
         distribution.merkleRoot = merkleRoot;
         distribution.owner = msg.sender;
-
-        // TODO: Transfer amountPerClaim * whitelistCount tokens to the contract
     }
 
-    function isClaimed(uint256 distributionId, uint256 index) public view returns (bool) {
-        Distribution storage distribution = distributions[distributionId];
-        uint256 claimedWordIndex = index / 256;
-        uint256 claimedBitIndex = index % 256;
-        uint256 claimedWord = distribution.claimedBitMap[claimedWordIndex];
-        uint256 mask = (1 << claimedBitIndex);
-        return claimedWord & mask == mask;
-    }
-
-    function _setClaimed(uint256 distributionId, uint256 index) private {
-        Distribution storage distribution = distributions[distributionId];
-        uint256 claimedWordIndex = index / 256;
-        uint256 claimedBitIndex = index % 256;
-        distribution.claimedBitMap[claimedWordIndex] = distribution.claimedBitMap[claimedWordIndex] | (1 << claimedBitIndex);
-    }
-
-    function claim(uint256 distributionId, uint256 index, address account, uint256 amount, bytes32[] calldata merkleProof) external {
+    function claim(uint256 distributionId, bytes32[] calldata merkleProof) external {
         Distribution storage distribution = distributions[distributionId];
 
-        if (block.timestamp > distribution.endTime) revert MerkleDistributor__ClaimWindowFinished();
-        if (isClaimed(distributionId, index)) revert MerkleDistributor__AlreadyClaimed();
+        if (distribution.endTime < block.timestamp) revert MerkleDistributor__ClaimWindowFinished();
+        if (distribution.isClaimed[msg.sender]) revert MerkleDistributor__AlreadyClaimed();
 
-        // Verify the merkle proof.
-        bytes32 node = keccak256(abi.encodePacked(index, account, amount));
+        // Verify the merkle proof
+        bytes32 node = keccak256(abi.encodePacked(msg.sender));
         if (!MerkleProof.verify(merkleProof, distribution.merkleRoot, node)) revert MerkleDistributor__InvalidProof();
 
-        // Mark it claimed and send the token.
-        _setClaimed(distributionId, index);
-        IERC20(distribution.token).safeTransfer(account, amount);
+        // Mark it claimed and send the token
+        distribution.isClaimed[msg.sender] = true;
 
-        emit Claimed(distributionId, index, account, amount);
+        IERC20(distribution.token).safeTransfer(msg.sender, distribution.amountPerClaim);
+
+        emit Claimed(distributionId, msg.sender);
     }
 
-    function withdraw(uint256 distributionId) external onlyOwner(distributionId) {
+    function refund(uint256 distributionId) external onlyOwner(distributionId) {
+        Distribution storage distribution = distributions[distributionId];
+        if (block.timestamp < distribution.endTime) revert MerkleDistributor__NoRefundDuringClaim();
+
+        uint256 amountLeft = getAmountLeft(distributionId);
+        if (amountLeft == 0) revert MerkleDistributor__NothingToRefund();
+
+        distribution.refunded = true;
+        IERC20(distribution.token).safeTransfer(distribution.owner, amountLeft);
+
+        emit Refunded(distributionId, amountLeft);
+    }
+
+    // MARK: - Utility functions
+
+    function isClaimed(uint256 distributionId, address wallet) external view returns (bool) {
+        return distributions[distributionId].isClaimed[wallet];
+    }
+
+    function getAmountLeft(uint256 distributionId) public view returns (uint256) {
         Distribution storage distribution = distributions[distributionId];
 
-        if (block.timestamp < distribution.endTime) revert MerkleDistributor__NoWithdrawDuringClaim();
+        return distribution.amountPerClaim * (distribution.whitelistCount - distribution.claimedCount);
+    }
 
-        uint256 balance = IERC20(distribution.token).balanceOf(address(this));
-        require(balance > 0, "No tokens to withdraw");
+    function getAmountClaimed(uint256 distributionId) external view returns (uint256) {
+        Distribution storage distribution = distributions[distributionId];
 
-        IERC20(distribution.token).safeTransfer(distribution.owner, balance);
-
-        emit Withdrawn(distributionId, balance);
+        return distribution.amountPerClaim * distribution.claimedCount;
     }
 }
