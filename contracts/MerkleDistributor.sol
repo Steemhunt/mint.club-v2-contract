@@ -11,7 +11,7 @@ contract MerkleDistributor {
     error MerkleDistributor__ClaimWindowFinished();
     error MerkleDistributor__AlreadyClaimed();
     error MerkleDistributor__InvalidProof();
-    error MerkleDistributor__InvalidDistributionParams();
+    error MerkleDistributor__InvalidDistributionParams(string param);
     error MerkleDistributor__NoRefundDuringClaim();
     error MerkleDistributor__NothingToRefund();
 
@@ -45,10 +45,10 @@ contract MerkleDistributor {
         uint40 endTime,
         bytes32 merkleRoot
     ) external {
-        if (token == address(0)) revert MerkleDistributor__InvalidDistributionParams();
-        if (amountPerClaim == 0) revert MerkleDistributor__InvalidDistributionParams();
-        if (whitelistCount == 0) revert MerkleDistributor__InvalidDistributionParams();
-        if (endTime <= block.timestamp) revert MerkleDistributor__InvalidDistributionParams();
+        if (token == address(0)) revert MerkleDistributor__InvalidDistributionParams('token');
+        if (amountPerClaim == 0) revert MerkleDistributor__InvalidDistributionParams('amountPerClaim');
+        if (whitelistCount == 0) revert MerkleDistributor__InvalidDistributionParams('whitelistCount');
+        if (endTime <= block.timestamp) revert MerkleDistributor__InvalidDistributionParams('endTime');
 
         // Deposit total amount of tokens to this contract
         IERC20(token).safeTransferFrom(msg.sender, address(this), amountPerClaim * whitelistCount);
