@@ -73,8 +73,11 @@ contract MerkleDistributor {
         if (distribution.isClaimed[msg.sender]) revert MerkleDistributor__AlreadyClaimed();
 
         // Verify the merkle proof
-        bytes32 node = keccak256(abi.encodePacked(msg.sender));
-        if (!MerkleProof.verify(merkleProof, distribution.merkleRoot, node)) revert MerkleDistributor__InvalidProof();
+        if (!MerkleProof.verify(
+            merkleProof,
+            distribution.merkleRoot,
+            keccak256(abi.encodePacked(msg.sender))
+        )) revert MerkleDistributor__InvalidProof();
 
         // Mark it claimed and send the token
         distribution.isClaimed[msg.sender] = true;
@@ -98,6 +101,14 @@ contract MerkleDistributor {
     }
 
     // MARK: - Utility functions
+
+    function isWhitelisted(uint256 distributionId, address wallet, bytes32[] calldata merkleProof) external view returns (bool) {
+        return MerkleProof.verify(
+            merkleProof,
+            distributions[distributionId].merkleRoot,
+            keccak256(abi.encodePacked(wallet))
+        );
+    }
 
     function isClaimed(uint256 distributionId, address wallet) external view returns (bool) {
         return distributions[distributionId].isClaimed[wallet];

@@ -1,6 +1,8 @@
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { time } = require('@nomicfoundation/hardhat-network-helpers');
 const { expect } = require('chai');
+const keccak256 = require('keccak256');
+const MerkleTree = require('merkletreejs');
 
 const NULL_ADDRESS = '0x0000000000000000000000000000000000000000';
 const ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
@@ -15,7 +17,7 @@ function wei(num, decimals = 18) {
   return BigInt(num) * 10n**BigInt(decimals);
 }
 
-describe.only('MerkleDistributor', function () {
+describe('MerkleDistributor', function () {
   async function deployFixtures() {
     const Token = await ethers.deployContract('TestToken', [ORIGINAL_BALANCE]); // supply: 1M
     await Token.waitForDeployment();
@@ -27,11 +29,13 @@ describe.only('MerkleDistributor', function () {
   }
 
   let Token, MerkleDistributor;
-  let owner, alice;
+  let owner, alice, bob, carol, david;
+  let defaultWhiltelist;
 
   beforeEach(async function () {
     [Token, MerkleDistributor] = await loadFixture(deployFixtures);
-    [owner, alice] = await ethers.getSigners();
+    [owner, alice, bob, carol, david] = await ethers.getSigners();
+    defaultWhiltelist = [alice, bob, carol];
   });
 
   describe('Create distribution', function () {
@@ -95,6 +99,15 @@ describe.only('MerkleDistributor', function () {
       it('should deduct the total airdrop amount from the owner', async function() {
         expect(await Token.balanceOf(owner.address)).to.equal(ORIGINAL_BALANCE - this.totalAirdropAmount);
       });
+
+      it('should revert on anyone to claim it because merkle root is null', async function() {
+        // TODO: Generate merkle proof for the second params
+        await expect(MerkleDistributor.connect(alice).claim(0, [])).
+          to.be.revertedWithCustomError(
+            MerkleDistributor,
+            'MerkleDistributor__InvalidProof'
+          );
+      });
     }); // Normal cases
 
     describe('Edge cases', function () {
@@ -147,5 +160,25 @@ describe.only('MerkleDistributor', function () {
     }); // Edge cases
   }); // Create distribution
 
-  // TODO: add more tests for claiming, withdrawing, etc.
+  describe.only('Set merkle root', function () {
+    beforeEach(async function () {
+      const leaves = defaultWhiltelist.map((x) => keccak256(x));
+      const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
+      console.log(tree.getRoot(), tree.toString());
+
+      await MerkleDistributor.connect(owner).createDistribution(
+        Token.target,
+        TEST_DATA.amountPerClaim,
+        TEST_DATA.whitelistCount,
+        TEST_DATA.endTime,
+        tree.getRoot()
+      );
+      this.distribution = await MerkleDistributor.distributions(0);
+    });
+
+    it('should set merkle root correctly', async function() {
+    });
+  }); // Set merkle root
+
+  // TODO: refund
 });
