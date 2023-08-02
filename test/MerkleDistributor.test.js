@@ -2,7 +2,7 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { time } = require('@nomicfoundation/hardhat-network-helpers');
 const { expect } = require('chai');
 const keccak256 = require('keccak256');
-const MerkleTree = require('merkletreejs');
+const { MerkleTree } = require('merkletreejs');
 
 const NULL_ADDRESS = '0x0000000000000000000000000000000000000000';
 const ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
@@ -15,6 +15,10 @@ const TEST_DATA = {
 
 function wei(num, decimals = 18) {
   return BigInt(num) * 10n**BigInt(decimals);
+}
+
+function bufferToHex(x) {
+  return `0x${x.toString("hex")}`;
 }
 
 describe('MerkleDistributor', function () {
@@ -35,7 +39,7 @@ describe('MerkleDistributor', function () {
   beforeEach(async function () {
     [Token, MerkleDistributor] = await loadFixture(deployFixtures);
     [owner, alice, bob, carol, david] = await ethers.getSigners();
-    defaultWhiltelist = [alice, bob, carol];
+    defaultWhiltelist = [alice.address, bob.address, carol.address];
   });
 
   describe('Create distribution', function () {
@@ -163,20 +167,42 @@ describe('MerkleDistributor', function () {
   describe.only('Set merkle root', function () {
     beforeEach(async function () {
       const leaves = defaultWhiltelist.map((x) => keccak256(x));
-      const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
-      console.log(tree.getRoot(), tree.toString());
+      this.tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
 
-      await MerkleDistributor.connect(owner).createDistribution(
+      await Token.approve(MerkleDistributor.target, TEST_DATA.amountPerClaim * 3n);
+      await MerkleDistributor.createDistribution(
         Token.target,
-        TEST_DATA.amountPerClaim,
-        TEST_DATA.whitelistCount,
+        TEST_DATA.amountPerClaim, // wei(100)
+        3n,
         TEST_DATA.endTime,
-        tree.getRoot()
+        bufferToHex(this.tree.getRoot())
       );
       this.distribution = await MerkleDistributor.distributions(0);
     });
 
     it('should set merkle root correctly', async function() {
+      expect(this.distribution.merkleRoot).to.equal(bufferToHex(this.tree.getRoot()));
+    });
+
+    it('should have alice in the whitelist', async function() {
+      const proof = this.tree.getProof(keccak256(alice.address)).map((x) => bufferToHex(x.data));
+      expect(await MerkleDistributor.isWhitelisted(0, alice.address, proof)).to.equal(true);
+    });
+
+    it('should have bob in the whitelist', async function() {
+      const proof = this.tree.getProof(keccak256(bob.address)).map((x) => bufferToHex(x.data));
+      expect(await MerkleDistributor.isWhitelisted(0, bob.address, proof)).to.equal(true);
+    });
+
+    it('should have carol in the whitelist', async function() {
+      const proof = this.tree.getProof(keccak256(carol.address)).map((x) => bufferToHex(x.data));
+      expect(await MerkleDistributor.isWhitelisted(0, carol.address, proof)).to.equal(true);
+    });
+
+    it('should NOT have david in the whitelist', async function() {
+      const proof = this.tree.getProof(keccak256(david.address)).map((x) => bufferToHex(x.data));
+
+      expect(await MerkleDistributor.isWhitelisted(0, david.address, proof)).to.equal(false);
     });
   }); // Set merkle root
 
