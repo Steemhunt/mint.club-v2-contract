@@ -84,6 +84,7 @@ contract MerkleDistributor {
 
         // Mark it claimed and send the token
         distribution.isClaimed[msg.sender] = true;
+        distribution.claimedCount += 1;
 
         IERC20(distribution.token).safeTransfer(msg.sender, distribution.amountPerClaim);
 
