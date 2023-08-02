@@ -176,7 +176,7 @@ describe('Bond', function () {
               Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [] })
             )
           )
-        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepPrams')
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepParams')
         .withArgs('INVALID_LENGTH');
       });
 
@@ -187,7 +187,7 @@ describe('Bond', function () {
               Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [...Array(1002).keys()].splice(1) })
             )
           )
-        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepPrams')
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepParams')
         .withArgs('INVALID_LENGTH');
       });
 
@@ -198,7 +198,7 @@ describe('Bond', function () {
               Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [100, 200], stepPrices: [1] })
             )
           )
-        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepPrams')
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepParams')
         .withArgs('LENGTH_DO_NOT_MATCH');
       });
 
@@ -209,7 +209,7 @@ describe('Bond', function () {
               Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [100, 200], stepPrices: [1, 2] })
             )
           )
-        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepPrams')
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepParams')
         .withArgs('MAX_SUPPLY_MISMATCH');
       });
 
@@ -220,7 +220,7 @@ describe('Bond', function () {
               Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [0, BABY_TOKEN.maxSupply], stepPrices: [1, 2] })
             )
           )
-        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepPrams')
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepParams')
         .withArgs('CANNOT_BE_ZERO');
       });
 
@@ -231,7 +231,7 @@ describe('Bond', function () {
               Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [2, 1, BABY_TOKEN.maxSupply], stepPrices: [1, 2, 3] })
             )
           )
-        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepPrams')
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepParams')
         .withArgs('DECREASING_RANGE');
       });
 
@@ -242,7 +242,7 @@ describe('Bond', function () {
               Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [1, 2, BABY_TOKEN.maxSupply], stepPrices: [1, 3, 2] })
             )
           )
-        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepPrams')
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepParams')
         .withArgs('DECREASING_PRICE');
       });
 

@@ -27,6 +27,7 @@ contract MerkleDistributor {
         bool refunded;
         address owner; // 24 + 24 + 40 + 8 + 160 = 256 bits
         bytes32 merkleRoot; // 256 bits
+        string title;
 
         mapping(address => bool) isClaimed;
     }
@@ -43,7 +44,8 @@ contract MerkleDistributor {
         uint96 amountPerClaim,
         uint24 whitelistCount,
         uint40 endTime,
-        bytes32 merkleRoot
+        bytes32 merkleRoot,
+        string calldata title
     ) external {
         if (token == address(0)) revert MerkleDistributor__InvalidDistributionParams('token');
         if (amountPerClaim == 0) revert MerkleDistributor__InvalidDistributionParams('amountPerClaim');
@@ -63,6 +65,7 @@ contract MerkleDistributor {
         distribution.endTime = endTime;
         // distribution.refunded = false;
         distribution.merkleRoot = merkleRoot;
+        distribution.title = title;
         distribution.owner = msg.sender;
     }
 

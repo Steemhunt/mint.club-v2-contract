@@ -8,6 +8,7 @@ const NULL_ADDRESS = '0x0000000000000000000000000000000000000000';
 const ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const ORIGINAL_BALANCE = wei(1000000);
 const TEST_DATA = {
+  title: 'Test Airdrop',
   amountPerClaim: wei(100),
   whitelistCount: 10n,
   endTime: Math.floor(Date.now() / 1000) + 60 * 60 * 24 // 24 hours from now
@@ -50,14 +51,19 @@ describe('MerkleDistributor', function () {
 
     describe('Normal cases', function () {
       beforeEach(async function () {
-        await MerkleDistributor.connect(owner).createDistribution(
+        await MerkleDistributor.createDistribution(
           Token.target,
           TEST_DATA.amountPerClaim,
           TEST_DATA.whitelistCount,
           TEST_DATA.endTime,
-          ZERO_BYTES32
+          ZERO_BYTES32,
+          TEST_DATA.title
         );
         this.distribution = await MerkleDistributor.distributions(0);
+      });
+
+      it('should set properties correctly - title', async function() {
+        expect(this.distribution.title).to.equal(TEST_DATA.title);
       });
 
       it('should set properties correctly - token', async function() {
@@ -121,7 +127,8 @@ describe('MerkleDistributor', function () {
           TEST_DATA.amountPerClaim,
           TEST_DATA.whitelistCount,
           TEST_DATA.endTime,
-          ZERO_BYTES32
+          ZERO_BYTES32,
+          TEST_DATA.title
         ];
       });
 
@@ -164,7 +171,7 @@ describe('MerkleDistributor', function () {
     }); // Edge cases
   }); // Create distribution
 
-  describe.only('Set merkle root', function () {
+  describe('Set merkle root', function () {
     beforeEach(async function () {
       const leaves = defaultWhiltelist.map((x) => keccak256(x));
       this.tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
@@ -175,7 +182,8 @@ describe('MerkleDistributor', function () {
         TEST_DATA.amountPerClaim, // wei(100)
         3n,
         TEST_DATA.endTime,
-        bufferToHex(this.tree.getRoot())
+        bufferToHex(this.tree.getRoot()),
+        TEST_DATA.title
       );
       this.distribution = await MerkleDistributor.distributions(0);
     });
@@ -201,7 +209,6 @@ describe('MerkleDistributor', function () {
 
     it('should NOT have david in the whitelist', async function() {
       const proof = this.tree.getProof(keccak256(david.address)).map((x) => bufferToHex(x.data));
-
       expect(await MerkleDistributor.isWhitelisted(0, david.address, proof)).to.equal(false);
     });
   }); // Set merkle root
