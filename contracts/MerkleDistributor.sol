@@ -8,10 +8,11 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 contract MerkleDistributor {
     using SafeERC20 for IERC20;
 
+    error MerkleDistributor__PermissionDenied();
     error MerkleDistributor__ClaimWindowFinished();
     error MerkleDistributor__AlreadyClaimed();
     error MerkleDistributor__InvalidProof();
-    error MerkleDistributor__InvalidDistributionParams(string param);
+    error MerkleDistributor__InvalidParams(string param);
     error MerkleDistributor__NoRefundDuringClaim();
     error MerkleDistributor__NothingToRefund();
 
@@ -35,7 +36,7 @@ contract MerkleDistributor {
     Distribution[] public distributions;
 
     modifier onlyOwner(uint256 distributionId) {
-        require(msg.sender == distributions[distributionId].owner, "Not the owner");
+        if (msg.sender != distributions[distributionId].owner) revert MerkleDistributor__PermissionDenied();
         _;
     }
 
@@ -47,10 +48,10 @@ contract MerkleDistributor {
         bytes32 merkleRoot,
         string calldata title
     ) external {
-        if (token == address(0)) revert MerkleDistributor__InvalidDistributionParams('token');
-        if (amountPerClaim == 0) revert MerkleDistributor__InvalidDistributionParams('amountPerClaim');
-        if (whitelistCount == 0) revert MerkleDistributor__InvalidDistributionParams('whitelistCount');
-        if (endTime <= block.timestamp) revert MerkleDistributor__InvalidDistributionParams('endTime');
+        if (token == address(0)) revert MerkleDistributor__InvalidParams('token');
+        if (amountPerClaim == 0) revert MerkleDistributor__InvalidParams('amountPerClaim');
+        if (whitelistCount == 0) revert MerkleDistributor__InvalidParams('whitelistCount');
+        if (endTime <= block.timestamp) revert MerkleDistributor__InvalidParams('endTime');
 
         // Deposit total amount of tokens to this contract
         IERC20(token).safeTransferFrom(msg.sender, address(this), amountPerClaim * whitelistCount);

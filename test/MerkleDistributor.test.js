@@ -142,7 +142,7 @@ describe('MerkleDistributor', function () {
         await expect(MerkleDistributor.createDistribution(...this.testParams)).
           to.be.revertedWithCustomError(
             MerkleDistributor,
-            'MerkleDistributor__InvalidDistributionParams'
+            'MerkleDistributor__InvalidParams'
           ).withArgs('token');
       });
 
@@ -151,7 +151,7 @@ describe('MerkleDistributor', function () {
         await expect(MerkleDistributor.createDistribution(...this.testParams)).
           to.be.revertedWithCustomError(
             MerkleDistributor,
-            'MerkleDistributor__InvalidDistributionParams'
+            'MerkleDistributor__InvalidParams'
           ).withArgs('amountPerClaim');
       });
 
@@ -160,7 +160,7 @@ describe('MerkleDistributor', function () {
         await expect(MerkleDistributor.createDistribution(...this.testParams)).
           to.be.revertedWithCustomError(
             MerkleDistributor,
-            'MerkleDistributor__InvalidDistributionParams'
+            'MerkleDistributor__InvalidParams'
           ).withArgs('whitelistCount');
       });
 
@@ -169,7 +169,7 @@ describe('MerkleDistributor', function () {
         await expect(MerkleDistributor.createDistribution(...this.testParams)).
           to.be.revertedWithCustomError(
             MerkleDistributor,
-            'MerkleDistributor__InvalidDistributionParams'
+            'MerkleDistributor__InvalidParams'
           ).withArgs('endTime');
       });
     }); // Edge cases
@@ -256,6 +256,14 @@ describe('MerkleDistributor', function () {
     }); // Claim
 
     describe('Refund', function () {
+      it('should revert if not the owner', async function() {
+        await expect(MerkleDistributor.connect(carol).refund(0)).
+          to.be.revertedWithCustomError(
+            MerkleDistributor,
+            'MerkleDistributor__PermissionDenied'
+          );
+      });
+
       it('should not able to refund if not ended', async function() {
         await expect(MerkleDistributor.refund(0)).
           to.be.revertedWithCustomError(
