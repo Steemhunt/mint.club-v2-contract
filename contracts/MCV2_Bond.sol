@@ -5,6 +5,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./MCV2_FeeCollector.sol";
 import "./MCV2_Token.sol";
 
@@ -14,6 +15,7 @@ import "./MCV2_Token.sol";
 */
 contract MCV2_Bond is MCV2_FeeCollector {
     using SafeERC20 for IERC20;
+    using SafeCast for uint256;
 
     error MCV2_Bond__InvalidTokenCreationParams();
     error MCV2_Bond__InvalidStepParams(string reason);
@@ -40,8 +42,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
         address creator;
         address reserveToken;
         uint128 maxSupply;
-        uint8 creatorFeeRate; // 56bit left
-        uint256 reserveBalance;
+        uint128 reserveBalance;
         BondStep[] steps;
     }
 
@@ -63,8 +64,9 @@ contract MCV2_Bond is MCV2_FeeCollector {
     constructor(
         address tokenImplementation_,
         address protocolBeneficiary_,
-        uint256 protocolFee_
-    ) MCV2_FeeCollector(protocolBeneficiary_, protocolFee_) {
+        uint256 protocolFee_,
+        uint256 creatorFee_
+    ) MCV2_FeeCollector(protocolBeneficiary_, protocolFee_, creatorFee_) {
         tokenImplementation = tokenImplementation_;
     }
 
@@ -75,13 +77,11 @@ contract MCV2_Bond is MCV2_FeeCollector {
         string memory symbol,
         address reserveToken,
         uint128 maxSupply,
-        uint8 creatorFeeRate,
         uint128[] calldata stepRanges,
         uint128[] calldata stepPrices
     ) external returns (address) {
         if (reserveToken == address(0)) revert MCV2_Bond__InvalidTokenCreationParams();
         if (maxSupply == 0) revert MCV2_Bond__InvalidTokenCreationParams();
-        if (creatorFeeRate > FEE_MAX) revert MCV2_Bond__InvalidTokenCreationParams();
         if (stepRanges.length == 0 || stepRanges.length > MAX_STEPS) revert MCV2_Bond__InvalidStepParams('INVALID_LENGTH');
         if (stepRanges.length != stepPrices.length) revert MCV2_Bond__InvalidStepParams('LENGTH_DO_NOT_MATCH');
 
@@ -106,7 +106,6 @@ contract MCV2_Bond is MCV2_FeeCollector {
         bond.creator = _msgSender();
         bond.reserveToken = reserveToken;
         bond.maxSupply = maxSupply;
-        bond.creatorFeeRate = creatorFeeRate;
 
         // Last value or the rangeTo must be the same as the maxSupply
         if (stepRanges[stepRanges.length - 1] != maxSupply) revert MCV2_Bond__InvalidStepParams('MAX_SUPPLY_MISMATCH');
@@ -185,7 +184,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
         uint256 currentStep = getCurrentStep(tokenAddress, currentSupply);
 
         uint256 newSupply = currentSupply;
-        (creatorFee, protocolFee) = getFees(reserveAmount, bond.creatorFeeRate);
+        (creatorFee, protocolFee) = getFees(reserveAmount);
 
         uint256 buyAmount = reserveAmount - creatorFee - protocolFee;
         for (uint256 i = currentStep; i < bond.steps.length; i++) {
@@ -223,7 +222,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
         reserveToken.safeTransferFrom(buyer, address(this), reserveAmount);
 
         // Update reserve & fee balances
-        bond.reserveBalance += (reserveAmount - creatorFee - protocolFee);
+        bond.reserveBalance += (reserveAmount - creatorFee - protocolFee).toUint128();
         addFee(tokenAddress, bond.creator, creatorFee);
         addFee(tokenAddress, protocolBeneficiary, protocolFee);
 
@@ -261,7 +260,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
         assert(tokensLeft == 0); // Cannot be greater than 0 because of the InvalidTokenAmount check above
 
-        (creatorFee, protocolFee) = getFees(reserveFromBond, bond.creatorFeeRate);
+        (creatorFee, protocolFee) = getFees(reserveFromBond);
         refundAmount = reserveFromBond - creatorFee - protocolFee;
     }
 
@@ -280,7 +279,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
         MCV2_Token(tokenAddress).burnByBond(seller, tokensToSell);
 
         // Update reserve & fee balances
-        bond.reserveBalance -= (refundAmount + creatorFee + protocolFee);
+        bond.reserveBalance -= (refundAmount + creatorFee + protocolFee).toUint128();
         addFee(tokenAddress, bond.creator, creatorFee);
         addFee(tokenAddress, protocolBeneficiary, protocolFee);
 

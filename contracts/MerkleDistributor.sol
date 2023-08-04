@@ -21,7 +21,7 @@ contract MerkleDistributor {
 
     struct Distribution {
         address token;
-        uint96 amountPerClaim; // 160 + 96 = 256 bits
+        uint96 amountPerClaim; // (supports ~ 79B) 160 + 96 = 256 bits
         uint24 whitelistCount;
         uint24 claimedCount;
         uint40 endTime; // supports up to year 36,825

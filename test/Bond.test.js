@@ -6,12 +6,12 @@ const web3 = require('web3');
 const MAX_INT_256 = 2n**256n - 1n;
 const BENEFICIARY = '0x00000B655d573662B9921e14eDA96DBC9311fDe6'; // a random address for testing
 const PROTOCOL_FEE = 10n; // 0.1%
+const CREATOR_FEE = 100n; // 1.0%
 const BABY_TOKEN = {
   name: 'Baby Token',
   symbol: 'BABY',
   reserveToken: null, // Should be set later
   maxSupply: wei(10000000), // supply: 10M
-  creatorFeeRate: 100n, // creator fee: 1.0%
   stepRanges: [wei(10000), wei(100000), wei(200000), wei(500000), wei(1000000), wei(2000000), wei(5000000), wei(10000000) ],
   stepPrices: [wei(0), wei(2), wei(3), wei(4), wei(5), wei(7), wei(10), wei(15) ]
 };
@@ -29,7 +29,7 @@ function wei(num, decimals = 18) {
 }
 
 function calculatePurchase(reserveToPurchase, stepPrice) {
-  const creatorFee = reserveToPurchase * BABY_TOKEN.creatorFeeRate / 10000n;
+  const creatorFee = reserveToPurchase * CREATOR_FEE / 10000n;
   const protocolFee = reserveToPurchase * PROTOCOL_FEE / 10000n;
   const reserveOnBond = reserveToPurchase - creatorFee - protocolFee;
   const tokensToMint = 10n**18n * reserveOnBond / stepPrice;
@@ -39,7 +39,7 @@ function calculatePurchase(reserveToPurchase, stepPrice) {
 
 function calculateSell(tokensToSell, stepPrice) {
   const reserveFromBond = tokensToSell * stepPrice / 10n**18n;
-  const creatorFee = reserveFromBond * BABY_TOKEN.creatorFeeRate / 10000n;
+  const creatorFee = reserveFromBond * CREATOR_FEE / 10000n;
   const protocolFee = reserveFromBond * PROTOCOL_FEE / 10000n;
   const reserveToRefund = reserveFromBond - creatorFee - protocolFee; // after fee -
 
@@ -47,7 +47,7 @@ function calculateSell(tokensToSell, stepPrice) {
 }
 
 function calculateFees(reserveAmount) {
-  const creatorFee = reserveAmount * BABY_TOKEN.creatorFeeRate / 10000n;
+  const creatorFee = reserveAmount * CREATOR_FEE / 10000n;
   const protocolFee = reserveAmount * PROTOCOL_FEE / 10000n;
 
   return { creatorFee, protocolFee, totalFee: creatorFee + protocolFee };
@@ -58,7 +58,7 @@ describe('Bond', function () {
     const TokenImplementation = await ethers.deployContract('MCV2_Token');
     await TokenImplementation.waitForDeployment();
 
-    const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, BENEFICIARY, PROTOCOL_FEE]);
+    const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, BENEFICIARY, PROTOCOL_FEE, CREATOR_FEE]);
     await Bond.waitForDeployment();
 
     const BaseToken = await ethers.deployContract('TestToken', [wei(200000000)]); // supply: 200M
@@ -121,7 +121,6 @@ describe('Bond', function () {
       expect(this.bond.creator).to.equal(owner.address);
       expect(this.bond.reserveToken).to.equal(BABY_TOKEN.reserveToken);
       expect(this.bond.maxSupply).to.equal(BABY_TOKEN.maxSupply);
-      expect(this.bond.creatorFeeRate).to.equal(BABY_TOKEN.creatorFeeRate);
     });
 
     it('should set correct bond steps', async function() {
@@ -154,16 +153,6 @@ describe('Bond', function () {
           Bond.createToken(
             ...Object.values(
               Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', maxSupply: 0 })
-            )
-          )
-        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenCreationParams');
-      });
-
-      it('should check if creator fee rate is valid', async function () {
-        await expect(
-          Bond.createToken(
-            ...Object.values(
-              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', creatorFeeRate: 101 })
             )
           )
         ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenCreationParams');
@@ -345,7 +334,7 @@ describe('Bond', function () {
           // stepPrices: [wei(0), wei(2), wei(3), wei(4), wei(5), wei(7), wei(10), wei(15) ],
           // -> Reserve required: [0, wei(180K), wei(480K), wei(1680K)... ]
           this.sum = {
-            creatorFee: this.initialBaseBalance * BABY_TOKEN.creatorFeeRate / 10000n,
+            creatorFee: this.initialBaseBalance * CREATOR_FEE / 10000n,
             protocolFee: this.initialBaseBalance * PROTOCOL_FEE / 10000n,
           }
           this.sum.reserveOnBond = this.initialBaseBalance - this.sum.creatorFee - this.sum.protocolFee; // 989,000
@@ -422,8 +411,8 @@ describe('Bond', function () {
 
           it('should add claimable balance to the creator', async function () {
             expect(await Bond.userTokenFeeBalance(owner.address, this.token.target)).to.equal(
-              this.initialBaseBalance * BABY_TOKEN.creatorFeeRate / 10000n + // buy
-              this.initial.bondReserve * BABY_TOKEN.creatorFeeRate / 10000n // sell
+              this.initialBaseBalance * CREATOR_FEE / 10000n + // buy
+              this.initial.bondReserve * CREATOR_FEE / 10000n // sell
             );
           });
 
@@ -436,8 +425,8 @@ describe('Bond', function () {
 
           it('should leave claimable fee balance on the bond', async function () {
             expect(await BaseToken.balanceOf(Bond.target)).to.equal(
-              this.initialBaseBalance * (BABY_TOKEN.creatorFeeRate + PROTOCOL_FEE) / 10000n + // buy
-              this.initial.bondReserve * (BABY_TOKEN.creatorFeeRate + PROTOCOL_FEE) / 10000n // sell
+              this.initialBaseBalance * (CREATOR_FEE + PROTOCOL_FEE) / 10000n + // buy
+              this.initial.bondReserve * (CREATOR_FEE + PROTOCOL_FEE) / 10000n // sell
             );
           });
         });
