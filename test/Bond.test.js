@@ -68,11 +68,11 @@ describe('Bond', function () {
   }
 
   let TokenImplementation, Bond, BaseToken;
-  let owner, alice;
+  let owner, alice, bob;
 
   beforeEach(async function () {
     [TokenImplementation, Bond, BaseToken] = await loadFixture(deployFixtures);
-    [owner, alice] = await ethers.getSigners();
+    [owner, alice, bob] = await ethers.getSigners();
     BABY_TOKEN.reserveToken = BaseToken.target; // set BaseToken address
   });
 
@@ -639,4 +639,37 @@ describe('Bond', function () {
       }); // Rounding errors
     }); // Other Edge Cases
   }); // Create token
+
+  describe('Utility functions', function () {
+    beforeEach(async function () {
+      this.BaseToken2 = await ethers.deployContract('TestToken', [wei(200000000)]);
+      await this.BaseToken2.waitForDeployment();
+      const BABY_TOKEN2 = Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', reserveToken: this.BaseToken2.target });
+      const BABY_TOKEN3 = Object.assign({}, BABY_TOKEN, { symbol: 'BABY3', reserveToken: this.BaseToken2.target });
+
+      await Bond.connect(alice).createToken(...Object.values(BABY_TOKEN));
+      await Bond.connect(alice).createToken(...Object.values(BABY_TOKEN2));
+      await Bond.connect(bob).createToken(...Object.values(BABY_TOKEN3));
+    });
+
+    it('should return [0] for ReserveToken = BaseToken', async function () {
+      const ids = await Bond.getTokenIdsByReserveToken(BaseToken.target);
+      expect(ids).to.deep.equal([0]);
+    });
+
+    it('should return [1, 2] for ReserveToken = BaseToken2', async function () {
+      const ids = await Bond.getTokenIdsByReserveToken(this.BaseToken2.target);
+      expect(ids).to.deep.equal([1, 2]);
+    });
+
+    it('should return [0, 1] for creator = alice', async function () {
+      const ids = await Bond.getTokenIdsByCreator(alice.address);
+      expect(ids).to.deep.equal([0, 1]);
+    });
+
+    it('should return [2] for creator = bob', async function () {
+      const ids = await Bond.getTokenIdsByCreator(bob.address);
+      expect(ids).to.deep.equal([2]);
+    });
+  }); // Utility functions
 }); // Bond

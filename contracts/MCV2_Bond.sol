@@ -52,10 +52,8 @@ contract MCV2_Bond is MCV2_FeeCollector {
         uint128 price; // multiplied by 10**18 for decimals
     }
 
-    // Token => Bond
-    mapping (address => Bond) public tokenBond;
-    // Array of all created tokens
-    address[] public tokens;
+    mapping (address => Bond) public tokenBond; // Token => Bond
+    address[] public tokens; // Array of all created tokens
 
     event TokenCreated(address indexed tokenAddress, string name, string symbol);
     event Buy(address indexed tokenAddress, address indexed buyer, uint256 amountMinted, address indexed reserveToken, uint256 reserveAmount);
@@ -68,6 +66,11 @@ contract MCV2_Bond is MCV2_FeeCollector {
         uint256 creatorFee_
     ) MCV2_FeeCollector(protocolBeneficiary_, protocolFee_, creatorFee_) {
         tokenImplementation = tokenImplementation_;
+    }
+
+    modifier _checkBondExists(address tokenAddress) {
+        if(tokenBond[tokenAddress].maxSupply == 0) revert MCV2_Bond__TokenNotFound();
+        _;
     }
 
     // MARK: - Factory
@@ -90,7 +93,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
         // NOTE: This check might not be necessary as the clone would fail with an 'ERC1167: create2 failed'
         // error anyway, and the collision is nearly impossible (one in 2^160).
-        // However, we retain this check to provide a clearer error message, albeit at the expense of an additional 811 gas cost.
+        // However, we retain this check to provide a clearer error message, albeit at the expense of an additional gas cost.
         { // avoids stack too deep errors
             address predicted = Clones.predictDeterministicAddress(tokenImplementation, salt);
             if (tokenBond[predicted].maxSupply > 0) revert MCV2_Bond__TokenSymbolAlreadyExists();
@@ -110,7 +113,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
         // Last value or the rangeTo must be the same as the maxSupply
         if (stepRanges[stepRanges.length - 1] != maxSupply) revert MCV2_Bond__InvalidStepParams('MAX_SUPPLY_MISMATCH');
 
-        for (uint256 i = 0; i < stepRanges.length; i++) {
+        for (uint256 i = 0; i < stepRanges.length; ++i) {
             if (stepRanges[i] == 0) revert MCV2_Bond__InvalidStepParams('CANNOT_BE_ZERO');
 
             // Ranges and prices must be strictly increasing
@@ -135,28 +138,9 @@ contract MCV2_Bond is MCV2_FeeCollector {
         return tokenAddress;
     }
 
-    function tokenCount() external view returns (uint256) {
-        return tokens.length;
-    }
-
-    function exists(address tokenAddress) external view returns (bool) {
-        return tokenBond[tokenAddress].maxSupply > 0;
-    }
-
-    function getSteps(address tokenAddress) external view returns (BondStep[] memory) {
-        return tokenBond[tokenAddress].steps;
-    }
-
-    // MARK: - Utility functions for Bonding Curve
-
-    modifier _checkBondExists(address tokenAddress) {
-        if(tokenBond[tokenAddress].maxSupply == 0) revert MCV2_Bond__TokenNotFound();
-        _;
-    }
-
     function getCurrentStep(address tokenAddress, uint256 currentSupply) internal view returns (uint256) {
         Bond storage bond = tokenBond[tokenAddress];
-        for(uint256 i = 0; i < bond.steps.length; i++) {
+        for(uint256 i = 0; i < bond.steps.length; ++i) {
             if (currentSupply <= bond.steps[i].rangeTo) {
                 return i;
             }
@@ -164,15 +148,8 @@ contract MCV2_Bond is MCV2_FeeCollector {
         revert MCV2_Bond__InvalidCurrentSupply();
     }
 
-    function currentPrice(address tokenAddress) external view _checkBondExists(tokenAddress) returns (uint256) {
-        uint256 i = getCurrentStep(tokenAddress, MCV2_Token(tokenAddress).totalSupply());
-
-        return tokenBond[tokenAddress].steps[i].price;
-    }
-
     // MARK: - Buy
 
-    // Returns token amount to be minted with given reserve amount
     function getTokensForReserve(address tokenAddress, uint256 reserveAmount) public view _checkBondExists(tokenAddress)
         returns (uint256 tokensToMint, uint256 creatorFee, uint256 protocolFee)
     {
@@ -187,7 +164,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
         (creatorFee, protocolFee) = getFees(reserveAmount);
 
         uint256 buyAmount = reserveAmount - creatorFee - protocolFee;
-        for (uint256 i = currentStep; i < bond.steps.length; i++) {
+        for (uint256 i = currentStep; i < bond.steps.length; ++i) {
             uint256 supplyLeft = bond.steps[i].rangeTo - newSupply;
             uint256 reserveRequired = supplyLeft * bond.steps[i].price / 1e18;
 
@@ -234,7 +211,6 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
     // MARK: - Sell
 
-    // Returns reserve amount to refund with given token amount
     function getRefundForTokens(address tokenAddress, uint256 tokensToSell) public view _checkBondExists(tokenAddress)
         returns (uint256 refundAmount, uint256 creatorFee, uint256 protocolFee)
     {
@@ -288,5 +264,63 @@ contract MCV2_Bond is MCV2_FeeCollector {
         reserveToken.safeTransfer(seller, refundAmount);
 
         emit Sell(tokenAddress, seller, tokensToSell, bond.reserveToken, refundAmount);
+    }
+
+    // MARK: - Utility functions
+
+    function tokenCount() external view returns (uint256) {
+        return tokens.length;
+    }
+
+    function exists(address tokenAddress) external view returns (bool) {
+        return tokenBond[tokenAddress].maxSupply > 0;
+    }
+
+    function getSteps(address tokenAddress) external view returns (BondStep[] memory) {
+        return tokenBond[tokenAddress].steps;
+    }
+
+    function currentPrice(address tokenAddress) external view _checkBondExists(tokenAddress) returns (uint256) {
+        uint256 i = getCurrentStep(tokenAddress, MCV2_Token(tokenAddress).totalSupply());
+
+        return tokenBond[tokenAddress].steps[i].price;
+    }
+
+    function getTokenIdsByReserveToken(address reserveToken) external view returns (uint256[] memory ids) {
+        unchecked {
+            uint256 count = 0;
+            uint256 tokenLength = tokens.length;
+            for (uint256 i = 0; i < tokenLength; ++i) {
+                if (tokenBond[tokens[i]].reserveToken == reserveToken) ++count;
+            }
+            ids = new uint256[](count);
+
+            uint256 j = 0;
+            for (uint256 i = 0; i < tokenLength; ++i) {
+                if (tokenBond[tokens[i]].reserveToken == reserveToken){
+                    ids[j++] = i;
+                    if (j == count) break;
+                }
+            }
+        }
+    }
+
+    function getTokenIdsByCreator(address creator) external view returns (uint256[] memory ids) {
+        unchecked {
+            uint256 count = 0;
+            uint256 tokenLength = tokens.length;
+            for (uint256 i = 0; i < tokenLength; ++i) {
+                if (tokenBond[tokens[i]].creator == creator) ++count;
+            }
+            ids = new uint256[](count);
+
+            uint256 j = 0;
+            for (uint256 i = 0; i < tokenLength; ++i) {
+                if (tokenBond[tokens[i]].creator == creator) {
+                    ids[j++] = i;
+                    if (j == count) break;
+                }
+            }
+        }
     }
 }
