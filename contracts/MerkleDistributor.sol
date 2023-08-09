@@ -130,4 +130,42 @@ contract MerkleDistributor {
 
         return distribution.amountPerClaim * distribution.claimedCount;
     }
+
+    function getDistributionIdsByToken(address token) external view returns (uint256[] memory ids) {
+        unchecked {
+            uint256 count;
+            uint256 distributionsLength = distributions.length;
+            for (uint256 i = 0; i < distributionsLength; ++i) {
+                if (distributions[i].token == token) ++count;
+            }
+            ids = new uint256[](count);
+
+            uint256 j;
+            for (uint256 i = 0; i < distributionsLength; ++i) {
+                if (distributions[i].token == token) {
+                    ids[j++] = i;
+                    if (j == count) break;
+                }
+            }
+        }
+    }
+
+    function getDistributionIdsByOwner(address owner) external view returns (uint256[] memory ids) {
+        unchecked {
+            uint256 count;
+            uint256 distributionsLength = distributions.length;
+            for (uint256 i = 0; i < distributionsLength; ++i) {
+                if (distributions[i].owner == owner) ++count;
+            }
+            ids = new uint256[](count);
+
+            uint256 j;
+            for (uint256 i = 0; i < distributionsLength; ++i) {
+                if (distributions[i].owner == owner) {
+                    ids[j++] = i;
+                    if (j == count) break;
+                }
+            }
+        }
+    }
 }

@@ -301,4 +301,64 @@ describe('MerkleDistributor', function () {
       });
     }); // Refund
   }); // Set merkle root
+
+  describe('Utility functions', function () {
+    beforeEach(async function () {
+      this.Token2 = await ethers.deployContract('TestToken', [ORIGINAL_BALANCE]);
+      await this.Token2.waitForDeployment();
+
+      await Token.transfer(alice.address, 10000);
+      await Token.connect(alice).approve(MerkleDistributor.target, 10000);
+      await MerkleDistributor.connect(alice).createDistribution(
+        Token.target,
+        100,
+        100,
+        TEST_DATA.endTime,
+        ZERO_BYTES32,
+        'test'
+      );
+
+      await this.Token2.transfer(alice.address, 10000);
+      await this.Token2.connect(alice).approve(MerkleDistributor.target, 10000);
+      await MerkleDistributor.connect(alice).createDistribution(
+        this.Token2.target,
+        100,
+        100,
+        TEST_DATA.endTime,
+        ZERO_BYTES32,
+        'test'
+      );
+
+      await this.Token2.transfer(bob.address, 10000);
+      await this.Token2.connect(bob).approve(MerkleDistributor.target, 10000);
+      await MerkleDistributor.connect(bob).createDistribution(
+        this.Token2.target,
+        100,
+        100,
+        TEST_DATA.endTime,
+        ZERO_BYTES32,
+        'test'
+      );
+    });
+
+    it('should return [0] for token = Token', async function () {
+      const ids = await MerkleDistributor.getDistributionIdsByToken(Token.target);
+      expect(ids).to.deep.equal([0]);
+    });
+
+    it('should return [1, 2] for token = Token2', async function () {
+      const ids = await MerkleDistributor.getDistributionIdsByToken(this.Token2.target);
+      expect(ids).to.deep.equal([1, 2]);
+    });
+
+    it('should return [0, 1] for owner = alice', async function () {
+      const ids = await MerkleDistributor.getDistributionIdsByOwner(alice.address);
+      expect(ids).to.deep.equal([0, 1]);
+    });
+
+    it('should return [2] for owner = bob', async function () {
+      const ids = await MerkleDistributor.getDistributionIdsByOwner(bob.address);
+      expect(ids).to.deep.equal([2]);
+    });
+  }); // Utility functions
 }); // MerkleDistributor

@@ -289,14 +289,14 @@ contract MCV2_Bond is MCV2_FeeCollector {
     function getTokenIdsByReserveToken(address reserveToken) external view returns (uint256[] memory ids) {
         unchecked {
             uint256 count = 0;
-            uint256 tokenLength = tokens.length;
-            for (uint256 i = 0; i < tokenLength; ++i) {
+            uint256 tokensLength = tokens.length;
+            for (uint256 i = 0; i < tokensLength; ++i) {
                 if (tokenBond[tokens[i]].reserveToken == reserveToken) ++count;
             }
             ids = new uint256[](count);
 
             uint256 j = 0;
-            for (uint256 i = 0; i < tokenLength; ++i) {
+            for (uint256 i = 0; i < tokensLength; ++i) {
                 if (tokenBond[tokens[i]].reserveToken == reserveToken){
                     ids[j++] = i;
                     if (j == count) break;
@@ -308,14 +308,14 @@ contract MCV2_Bond is MCV2_FeeCollector {
     function getTokenIdsByCreator(address creator) external view returns (uint256[] memory ids) {
         unchecked {
             uint256 count = 0;
-            uint256 tokenLength = tokens.length;
-            for (uint256 i = 0; i < tokenLength; ++i) {
+            uint256 tokensLength = tokens.length;
+            for (uint256 i = 0; i < tokensLength; ++i) {
                 if (tokenBond[tokens[i]].creator == creator) ++count;
             }
             ids = new uint256[](count);
 
             uint256 j = 0;
-            for (uint256 i = 0; i < tokenLength; ++i) {
+            for (uint256 i = 0; i < tokensLength; ++i) {
                 if (tokenBond[tokens[i]].creator == creator) {
                     ids[j++] = i;
                     if (j == count) break;
