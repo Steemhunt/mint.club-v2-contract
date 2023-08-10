@@ -5,7 +5,7 @@ const { MAX_INT_256, wei } = require('./utils/test-utils');
 
 const BENEFICIARY = '0x00000B655d573662B9921e14eDA96DBC9311fDe6'; // a random address for testing
 const PROTOCOL_FEE = 10n; // 0.1%
-const CREATOR_FEE = 100n; // 1.0%
+const CREATOR_FEE = 20n; // 0.2%
 const BABY_TOKEN = {
   name: 'Baby Token',
   symbol: 'BABY',
@@ -279,7 +279,7 @@ describe('Bond', function () {
 
         // { creatorFee, protocolFee, reserveOnBond, tokensToMint }
         this.buyTest = calculatePurchase(this.reserveToPurchase, BABY_TOKEN.stepPrices[1]);
-        // should be minted: (1000 - 11)/2 = 494.5 BABY tokens
+        // should be minted: (1000 - 3)/2 = 498.5 BABY tokens
 
         await BaseToken.transfer(alice.address, this.initialBaseBalance);
         await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
@@ -287,12 +287,12 @@ describe('Bond', function () {
       });
 
       it('should mint correct amount after fees', async function () {
-        expect(await this.token.balanceOf(alice.address)).to.equal(this.buyTest.tokensToMint); // excluding 1.1% fee
+        expect(await this.token.balanceOf(alice.address)).to.equal(this.buyTest.tokensToMint); // excluding fees
       });
 
       it('should transfer BASE tokens to the bond', async function () {
         expect(await BaseToken.balanceOf(alice.address)).to.equal(this.initialBaseBalance - this.reserveToPurchase);
-        expect(await BaseToken.balanceOf(Bond.target)).to.equal(this.reserveToPurchase); // including fee until claimed
+        expect(await BaseToken.balanceOf(Bond.target)).to.equal(this.reserveToPurchase); // including fees until claimed
       });
 
       it('should add reserveBalance to the bond', async function () {
@@ -321,8 +321,8 @@ describe('Bond', function () {
 
       describe('Massive buy through multiple steps', function () {
         beforeEach(async function () {
-          // 494.5 BABY already purchased with 1,000 BASE tokens (after fee: 989 BASE tokens)
-          const additionalPurchase = this.initialBaseBalance - this.reserveToPurchase; // All left reserve balance: wei(999000)
+          // BABY already purchased with 1,000 BASE tokens (Reserve after fee: 997 BASE)
+          const additionalPurchase = this.initialBaseBalance - this.reserveToPurchase; // All left reserve balance: 999,000
           await Bond.connect(alice).buy(this.token.target, additionalPurchase, 0);
 
           // stepRanges: [wei(10K), wei(100K), wei(200K), wei(500K), wei(1M), wei(2M), wei(5M), wei(10M) ],
@@ -332,10 +332,10 @@ describe('Bond', function () {
             creatorFee: this.initialBaseBalance * CREATOR_FEE / 10000n,
             protocolFee: this.initialBaseBalance * PROTOCOL_FEE / 10000n,
           }
-          this.sum.reserveOnBond = this.initialBaseBalance - this.sum.creatorFee - this.sum.protocolFee; // 989,000
+          this.sum.reserveOnBond = this.initialBaseBalance - this.sum.creatorFee - this.sum.protocolFee; // 997,000
           // Until 200K BABY tokens, reserve required is 480K, thus
-          // -> 200,000 + (989,000 - 480,000) / 4 = 327,250
-          this.sum.totalSupply = wei(327250);
+          // -> 200,000 + (997,000 - 480,000) / 4 = 329,250
+          this.sum.totalSupply = wei(329250);
           this.sum.tokensToMint = this.sum.totalSupply - BABY_TOKEN.stepRanges[0]; // 10,000 is the initial free mint
         });
 
@@ -532,13 +532,14 @@ describe('Bond', function () {
         });
 
         it('should revert if user try to buy more than the available supply', async function () {
-          // To mint 10M tokens, requires 116,180,000 reserve, 117,472,194.1 including fees
+          // To mint 10M tokens, requires 116,180,000 reserve, 116,529,588.8 including fees
+          // Ref: https://t.ly/LFfGh
           await expect(
-            Bond.connect(alice).buy(this.token.target, wei(117472195), 0)
+            Bond.connect(alice).buy(this.token.target, wei(116529589), 0)
           ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__ExceedMaxSupply');
 
           await expect(
-            Bond.connect(alice).buy(this.token.target, wei(117472194), 0)
+            Bond.connect(alice).buy(this.token.target, wei(116529588), 0)
           ).not.to.be.reverted;
         });
 
@@ -597,39 +598,51 @@ describe('Bond', function () {
 
       describe('Rounding errors', function() {
         beforeEach(async function () {
-          // Start with 10000 BaseToken, purchasing 1000 BABY tokens
-          this.initialBaseBalance = wei(10000);
+          await BaseToken.transfer(alice.address, wei(999999));
+          await BaseToken.connect(alice).approve(Bond.target, wei(999999));
+
           this.tokensToMint = wei(1000);
-
-          this.reserveToPurchase = 2022244691607684529827n;
-          this.reserveOnBond = 2000000000000000000000n;
-
-          await BaseToken.transfer(alice.address, this.initialBaseBalance);
-          await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
+          this.reserveOnBond = 2000000000000000000000n; // wei(2000)
+          /**
+           * reserveReqruied = reserve * (1 / (1 - fee))
+           *   -> 20000000000000000000000n * 10000n / 9970n = 2006018054162487462387n
+           * actualCalculation = (x) => x - x * 10n / 10000n - x * 20n / 10000n
+           *  -> actualCalculation(2006018054162487462387n) = 2000000000000000000001n
+           */
+          this.reversedCalculation = 2006018054162487462387n;
         });
 
-        it('should be the correct calculation', async function () {
-          await Bond.connect(alice).buy(this.token.target, this.reserveToPurchase, 0);
-          expect(await this.token.balanceOf(alice.address)).to.equal(this.tokensToMint); // minted 1000 BABY tokens
+        it('mints 1000 BABY, with 2000 BASE', async function () {
+          await Bond.connect(alice).buy(this.token.target, this.reversedCalculation - 1n, 0);
+          expect(await this.token.balanceOf(alice.address)).to.equal(this.tokensToMint);
 
           const bond = await Bond.tokenBond(this.token.target);
-          expect(await bond.reserveBalance).to.equal(this.reserveOnBond);
+          expect(bond.reserveBalance).to.equal(this.reserveOnBond);
         });
 
-        it('sould have an additional 1e-18 BASE token in the collateral bond, even if the minting amount remains the same', async function () {
-          await Bond.connect(alice).buy(this.token.target, this.reserveToPurchase + 1n, 0);
-          expect(await this.token.balanceOf(alice.address)).to.equal(this.tokensToMint); // minted 1000 BABY tokens
+        it('mints the same 1000 BABY, with 2000 BASE + 1 wei', async function () {
+          await Bond.connect(alice).buy(this.token.target, this.reversedCalculation, 0);
+          expect(await this.token.balanceOf(alice.address)).to.equal(this.tokensToMint);
 
           const bond = await Bond.tokenBond(this.token.target);
-          expect(await bond.reserveBalance).to.equal(this.reserveOnBond + 1n);
+          expect(bond.reserveBalance).to.equal(this.reserveOnBond + 1n);
         });
 
-        it('should mint 1e-18 more BABY token', async function () {
-          await Bond.connect(alice).buy(this.token.target, this.reserveToPurchase + 2n, 0);
-          expect(await this.token.balanceOf(alice.address)).to.equal(this.tokensToMint + 1n); // minted 1000 + 1e-18 BABY tokens
+        it('mints 1 wei more BABY, with 2000 BASE + 2 wei', async function () {
+          await Bond.connect(alice).buy(this.token.target, this.reversedCalculation + 1n, 0);
+          expect(await this.token.balanceOf(alice.address)).to.equal(this.tokensToMint + 1n);
 
           const bond = await Bond.tokenBond(this.token.target);
-          expect(await bond.reserveBalance).to.equal(this.reserveOnBond + 2n);
+          expect(bond.reserveBalance).to.equal(this.reserveOnBond + 2n);
+        });
+
+        it('does not collect any fees if the amount is too small, due to flooring', async function () {
+          // price = 2
+          await Bond.connect(alice).buy(this.token.target, 200n, 0);
+          expect(await this.token.balanceOf(alice.address)).to.equal(100n);
+
+          const bond = await Bond.tokenBond(this.token.target);
+          expect(bond.reserveBalance).to.equal(200n);
         });
       }); // Rounding errors
     }); // Other Edge Cases
