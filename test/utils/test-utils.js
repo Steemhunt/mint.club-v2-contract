@@ -1,0 +1,8 @@
+exports.MAX_INT_256 = 2n**256n - 1n;
+exports.NULL_ADDRESS = '0x0000000000000000000000000000000000000000';
+exports.ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
+exports.wei = function(num, decimals = 18) {
+  return BigInt(num) * 10n**BigInt(decimals);
+};
+

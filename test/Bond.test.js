@@ -1,9 +1,8 @@
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
-// const { anyValue } = require('@nomicfoundation/hardhat-chai-matchers/withArgs');
 const { expect } = require('chai');
 const web3 = require('web3');
+const { MAX_INT_256, wei } = require('./utils/test-utils');
 
-const MAX_INT_256 = 2n**256n - 1n;
 const BENEFICIARY = '0x00000B655d573662B9921e14eDA96DBC9311fDe6'; // a random address for testing
 const PROTOCOL_FEE = 10n; // 0.1%
 const CREATOR_FEE = 100n; // 1.0%
@@ -22,10 +21,6 @@ function computeCreate2Address(saltHex, bytecode, deployer) {
       .sha3(`0x${['ff', deployer, saltHex, web3.utils.soliditySha3(bytecode)].map(x => x.replace(/0x/, '')).join('')}`)
       .slice(-40)}`,
   );
-}
-
-function wei(num, decimals = 18) {
-  return BigInt(num) * 10n**BigInt(decimals);
 }
 
 function calculatePurchase(reserveToPurchase, stepPrice) {

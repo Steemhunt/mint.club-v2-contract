@@ -3,9 +3,8 @@ const { time } = require('@nomicfoundation/hardhat-network-helpers');
 const { expect } = require('chai');
 const keccak256 = require('keccak256');
 const { MerkleTree } = require('merkletreejs');
+const { NULL_ADDRESS, ZERO_BYTES32, wei } = require('./utils/test-utils');
 
-const NULL_ADDRESS = '0x0000000000000000000000000000000000000000';
-const ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const ORIGINAL_BALANCE = wei(1000000);
 const TEST_DATA = {
   title: 'Test Airdrop',
@@ -13,10 +12,6 @@ const TEST_DATA = {
   whitelistCount: 10n,
   endTime: Math.floor(Date.now() / 1000) + 60 * 60 * 24 // 24 hours from now
 };
-
-function wei(num, decimals = 18) {
-  return BigInt(num) * 10n**BigInt(decimals);
-}
 
 function bufferToHex(x) {
   return `0x${x.toString("hex")}`;
