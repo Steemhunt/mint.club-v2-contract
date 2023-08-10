@@ -14,6 +14,7 @@ abstract contract MCV2_FeeCollector is Ownable {
     uint256 internal protocolFee;
     uint256 internal creatorFee;
 
+    // TODO: TEST
     // TODO: Merge as a struct?
     // User => Token => Fee Balance
     mapping(address => mapping(address => uint256)) public userTokenFeeBalance;
