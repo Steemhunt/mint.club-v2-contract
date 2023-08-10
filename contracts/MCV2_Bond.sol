@@ -288,7 +288,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
     function getTokenIdsByReserveToken(address reserveToken) external view returns (uint256[] memory ids) {
         unchecked {
-            uint256 count = 0;
+            uint256 count;
             uint256 tokensLength = tokens.length;
             for (uint256 i = 0; i < tokensLength; ++i) {
                 if (tokenBond[tokens[i]].reserveToken == reserveToken) ++count;
@@ -307,7 +307,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
     function getTokenIdsByCreator(address creator) external view returns (uint256[] memory ids) {
         unchecked {
-            uint256 count = 0;
+            uint256 count;
             uint256 tokensLength = tokens.length;
             for (uint256 i = 0; i < tokensLength; ++i) {
                 if (tokenBond[tokens[i]].creator == creator) ++count;

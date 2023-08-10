@@ -10,6 +10,7 @@ contract MerkleDistributor {
 
     error MerkleDistributor__PermissionDenied();
     error MerkleDistributor__ClaimWindowFinished();
+    error MerkleDistributor__NoClaimableTokensLeft();
     error MerkleDistributor__AlreadyClaimed();
     error MerkleDistributor__InvalidProof();
     error MerkleDistributor__InvalidParams(string param);
@@ -75,6 +76,7 @@ contract MerkleDistributor {
 
         if (distribution.endTime < block.timestamp) revert MerkleDistributor__ClaimWindowFinished();
         if (distribution.isClaimed[msg.sender]) revert MerkleDistributor__AlreadyClaimed();
+        if (distribution.claimedCount >= distribution.whitelistCount) revert MerkleDistributor__NoClaimableTokensLeft();
 
         // Verify the merkle proof
         if (!MerkleProof.verify(

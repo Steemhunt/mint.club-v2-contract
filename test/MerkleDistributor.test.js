@@ -302,6 +302,34 @@ describe('MerkleDistributor', function () {
     }); // Refund
   }); // Set merkle root
 
+  describe('Edge cases', function () {
+    beforeEach(async function () {
+      const leaves = defaultWhiltelist.map((x) => keccak256(x)); // 3 whitelist
+      this.tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
+
+      await Token.approve(MerkleDistributor.target, TEST_DATA.amountPerClaim * 2n);
+      await MerkleDistributor.createDistribution(
+        Token.target,
+        TEST_DATA.amountPerClaim, // wei(100)
+        2n, // only 2 can calim
+        TEST_DATA.endTime,
+        bufferToHex(this.tree.getRoot()),
+        TEST_DATA.title
+      );
+      this.distribution = await MerkleDistributor.distributions(0);
+    });
+
+    it('should revert if all claimed', async function() {
+      await MerkleDistributor.connect(alice).claim(0, getProof(this.tree, alice.address));
+      await MerkleDistributor.connect(bob).claim(0, getProof(this.tree, bob.address));
+      await expect(MerkleDistributor.connect(carol).claim(0, getProof(this.tree, carol.address))).
+        to.be.revertedWithCustomError(
+          MerkleDistributor,
+          'MerkleDistributor__NoClaimableTokensLeft'
+        );
+    });
+  }); // Edge cases
+
   describe('Utility functions', function () {
     beforeEach(async function () {
       this.Token2 = await ethers.deployContract('TestToken', [ORIGINAL_BALANCE]);
