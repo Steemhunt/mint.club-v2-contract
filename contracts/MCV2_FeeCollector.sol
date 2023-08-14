@@ -24,7 +24,7 @@ abstract contract MCV2_FeeCollector is Ownable {
         updateProtocolBeneficiary(protocolBeneficiary_, protocolFee_, creatorFee_);
     }
 
-    function addFee(address tokenAddress, address walletAddress, uint256 amount) internal {
+    function addFee(address walletAddress, address tokenAddress, uint256 amount) internal {
         userTokenFeeBalance[walletAddress][tokenAddress] += amount;
     }
 
