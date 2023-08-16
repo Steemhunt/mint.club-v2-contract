@@ -61,10 +61,6 @@ describe('MerkleDistributor', function () {
         this.distribution = await MerkleDistributor.distributions(0);
       });
 
-      it('should set properties correctly - title', async function() {
-        expect(this.distribution.title).to.equal(TEST_DATA.title);
-      });
-
       it('should set properties correctly - token', async function() {
         expect(this.distribution.token).to.equal(Token.target);
       });
@@ -75,6 +71,10 @@ describe('MerkleDistributor', function () {
 
       it('should set properties correctly - whitelistCount', async function() {
         expect(this.distribution.whitelistCount).to.equal(TEST_DATA.whitelistCount);
+      });
+
+      it('should set properties correctly - claimedCount', async function() {
+        expect(this.distribution.claimedCount).to.equal(0);
       });
 
       it('should set properties correctly - endTime', async function() {
@@ -91,6 +91,10 @@ describe('MerkleDistributor', function () {
 
       it('should set properties correctly - merkleRoot', async function() {
         expect(this.distribution.merkleRoot).to.equal(ZERO_BYTES32);
+      });
+
+      it('should set properties correctly - title', async function() {
+        expect(this.distribution.title).to.equal(TEST_DATA.title);
       });
 
       it('should return total airdrop amount as amountLeft', async function() {
@@ -207,6 +211,14 @@ describe('MerkleDistributor', function () {
       expect(await MerkleDistributor.isWhitelisted(0, david.address, getProof(this.tree, david.address))).to.equal(false);
     });
 
+    it('should not set any of isClaimed to true', async function() {
+      expect(await MerkleDistributor.isClaimed(0, owner.address)).to.equal(false);
+      expect(await MerkleDistributor.isClaimed(0, alice.address)).to.equal(false);
+      expect(await MerkleDistributor.isClaimed(0, bob.address)).to.equal(false);
+      expect(await MerkleDistributor.isClaimed(0, carol.address)).to.equal(false);
+      expect(await MerkleDistributor.isClaimed(0, david.address)).to.equal(false);
+    });
+
     describe('Claim', function () {
       beforeEach(async function () {
         await MerkleDistributor.connect(carol).claim(0, getProof(this.tree, carol.address));
@@ -218,6 +230,10 @@ describe('MerkleDistributor', function () {
 
       it('should increase the amount claimed', async function() {
         expect(await MerkleDistributor.getAmountClaimed(0)).to.equal(TEST_DATA.amountPerClaim);
+      });
+
+      it('should set isClaimed to true', async function() {
+        expect(await MerkleDistributor.isClaimed(0, carol.address)).to.equal(true);
       });
 
       it('should not able to claim twice', async function() {

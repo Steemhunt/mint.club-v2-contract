@@ -132,6 +132,14 @@ describe('Bond', function () {
         .withArgs(this.token.target, BABY_TOKEN.name, BABY_TOKEN.symbol);
     });
 
+    it('should return tokenCount = 1', async function () {
+      expect(await Bond.tokenCount()).to.equal(1);
+    });
+
+    it('should return true for existence check', async function () {
+      expect(await Bond.exists(this.token.target)).to.equal(true);
+    });
+
     describe('Validations', function () {
       it('should check if reserve token is valid', async function () {
         await expect(
@@ -593,6 +601,30 @@ describe('Bond', function () {
           await expect(
             Bond.connect(alice).sell(this.token.target, amount + 1n, 0)
           ).to.be.revertedWith('ERC20: burn amount exceeds balance');
+        });
+
+        it('should revert if the minTokens parameter is set more than the expected value', async function () {
+          const sellAmount = wei(100);
+          const { reserveToRefund } = calculateSell(sellAmount, BABY_TOKEN.stepPrices[1]);
+          await this.token.connect(alice).approve(Bond.target, sellAmount);
+
+          await expect(
+            Bond.connect(alice).sell(this.token.target, sellAmount, reserveToRefund + 1n)
+          ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__SlippageLimitExceeded');
+        });
+
+        it('should revert if the slippage limit exceeded due to a front-run', async function () {
+          const sellAmount = wei(100);
+          const { reserveToRefund } = calculateSell(sellAmount, BABY_TOKEN.stepPrices[1]);
+          await this.token.connect(alice).approve(Bond.target, sellAmount);
+
+          // Front-run the transaction - owner rugs the pool
+          await this.token.connect(owner).approve(Bond.target, BABY_TOKEN.stepRanges[0]);
+          await Bond.connect(owner).sell(this.token.target, BABY_TOKEN.stepRanges[0], 0);
+
+          await expect(
+            Bond.connect(alice).sell(this.token.target, sellAmount, reserveToRefund)
+          ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__SlippageLimitExceeded');
         });
       }); // Sell: Edge Cases
 

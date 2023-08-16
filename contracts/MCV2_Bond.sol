@@ -24,8 +24,8 @@ contract MCV2_Bond is MCV2_FeeCollector {
     error MCV2_Bond__InvalidTokenAmount();
     error MCV2_Bond__ExceedTotalSupply();
     error MCV2_Bond__InvalidRefundAmount();
-    error MCV2_Bond__InvalidCurrentSupply();
     error MCV2_Bond__InvalidReserveAmount();
+    error MCV2_Bond__InvalidCurrentSupply();
 
     uint256 private constant MAX_STEPS = 1000;
 
@@ -143,7 +143,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
                 return i;
             }
         }
-        revert MCV2_Bond__InvalidCurrentSupply();
+        revert MCV2_Bond__InvalidCurrentSupply(); // can never happen
     }
 
     // MARK: - Buy
@@ -232,7 +232,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
             if (i > 0) i--;
         }
 
-        assert(tokensLeft == 0); // Cannot be greater than 0 because of the InvalidTokenAmount check above
+        if(tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount(); // can never happen
 
         (creatorFee, protocolFee) = getFees(reserveFromBond);
         refundAmount = reserveFromBond - creatorFee - protocolFee;

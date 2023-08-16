@@ -57,13 +57,6 @@ abstract contract MCV2_FeeCollector is Ownable {
 
     // MARK: - Internal utility functions
 
-    function getAmountAfterFees(uint256 amount) internal view returns (uint256) {
-        // return amount * (MAX_FEE_BASE - (creatorFee + protocolFee)) / MAX_FEE_BASE;
-        // NOTE: To minimize rounding errors, avoid using above fomula
-        return amount - amount * creatorFee / MAX_FEE_BASE - amount * protocolFee / MAX_FEE_BASE;
-    }
-
-    // Calculate creator fee and protocol fee
     function getFees(uint256 amount) internal view returns (uint256, uint256) {
         return (amount * creatorFee / MAX_FEE_BASE, amount * protocolFee / MAX_FEE_BASE);
     }
