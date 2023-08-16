@@ -3,8 +3,6 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/proxy/Clones.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./MCV2_FeeCollector.sol";
 import "./MCV2_Token.sol";
@@ -200,8 +198,8 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
         // Update reserve & fee balances
         bond.reserveBalance += (reserveAmount - creatorFee - protocolFee).toUint128();
-        addFee(bond.creator, token, creatorFee);
-        addFee(protocolBeneficiary, token, protocolFee);
+        addFee(bond.creator, bond.reserveToken, creatorFee);
+        addFee(protocolBeneficiary, bond.reserveToken, protocolFee);
 
         // Mint reward tokens to the buyer
         MCV2_Token(token).mintByBond(buyer, tokensToMint);
@@ -256,8 +254,8 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
         // Update reserve & fee balances
         bond.reserveBalance -= (refundAmount + creatorFee + protocolFee).toUint128();
-        addFee(bond.creator, token, creatorFee);
-        addFee(protocolBeneficiary, token, protocolFee);
+        addFee(bond.creator, bond.reserveToken, creatorFee);
+        addFee(protocolBeneficiary, bond.reserveToken, protocolFee);
 
         // Transfer reserve tokens to the seller
         IERC20 reserveToken = IERC20(bond.reserveToken);

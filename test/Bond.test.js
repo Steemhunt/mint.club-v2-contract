@@ -306,11 +306,11 @@ describe('Bond', function () {
       });
 
       it('should add claimable balance to the creator', async function () {
-        expect(await Bond.userTokenFeeBalance(owner.address, this.token.target)).to.equal(this.buyTest.creatorFee);
+        expect(await Bond.userTokenFeeBalance(owner.address, BaseToken.target)).to.equal(this.buyTest.creatorFee);
       });
 
       it('should add claimable balance to the protocol beneficiary', async function () {
-        expect(await Bond.userTokenFeeBalance(BENEFICIARY, this.token.target)).to.equal(this.buyTest.protocolFee);
+        expect(await Bond.userTokenFeeBalance(BENEFICIARY, BaseToken.target)).to.equal(this.buyTest.protocolFee);
       });
 
       it('should emit Buy event', async function () {
@@ -363,11 +363,11 @@ describe('Bond', function () {
         });
 
         it('should add claimable balance to the creator', async function () {
-          expect(await Bond.userTokenFeeBalance(owner.address, this.token.target)).to.equal(this.sum.creatorFee);
+          expect(await Bond.userTokenFeeBalance(owner.address, BaseToken.target)).to.equal(this.sum.creatorFee);
         });
 
         it('should add claimable balance to the protocol beneficiary', async function () {
-          expect(await Bond.userTokenFeeBalance(BENEFICIARY, this.token.target)).to.equal(this.sum.protocolFee);
+          expect(await Bond.userTokenFeeBalance(BENEFICIARY, BaseToken.target)).to.equal(this.sum.protocolFee);
         });
 
         describe('Massive sell through multiple steps', function () {
@@ -405,14 +405,14 @@ describe('Bond', function () {
           });
 
           it('should add claimable balance to the creator', async function () {
-            expect(await Bond.userTokenFeeBalance(owner.address, this.token.target)).to.equal(
+            expect(await Bond.userTokenFeeBalance(owner.address, BaseToken.target)).to.equal(
               this.initialBaseBalance * CREATOR_FEE / 10000n + // buy
               this.initial.bondReserve * CREATOR_FEE / 10000n // sell
             );
           });
 
           it('should add claimable balance to the creator', async function () {
-            expect(await Bond.userTokenFeeBalance(BENEFICIARY, this.token.target)).to.equal(
+            expect(await Bond.userTokenFeeBalance(BENEFICIARY, BaseToken.target)).to.equal(
               this.initialBaseBalance * PROTOCOL_FEE / 10000n + // buy
               this.initial.bondReserve * PROTOCOL_FEE / 10000n // sell
             );
@@ -470,11 +470,11 @@ describe('Bond', function () {
         });
 
         it('should add claimable balance to the creator', async function () {
-          expect(await Bond.userTokenFeeBalance(owner.address, this.token.target)).to.equal(this.buyTest.creatorFee + this.sellTest.creatorFee);
+          expect(await Bond.userTokenFeeBalance(owner.address, BaseToken.target)).to.equal(this.buyTest.creatorFee + this.sellTest.creatorFee);
         });
 
         it('should add claimable balance to the protocol beneficiary', async function () {
-          expect(await Bond.userTokenFeeBalance(BENEFICIARY, this.token.target)).to.equal(this.buyTest.protocolFee + this.sellTest.protocolFee);
+          expect(await Bond.userTokenFeeBalance(BENEFICIARY, BaseToken.target)).to.equal(this.buyTest.protocolFee + this.sellTest.protocolFee);
         });
 
         it('should emit Sell event', async function () {
