@@ -9,7 +9,10 @@ contract MerkleDistributor {
     using SafeERC20 for IERC20;
 
     error MerkleDistributor__PermissionDenied();
-    error MerkleDistributor__ClaimWindowFinished();
+    error MerkleDistributor__NotStarted();
+    error MerkleDistributor__Finished();
+    error MerkleDistributor__Refunded();
+    error MerkleDistributor__AlreadyRefunded();
     error MerkleDistributor__NoClaimableTokensLeft();
     error MerkleDistributor__AlreadyClaimed();
     error MerkleDistributor__InvalidProof();
@@ -22,14 +25,19 @@ contract MerkleDistributor {
 
     struct Distribution {
         address token;
-        uint96 amountPerClaim; // (supports ~ 79B) 160 + 96 = 256 bits
-        uint24 whitelistCount;
-        uint24 claimedCount;
-        uint40 endTime; // supports up to year 36,825
-        bool refunded;
-        address owner; // 24 + 24 + 40 + 8 + 160 = 256 bits
+        uint24 walletCount;
+        uint24 claimedCount; // 160 + 24 + 24 = 208 bits
+
+        uint128 amountPerClaim;
+        uint40 startTime; // supports up to year 36,825
+        uint40 endTime; // 128 + 40 + 40 = 208 bits
+
+        address owner;
+        bool refunded; // 160 + 8 = 168 bits
+
         bytes32 merkleRoot; // 256 bits
         string title;
+        string ipfsCID; // NOTE: Could save more gas with: https://github.com/saurfang/ipfs-multihash-on-solidity
 
         mapping(address => bool) isClaimed;
     }
@@ -44,42 +52,51 @@ contract MerkleDistributor {
     function createDistribution(
         address token,
         uint96 amountPerClaim,
-        uint24 whitelistCount,
+        uint24 walletCount,
+        uint40 startTime,
         uint40 endTime,
-        bytes32 merkleRoot,
-        string calldata title
+        bytes32 merkleRoot, // optional
+        string calldata title, // optional
+        string calldata ipfsCID // optional
     ) external {
         if (token == address(0)) revert MerkleDistributor__InvalidParams('token');
         if (amountPerClaim == 0) revert MerkleDistributor__InvalidParams('amountPerClaim');
-        if (whitelistCount == 0) revert MerkleDistributor__InvalidParams('whitelistCount');
+        if (walletCount == 0) revert MerkleDistributor__InvalidParams('walletCount');
         if (endTime <= block.timestamp) revert MerkleDistributor__InvalidParams('endTime');
+        if (startTime >= endTime) revert MerkleDistributor__InvalidParams('startTime');
 
         // Deposit total amount of tokens to this contract
-        IERC20(token).safeTransferFrom(msg.sender, address(this), amountPerClaim * whitelistCount);
+        IERC20(token).safeTransferFrom(msg.sender, address(this), amountPerClaim * walletCount);
 
         // Create a new distribution
         distributions.push();
         Distribution storage distribution = distributions[distributions.length - 1];
         distribution.token = token;
-        distribution.amountPerClaim = amountPerClaim;
-        distribution.whitelistCount = whitelistCount;
+        distribution.walletCount = walletCount;
         // distribution.claimedCount = 0;
+
+        distribution.amountPerClaim = amountPerClaim;
+        distribution.startTime = startTime;
         distribution.endTime = endTime;
-        // distribution.refunded = false;
-        distribution.merkleRoot = merkleRoot;
-        distribution.title = title;
+
         distribution.owner = msg.sender;
+        // distribution.refunded = false;
+        distribution.merkleRoot = merkleRoot; // optional
+        distribution.title = title; // optional
+        distribution.ipfsCID = ipfsCID; // optional
     }
 
     function claim(uint256 distributionId, bytes32[] calldata merkleProof) external {
         Distribution storage distribution = distributions[distributionId];
 
-        if (distribution.endTime < block.timestamp) revert MerkleDistributor__ClaimWindowFinished();
+        if (distribution.startTime > block.timestamp) revert MerkleDistributor__NotStarted();
+        if (distribution.endTime < block.timestamp) revert MerkleDistributor__Finished();
+        if (distribution.refunded) revert MerkleDistributor__Refunded();
         if (distribution.isClaimed[msg.sender]) revert MerkleDistributor__AlreadyClaimed();
-        if (distribution.claimedCount >= distribution.whitelistCount) revert MerkleDistributor__NoClaimableTokensLeft();
+        if (distribution.claimedCount >= distribution.walletCount) revert MerkleDistributor__NoClaimableTokensLeft();
 
         // Verify the merkle proof
-        if (!MerkleProof.verify(
+        if (distribution.merkleRoot != bytes32(0) && !MerkleProof.verify(
             merkleProof,
             distribution.merkleRoot,
             keccak256(abi.encodePacked(msg.sender))
@@ -94,9 +111,11 @@ contract MerkleDistributor {
         emit Claimed(distributionId, msg.sender);
     }
 
+    // The owner can refund the remaining tokens whenever they want, even during the distribution
     function refund(uint256 distributionId) external onlyOwner(distributionId) {
         Distribution storage distribution = distributions[distributionId];
-        if (block.timestamp < distribution.endTime) revert MerkleDistributor__NoRefundDuringClaim();
+
+        if (distribution.refunded) revert MerkleDistributor__AlreadyRefunded();
 
         uint256 amountLeft = getAmountLeft(distributionId);
         if (amountLeft == 0) revert MerkleDistributor__NothingToRefund();
@@ -108,6 +127,10 @@ contract MerkleDistributor {
     }
 
     // MARK: - Utility functions
+
+    function isWhitelistOnly(uint256 distributionId) external view returns (bool) {
+        return distributions[distributionId].merkleRoot != bytes32(0);
+    }
 
     function isWhitelisted(uint256 distributionId, address wallet, bytes32[] calldata merkleProof) external view returns (bool) {
         return MerkleProof.verify(
@@ -124,7 +147,7 @@ contract MerkleDistributor {
     function getAmountLeft(uint256 distributionId) public view returns (uint256) {
         Distribution storage distribution = distributions[distributionId];
 
-        return distribution.amountPerClaim * (distribution.whitelistCount - distribution.claimedCount);
+        return distribution.amountPerClaim * (distribution.walletCount - distribution.claimedCount);
     }
 
     function getAmountClaimed(uint256 distributionId) external view returns (uint256) {

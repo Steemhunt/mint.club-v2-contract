@@ -7,10 +7,11 @@ const { NULL_ADDRESS, ZERO_BYTES32, wei } = require('./utils/test-utils');
 
 const ORIGINAL_BALANCE = wei(1000000);
 const TEST_DATA = {
-  title: 'Test Airdrop',
   amountPerClaim: wei(100),
-  whitelistCount: 10n,
-  endTime: Math.floor(Date.now() / 1000) + 60 * 60 * 24 // 24 hours from now
+  walletCount: 10n,
+  startTime: 0, // Start immediately
+  endTime: Math.floor(Date.now() / 1000) + 60 * 60 * 24, // 24 hours from now
+  title: 'Test Airdrop'
 };
 
 function bufferToHex(x) {
@@ -44,7 +45,7 @@ describe('MerkleDistributor', function () {
 
   describe('Create distribution', function () {
     beforeEach(async function () {
-      this.totalAirdropAmount = TEST_DATA.amountPerClaim * TEST_DATA.whitelistCount;
+      this.totalAirdropAmount = TEST_DATA.amountPerClaim * TEST_DATA.walletCount;
       await Token.approve(MerkleDistributor.target, this.totalAirdropAmount);
     });
 
@@ -53,10 +54,12 @@ describe('MerkleDistributor', function () {
         await MerkleDistributor.createDistribution(
           Token.target,
           TEST_DATA.amountPerClaim,
-          TEST_DATA.whitelistCount,
+          TEST_DATA.walletCount,
+          TEST_DATA.startTime,
           TEST_DATA.endTime,
           ZERO_BYTES32,
-          TEST_DATA.title
+          TEST_DATA.title,
+          ''
         );
         this.distribution = await MerkleDistributor.distributions(0);
       });
@@ -69,12 +72,16 @@ describe('MerkleDistributor', function () {
         expect(this.distribution.amountPerClaim).to.equal(TEST_DATA.amountPerClaim);
       });
 
-      it('should set properties correctly - whitelistCount', async function() {
-        expect(this.distribution.whitelistCount).to.equal(TEST_DATA.whitelistCount);
+      it('should set properties correctly - walletCount', async function() {
+        expect(this.distribution.walletCount).to.equal(TEST_DATA.walletCount);
       });
 
       it('should set properties correctly - claimedCount', async function() {
         expect(this.distribution.claimedCount).to.equal(0);
+      });
+
+      it('should set properties correctly - startTime', async function() {
+        expect(this.distribution.startTime).to.equal(TEST_DATA.startTime);
       });
 
       it('should set properties correctly - endTime', async function() {
@@ -97,12 +104,20 @@ describe('MerkleDistributor', function () {
         expect(this.distribution.title).to.equal(TEST_DATA.title);
       });
 
+      it('should set properties correctly - ipfsCID', async function() {
+        expect(this.distribution.ipfsCID).to.equal('');
+      });
+
       it('should return total airdrop amount as amountLeft', async function() {
         expect(await MerkleDistributor.getAmountLeft(0)).to.equal(this.totalAirdropAmount);
       });
 
       it('should return 0 on getAmountClaimed', async function() {
         expect(await MerkleDistributor.getAmountClaimed(0)).to.equal(0n);
+      });
+
+      it('should return false on isWhitelistOnly', async function() {
+        expect(await MerkleDistributor.isWhitelistOnly(0)).to.equal(false);
       });
 
       it('should transfer the total airdrop amount to the contract', async function() {
@@ -112,15 +127,6 @@ describe('MerkleDistributor', function () {
       it('should deduct the total airdrop amount from the owner', async function() {
         expect(await Token.balanceOf(owner.address)).to.equal(ORIGINAL_BALANCE - this.totalAirdropAmount);
       });
-
-      it('should revert on anyone to claim it because merkle root is null', async function() {
-        // TODO: Generate merkle proof for the second params
-        await expect(MerkleDistributor.connect(alice).claim(0, [])).
-          to.be.revertedWithCustomError(
-            MerkleDistributor,
-            'MerkleDistributor__InvalidProof'
-          );
-      });
     }); // Normal cases
 
     describe('Edge cases', function () {
@@ -128,10 +134,12 @@ describe('MerkleDistributor', function () {
         this.testParams = [
           Token.target,
           TEST_DATA.amountPerClaim,
-          TEST_DATA.whitelistCount,
+          TEST_DATA.walletCount,
+          TEST_DATA.startTime,
           TEST_DATA.endTime,
           ZERO_BYTES32,
-          TEST_DATA.title
+          TEST_DATA.title,
+          ''
         ];
       });
 
@@ -154,17 +162,17 @@ describe('MerkleDistributor', function () {
           ).withArgs('amountPerClaim');
       });
 
-      it('should revert if whitelistCount is zero', async function() {
+      it('should revert if walletCount is zero', async function() {
         this.testParams[2] = 0;
         await expect(MerkleDistributor.createDistribution(...this.testParams)).
           to.be.revertedWithCustomError(
             MerkleDistributor,
             'MerkleDistributor__InvalidParams'
-          ).withArgs('whitelistCount');
+          ).withArgs('walletCount');
       });
 
       it('should revert if endTime is in the past', async function() {
-        this.testParams[3] = (await time.latest()) - 1;
+        this.testParams[4] = (await time.latest()) - 1;
         await expect(MerkleDistributor.createDistribution(...this.testParams)).
           to.be.revertedWithCustomError(
             MerkleDistributor,
@@ -173,6 +181,12 @@ describe('MerkleDistributor', function () {
       });
     }); // Edge cases
   }); // Create distribution
+
+
+
+  // TODO: Test for non-whitelist case
+
+
 
   describe('Set merkle root', function () {
     beforeEach(async function () {
@@ -184,9 +198,11 @@ describe('MerkleDistributor', function () {
         Token.target,
         TEST_DATA.amountPerClaim, // wei(100)
         3n,
+        TEST_DATA.startTime,
         TEST_DATA.endTime,
         bufferToHex(this.tree.getRoot()),
-        TEST_DATA.title
+        TEST_DATA.title,
+        '' // No need for ipfsCID in the test
       );
       this.distribution = await MerkleDistributor.distributions(0);
     });
@@ -256,12 +272,35 @@ describe('MerkleDistributor', function () {
           );
       });
 
+      it('should not able to claim before started', async function() {
+        const leaves = defaultWhiltelist.map((x) => keccak256(x));
+        const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
+
+        await Token.approve(MerkleDistributor.target, TEST_DATA.amountPerClaim * 3n);
+        await MerkleDistributor.createDistribution(
+          Token.target,
+          TEST_DATA.amountPerClaim,
+          3n,
+          await time.latest() + 9999,
+          TEST_DATA.endTime,
+          bufferToHex(tree.getRoot()),
+          TEST_DATA.title,
+          ''
+        );
+
+        await expect(MerkleDistributor.connect(carol).claim(1, getProof(this.tree, carol.address))).
+          to.be.revertedWithCustomError(
+            MerkleDistributor,
+            'MerkleDistributor__NotStarted'
+          );
+      });
+
       it('should not able to claim after ended', async function() {
         await time.increaseTo(TEST_DATA.endTime + 1);
         await expect(MerkleDistributor.connect(carol).claim(0, getProof(this.tree, carol.address))).
           to.be.revertedWithCustomError(
             MerkleDistributor,
-            'MerkleDistributor__ClaimWindowFinished'
+            'MerkleDistributor__Finished'
           );
       });
     }); // Claim
@@ -272,14 +311,6 @@ describe('MerkleDistributor', function () {
           to.be.revertedWithCustomError(
             MerkleDistributor,
             'MerkleDistributor__PermissionDenied'
-          );
-      });
-
-      it('should not able to refund if not ended', async function() {
-        await expect(MerkleDistributor.refund(0)).
-          to.be.revertedWithCustomError(
-            MerkleDistributor,
-            'MerkleDistributor__NoRefundDuringClaim'
           );
       });
 
@@ -310,6 +341,16 @@ describe('MerkleDistributor', function () {
             'MerkleDistributor__NothingToRefund'
           );
       });
+
+      it('should revert if already refunded', async function() {
+        await time.increaseTo(TEST_DATA.endTime + 1);
+        await MerkleDistributor.refund(0);
+        await expect(MerkleDistributor.refund(0)).
+          to.be.revertedWithCustomError(
+            MerkleDistributor,
+            'MerkleDistributor__AlreadyRefunded'
+          );
+      });
     }); // Refund
   }); // Set merkle root
 
@@ -323,9 +364,11 @@ describe('MerkleDistributor', function () {
         Token.target,
         TEST_DATA.amountPerClaim, // wei(100)
         2n, // only 2 can calim
+        TEST_DATA.startTime,
         TEST_DATA.endTime,
         bufferToHex(this.tree.getRoot()),
-        TEST_DATA.title
+        TEST_DATA.title,
+        ''
       );
       this.distribution = await MerkleDistributor.distributions(0);
     });
@@ -352,9 +395,11 @@ describe('MerkleDistributor', function () {
         Token.target,
         100,
         100,
+        TEST_DATA.startTime,
         TEST_DATA.endTime,
         ZERO_BYTES32,
-        'test'
+        'test',
+        ''
       );
 
       await this.Token2.transfer(alice.address, 10000);
@@ -363,9 +408,11 @@ describe('MerkleDistributor', function () {
         this.Token2.target,
         100,
         100,
+        TEST_DATA.startTime,
         TEST_DATA.endTime,
         ZERO_BYTES32,
-        'test'
+        'test',
+        ''
       );
 
       await this.Token2.transfer(bob.address, 10000);
@@ -374,9 +421,11 @@ describe('MerkleDistributor', function () {
         this.Token2.target,
         100,
         100,
+        TEST_DATA.startTime,
         TEST_DATA.endTime,
         ZERO_BYTES32,
-        'test'
+        'test',
+        ''
       );
     });
 
