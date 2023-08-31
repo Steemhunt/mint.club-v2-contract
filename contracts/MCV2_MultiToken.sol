@@ -7,9 +7,9 @@ import "./lib/ERC1155Initializable.sol";
 contract MCV2_MultiToken is ERC1155Initializable {
     error MCV2_MultiToken__PermissionDenied();
 
-    // ERC1155 spec does not have name and symbol by default, but we add them here for consistency
-    string private _name;
-    string private _symbol;
+    // ERC1155 spec does not include a name and symbol by default, but we have added them here for consistency.
+    string public name;
+    string public symbol;
 
     bool private _initialized; // false by default
     address private _bond; // Bonding curve contract should have its minting permission
@@ -17,8 +17,9 @@ contract MCV2_MultiToken is ERC1155Initializable {
     function init(string memory name_, string memory symbol_, string memory uri_) external {
         require(_initialized == false, "CONTRACT_ALREADY_INITIALIZED");
 
-        _name = name_;
-        _symbol = symbol_;
+        name = name_;
+        symbol = symbol_;
+
         _setURI(uri_);
         _bond = _msgSender();
         _initialized = true;
