@@ -7,10 +7,10 @@ import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 
 /**
- * @notice A slightly modified version of ERC20 (from OpenZeppelin 4.9.2) for initialization pattern.
+ * @notice A slightly modified version of ERC20 (from OpenZeppelin 4.9.3) for initialization pattern.
  * Modifications are marekd with the MODIFIED tag.
  */
-contract ERC20Initializable is Context, IERC20, IERC20Metadata {
+abstract contract ERC20Initializable is Context, IERC20, IERC20Metadata {
     mapping(address => uint256) private _balances;
 
     mapping(address => mapping(address => uint256)) private _allowances;
