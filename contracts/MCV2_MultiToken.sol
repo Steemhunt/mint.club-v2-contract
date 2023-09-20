@@ -14,15 +14,15 @@ contract MCV2_MultiToken is ERC1155Initializable {
     bool private _initialized; // false by default
     address private _bond; // Bonding curve contract should have its minting permission
 
-    function init(string memory name_, string memory symbol_, string memory uri_) external {
+    function init(string calldata name_, string calldata symbol_, string calldata uri_) external {
         require(_initialized == false, "CONTRACT_ALREADY_INITIALIZED");
+        _initialized = true;
 
         name = name_;
         symbol = symbol_;
 
         _setURI(uri_);
         _bond = _msgSender();
-        _initialized = true;
     }
 
     modifier onlyBond() {

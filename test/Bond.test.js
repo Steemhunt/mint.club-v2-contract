@@ -71,12 +71,6 @@ describe('Bond', function () {
     BABY_TOKEN.reserveToken = BaseToken.target; // set BaseToken address
   });
 
-  describe('Deployment', function () {
-    it('should set the right TokenImplementation address', async function() {
-      expect(await Bond.tokenImplementation()).to.equal(TokenImplementation.target);
-    });
-  });
-
   describe('Create token', function () {
     beforeEach(async function () {
       const Token = await ethers.getContractFactory('MCV2_Token');
