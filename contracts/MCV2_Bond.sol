@@ -56,6 +56,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
     address[] public tokens; // Array of all created tokens
 
     event TokenCreated(address indexed token, string name, string symbol);
+    event MultiTokenCreated(address indexed token, string name, string symbol, string uri);
     event Buy(address indexed token, address indexed buyer, uint256 amountMinted, address indexed reserveToken, uint256 reserveAmount);
     event Sell(address indexed token, address indexed seller, uint256 amountBurned, address indexed reserveToken, uint256 refundAmount);
 
@@ -84,43 +85,35 @@ contract MCV2_Bond is MCV2_FeeCollector {
         uint128 maxSupply,
         uint128[] calldata stepRanges,
         uint128[] calldata stepPrices
-    ) private {
-        if (bytes(name).length == 0)
-        if (reserveToken == address(0)) revert MCV2_Bond__InvalidTokenCreationParams();
-        if (maxSupply == 0) revert MCV2_Bond__InvalidTokenCreationParams();
+    ) pure private {
+        if (bytes(name).length == 0) revert MCV2_Bond__InvalidTokenCreationParams('name');
+        if (bytes(symbol).length == 0) revert MCV2_Bond__InvalidTokenCreationParams('symbol');
+        if (reserveToken == address(0)) revert MCV2_Bond__InvalidTokenCreationParams('reserveToken');
+        if (maxSupply == 0) revert MCV2_Bond__InvalidTokenCreationParams('maxSupply');
         if (stepRanges.length == 0 || stepRanges.length > MAX_STEPS) revert MCV2_Bond__InvalidStepParams('INVALID_LENGTH');
         if (stepRanges.length != stepPrices.length) revert MCV2_Bond__InvalidStepParams('LENGTH_DO_NOT_MATCH');
     }
 
-    function createToken(
-        string calldata name,
-        string calldata symbol,
-        address reserveToken,
-        uint128 maxSupply,
-        uint128[] calldata stepRanges,
-        uint128[] calldata stepPrices
-    ) external returns (address) {
-        if (reserveToken == address(0)) revert MCV2_Bond__InvalidTokenCreationParams();
-        if (maxSupply == 0) revert MCV2_Bond__InvalidTokenCreationParams();
-        if (stepRanges.length == 0 || stepRanges.length > MAX_STEPS) revert MCV2_Bond__InvalidStepParams('INVALID_LENGTH');
-        if (stepRanges.length != stepPrices.length) revert MCV2_Bond__InvalidStepParams('LENGTH_DO_NOT_MATCH');
-
+    function _clone(address implementation, string calldata symbol) private returns (address) {
         // Uniqueness of symbols on this network is guaranteed by the deterministic contract address
         bytes32 salt = keccak256(abi.encodePacked(address(this), symbol));
 
         // NOTE: This check might not be necessary as the clone would fail with an 'ERC1167: create2 failed'
         // error anyway, and the collision is nearly impossible (one in 2^160).
         // However, we retain this check to provide a clearer error message, albeit at the expense of an additional gas cost.
-        { // avoids stack too deep errors
-            address predicted = Clones.predictDeterministicAddress(tokenImplementation, salt);
-            if (tokenBond[predicted].maxSupply > 0) revert MCV2_Bond__TokenSymbolAlreadyExists();
-        }
+        address predicted = Clones.predictDeterministicAddress(implementation, salt);
+        if (tokenBond[predicted].maxSupply > 0) revert MCV2_Bond__TokenSymbolAlreadyExists();
 
-        address token = Clones.cloneDeterministic(tokenImplementation, salt);
-        MCV2_Token newToken = MCV2_Token(token);
-        newToken.init(name, symbol);
-        tokens.push(token);
+        return Clones.cloneDeterministic(implementation, salt);
+    }
 
+    function _setBond(
+        address token,
+        address reserveToken,
+        uint128 maxSupply,
+        uint128[] calldata stepRanges,
+        uint128[] calldata stepPrices
+    ) private {
         // Set token bond data
         Bond storage bond = tokenBond[token];
         bond.creator = _msgSender();
@@ -144,12 +137,30 @@ contract MCV2_Bond is MCV2_FeeCollector {
                 price: stepPrices[i]
             }));
         }
+    }
+
+    function createToken(
+        string calldata name,
+        string calldata symbol,
+        address reserveToken,
+        uint128 maxSupply,
+        uint128[] calldata stepRanges,
+        uint128[] calldata stepPrices
+    ) external returns (address) {
+        _validateParams(name, symbol, reserveToken, maxSupply, stepRanges, stepPrices);
+
+        address token = _clone(tokenImplementation, symbol);
+        MCV2_Token newToken = MCV2_Token(token);
+        newToken.init(name, symbol);
+        tokens.push(token);
+
+        _setBond(token, reserveToken, maxSupply, stepRanges, stepPrices);
 
         emit TokenCreated(token, name, symbol);
 
-        // Send free tokens to the creator if exists
+        // Send free tokens to the creator if a free minting range exists
         if (stepPrices[0] == 0) {
-            newToken.mintByBond(bond.creator, stepRanges[0]);
+            newToken.mintByBond(_msgSender(), stepRanges[0]);
         }
 
         return token;
@@ -164,56 +175,19 @@ contract MCV2_Bond is MCV2_FeeCollector {
         uint128[] calldata stepRanges,
         uint128[] calldata stepPrices
     ) external returns (address) {
-        if (reserveToken == address(0)) revert MCV2_Bond__InvalidTokenCreationParams();
-        if (maxSupply == 0) revert MCV2_Bond__InvalidTokenCreationParams();
-        if (stepRanges.length == 0 || stepRanges.length > MAX_STEPS) revert MCV2_Bond__InvalidStepParams('INVALID_STEP_LENGTH');
-        if (stepRanges.length != stepPrices.length) revert MCV2_Bond__InvalidStepParams('LENGTH_DO_NOT_MATCH');
+         _validateParams(name, symbol, reserveToken, maxSupply, stepRanges, stepPrices);
 
-        // Uniqueness of symbols on this network is guaranteed by the deterministic contract address
-        bytes32 salt = keccak256(abi.encodePacked(address(this), symbol));
-
-        // NOTE: This check might not be necessary as the clone would fail with an 'ERC1167: create2 failed'
-        // error anyway, and the collision is nearly impossible (one in 2^160).
-        // However, we retain this check to provide a clearer error message, albeit at the expense of an additional gas cost.
-        { // avoids stack too deep errors
-            address predicted = Clones.predictDeterministicAddress(tokenImplementation, salt);
-            if (tokenBond[predicted].maxSupply > 0) revert MCV2_Bond__TokenSymbolAlreadyExists();
-        }
-
-        address token = Clones.cloneDeterministic(tokenImplementation, salt);
-        MCV2_MultiToken newToken = MCV2_MultiToken(token);
-        newToken.init(name, symbol, uri);
+        address token = _clone(tokenImplementation, symbol);
+        MCV2_MultiToken(token).init(name, symbol, uri);
         tokens.push(token);
 
-        // Set token bond data
-        Bond storage bond = tokenBond[token];
-        bond.creator = _msgSender();
-        bond.reserveToken = reserveToken;
-        bond.maxSupply = maxSupply;
+        _setBond(token, reserveToken, maxSupply, stepRanges, stepPrices);
 
-        // Last value or the rangeTo must be the same as the maxSupply
-        if (stepRanges[stepRanges.length - 1] != maxSupply) revert MCV2_Bond__InvalidStepParams('MAX_SUPPLY_MISMATCH');
+        emit MultiTokenCreated(token, name, symbol, uri);
 
-        for (uint256 i = 0; i < stepRanges.length; ++i) {
-            if (stepRanges[i] == 0) revert MCV2_Bond__InvalidStepParams('CANNOT_BE_ZERO');
-
-            // Ranges and prices must be strictly increasing
-            if (i > 0) {
-                if (stepRanges[i] <= stepRanges[i - 1]) revert MCV2_Bond__InvalidStepParams('DECREASING_RANGE');
-                if (stepPrices[i] <= stepPrices[i - 1]) revert MCV2_Bond__InvalidStepParams('DECREASING_PRICE');
-            }
-
-            bond.steps.push(BondStep({
-                rangeTo: stepRanges[i],
-                price: stepPrices[i]
-            }));
-        }
-
-        emit TokenCreated(token, name, symbol);
-
-        // Send free tokens to the creator if exists
+        // Send free tokens to the creator if a free minting range exists
         if (stepPrices[0] == 0) {
-            newToken.mintByBond(bond.creator, stepRanges[0]);
+            MCV2_MultiToken(token).mintByBond(_msgSender(), stepRanges[0]);
         }
 
         return token;

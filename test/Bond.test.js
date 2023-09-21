@@ -53,20 +53,25 @@ describe('Bond', function () {
     const TokenImplementation = await ethers.deployContract('MCV2_Token');
     await TokenImplementation.waitForDeployment();
 
-    const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, BENEFICIARY, PROTOCOL_FEE, CREATOR_FEE]);
+    const NFTImplementation = await ethers.deployContract('MCV2_MultiToken');
+    await NFTImplementation.waitForDeployment();
+
+    const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, NFTImplementation.target, BENEFICIARY, PROTOCOL_FEE, CREATOR_FEE]);
     await Bond.waitForDeployment();
 
     const BaseToken = await ethers.deployContract('TestToken', [wei(200000000)]); // supply: 200M
     await BaseToken.waitForDeployment();
 
-    return [TokenImplementation, Bond, BaseToken];
+    // console.log('-222222', [TokenImplementation, NFTImplementation, Bond, BaseToken]);
+
+    return [TokenImplementation, NFTImplementation, Bond, BaseToken];
   }
 
-  let TokenImplementation, Bond, BaseToken;
+  let TokenImplementation, NFTImplementation, Bond, BaseToken;
   let owner, alice, bob;
 
   beforeEach(async function () {
-    [TokenImplementation, Bond, BaseToken] = await loadFixture(deployFixtures);
+    [TokenImplementation, NFTImplementation, Bond, BaseToken] = await loadFixture(deployFixtures);
     [owner, alice, bob] = await ethers.getSigners();
     BABY_TOKEN.reserveToken = BaseToken.target; // set BaseToken address
   });
@@ -74,7 +79,6 @@ describe('Bond', function () {
   describe('Create token', function () {
     beforeEach(async function () {
       const Token = await ethers.getContractFactory('MCV2_Token');
-
       this.creationTx = await Bond.createToken(...Object.values(BABY_TOKEN));
       this.token = await Token.attach(await Bond.tokens(0));
       this.bond = await Bond.tokenBond(this.token.target);

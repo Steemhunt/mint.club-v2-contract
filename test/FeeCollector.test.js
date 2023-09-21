@@ -29,18 +29,21 @@ describe('FeeCollector', function () {
     const TokenImplementation = await ethers.deployContract('MCV2_Token');
     await TokenImplementation.waitForDeployment();
 
-    const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, beneficiary.address, PROTOCOL_FEE, CREATOR_FEE]);
+    const NFTImplementation = await ethers.deployContract('MCV2_MultiToken');
+    await NFTImplementation.waitForDeployment();
+
+    const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, NFTImplementation.target, beneficiary.address, PROTOCOL_FEE, CREATOR_FEE]);
     await Bond.waitForDeployment();
 
     const BaseToken = await ethers.deployContract('TestToken', [wei(200000000)]); // supply: 200M
     await BaseToken.waitForDeployment();
 
-    return [TokenImplementation, Bond, BaseToken];
+    return [Bond, BaseToken];
   }
 
   beforeEach(async function () {
     [owner, alice, bob, beneficiary] = await ethers.getSigners();
-    [TokenImplementation, Bond, BaseToken] = await loadFixture(deployFixtures);
+    [Bond, BaseToken] = await loadFixture(deployFixtures);
     BABY_TOKEN.reserveToken = BaseToken.target; // set BaseToken address
 
     await Bond.connect(alice).createToken(...Object.values(BABY_TOKEN)); // creator = alice
