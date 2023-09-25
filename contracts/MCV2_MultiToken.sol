@@ -6,10 +6,15 @@ import "./lib/ERC1155Initializable.sol";
 
 contract MCV2_MultiToken is ERC1155Initializable {
     error MCV2_MultiToken__PermissionDenied();
+    error MCV2_MultiToken__BurnAmountExceedsTotalSupply();
+    error MCV2_MultiToken__NotApproved();
 
     // ERC1155 spec does not include a name and symbol by default, but we have added them here for consistency.
     string public name;
     string public symbol;
+
+    // Implement custom totalSupply tracking, since we only need to track the supply for tokenId = 0
+    uint256 public totalSupply;
 
     bool private _initialized; // false by default
     address private _bond; // Bonding curve contract should have its minting permission
@@ -34,6 +39,7 @@ contract MCV2_MultiToken is ERC1155Initializable {
      * Minting should also provide liquidity to the bonding curve contract
      */
     function mintByBond(address to, uint256 amount) public onlyBond {
+        totalSupply += amount;
         _mint(to, 0, amount, "");
     }
 
@@ -41,6 +47,12 @@ contract MCV2_MultiToken is ERC1155Initializable {
      * Users can simply send tokens to the token contract address for the same burning effect without changing the totalSupply.
      */
     function burnByBond(address account, uint256 amount) public onlyBond {
+        if (amount > totalSupply) revert MCV2_MultiToken__BurnAmountExceedsTotalSupply();
+        if(!isApprovedForAll(account, _bond)) revert MCV2_MultiToken__NotApproved(); // `msg.sender` is always be `_bond`
+
+        unchecked {
+            totalSupply -= amount;
+        }
         _burn(account, 0, amount);
     }
 }
