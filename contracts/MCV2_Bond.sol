@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./MCV2_FeeCollector.sol";
 import "./MCV2_Token.sol";
 import "./MCV2_MultiToken.sol";
+import "./MCV2_ICommonToken.sol";
 
 /**
 * @title MintClub Bond V2
@@ -212,7 +213,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
         Bond storage bond = tokenBond[token];
 
-        uint256 currentSupply = MCV2_Token(token).totalSupply();
+        uint256 currentSupply = MCV2_ICommonToken(token).totalSupply();
         uint256 currentStep = getCurrentStep(token, currentSupply);
 
         uint256 newSupply = currentSupply;
@@ -259,7 +260,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
         addFee(protocolBeneficiary, bond.reserveToken, protocolFee);
 
         // Mint reward tokens to the buyer
-        MCV2_Token(token).mintByBond(buyer, tokensToMint);
+        MCV2_ICommonToken(token).mintByBond(buyer, tokensToMint);
 
         emit Buy(token, buyer, tokensToMint, bond.reserveToken, reserveAmount);
     }
@@ -272,7 +273,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
         if (tokensToSell == 0) revert MCV2_Bond__InvalidTokenAmount();
 
         Bond storage bond = tokenBond[token];
-        uint256 currentSupply = MCV2_Token(token).totalSupply();
+        uint256 currentSupply = MCV2_ICommonToken(token).totalSupply();
         if (tokensToSell > currentSupply) revert MCV2_Bond__ExceedTotalSupply();
 
         uint256 reserveFromBond;
@@ -307,7 +308,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
         address seller = _msgSender();
 
         // Burn tokens from the seller
-        MCV2_Token(token).burnByBond(seller, tokensToSell);
+        MCV2_ICommonToken(token).burnByBond(seller, tokensToSell);
 
         // Update reserve & fee balances
         bond.reserveBalance -= (refundAmount + creatorFee + protocolFee).toUint128();
@@ -336,7 +337,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
     }
 
     function currentPrice(address token) external view _checkBondExists(token) returns (uint256) {
-        uint256 i = getCurrentStep(token, MCV2_Token(token).totalSupply());
+        uint256 i = getCurrentStep(token, MCV2_ICommonToken(token).totalSupply());
 
         return tokenBond[token].steps[i].price;
     }
