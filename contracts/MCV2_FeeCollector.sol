@@ -20,6 +20,9 @@ abstract contract MCV2_FeeCollector is Ownable {
     mapping(address => mapping(address => uint256)) public userTokenFeeBalance;
     mapping(address => mapping(address => uint256)) public userTokenFeeClaimed; // INFO
 
+    // TODO: Custom creator fee for each token!
+    
+
     constructor(address protocolBeneficiary_, uint256 protocolFee_, uint256 creatorFee_) {
         updateFeeRates(protocolBeneficiary_, protocolFee_, creatorFee_);
     }

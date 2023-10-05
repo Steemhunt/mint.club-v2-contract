@@ -7,23 +7,14 @@ const BENEFICIARY = '0x00000B655d573662B9921e14eDA96DBC9311fDe6'; // a random ad
 const PROTOCOL_FEE = 10n; // 0.1%
 const CREATOR_FEE = 20n; // 0.2%
 const BABY_TOKEN = {
-  name: 'Baby Token',
-  symbol: 'BABY',
+  name: 'Baby NFT',
+  symbol: 'BNFT',
+  uri: 'https://api.hunt.town/token-metadata/buildings.json',
   reserveToken: null, // Should be set later
-  maxSupply: wei(10000000), // supply: 10M
-  stepRanges: [wei(10000), wei(100000), wei(200000), wei(500000), wei(1000000), wei(2000000), wei(5000000), wei(10000000) ],
-  stepPrices: [wei(0), wei(2), wei(3), wei(4), wei(5), wei(7), wei(10), wei(15) ]
+  maxSupply: 100,
+  stepRanges: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+  stepPrices: [wei(0), wei(1), wei(2), wei(3), wei(4), wei(5), wei(6), wei(7), wei(8), wei(9) ]
 };
-
-// TODO: NFT Test
-// const BABY_NFT = {
-//   name: 'Baby NFT',
-//   symbol: 'BNFT',
-//   reserveToken: null, // Should be set later
-//   maxSupply: 100,
-//   stepRanges: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
-//   stepPrices: [wei(0), wei(1), wei(2), wei(3), wei(4), wei(5), wei(6), wei(7), wei(8), wei(9) ]
-// };
 
 function computeCreate2Address(saltHex, bytecode, deployer) {
   return web3.utils.toChecksumAddress(
@@ -58,7 +49,7 @@ function calculateFees(reserveAmount) {
   return { creatorFee, protocolFee, totalFee: creatorFee + protocolFee };
 }
 
-describe('Bond', function () {
+describe.only('Bond', function () {
   async function deployFixtures() {
     const TokenImplementation = await ethers.deployContract('MCV2_Token');
     await TokenImplementation.waitForDeployment();
@@ -72,8 +63,6 @@ describe('Bond', function () {
     const BaseToken = await ethers.deployContract('TestToken', [wei(200000000)]); // supply: 200M
     await BaseToken.waitForDeployment();
 
-    // console.log('-222222', [TokenImplementation, NFTImplementation, Bond, BaseToken]);
-
     return [TokenImplementation, NFTImplementation, Bond, BaseToken];
   }
 
@@ -86,18 +75,18 @@ describe('Bond', function () {
     BABY_TOKEN.reserveToken = BaseToken.target; // set BaseToken address
   });
 
-  describe('Create token', function () {
+  describe.only('Create NFT', function () {
     beforeEach(async function () {
-      const Token = await ethers.getContractFactory('MCV2_Token');
-      this.creationTx = await Bond.createToken(...Object.values(BABY_TOKEN));
-      this.token = await Token.attach(await Bond.tokens(0));
+      const NFT = await ethers.getContractFactory('MCV2_MultiToken');
+      this.creationTx = await Bond.createMultiToken(...Object.values(BABY_TOKEN));
+      this.token = await NFT.attach(await Bond.tokens(0));
       this.bond = await Bond.tokenBond(this.token.target);
     });
 
     it('should create a contract addreess deterministically', async function() {
       const creationCode = [
         '0x3d602d80600a3d3981f3363d3d373d3d3d363d73',
-        TokenImplementation.target.replace(/0x/, '').toLowerCase(),
+        NFTImplementation.target.replace(/0x/, '').toLowerCase(),
         '5af43d82803e903d91602b57fd5bf3',
       ].join('');
 
@@ -134,10 +123,10 @@ describe('Bond', function () {
       }
     });
 
-    it('should emit TokenCreated event', async function () {
+    it('should emit MultiTokenCreated event', async function () {
       await expect(this.creationTx)
-        .emit(Bond, 'TokenCreated')
-        .withArgs(this.token.target, BABY_TOKEN.name, BABY_TOKEN.symbol);
+        .emit(Bond, 'MultiTokenCreated')
+        .withArgs(this.token.target, BABY_TOKEN.name, BABY_TOKEN.symbol, BABY_TOKEN.uri);
     });
 
     it('should return tokenCount = 1', async function () {
@@ -151,7 +140,7 @@ describe('Bond', function () {
     describe('Validations', function () {
       it('should check if reserve token is valid', async function () {
         await expect(
-          Bond.createToken(
+          Bond.createMultiToken(
             ...Object.values(
               Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', reserveToken: '0x0000000000000000000000000000000000000000' })
             )
@@ -161,7 +150,7 @@ describe('Bond', function () {
 
       it('should check if max supply is valid', async function () {
         await expect(
-          Bond.createToken(
+          Bond.createMultiToken(
             ...Object.values(
               Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', maxSupply: 0 })
             )
@@ -171,7 +160,7 @@ describe('Bond', function () {
 
       it('should check if step ranges are not empty', async function () {
         await expect(
-          Bond.createToken(
+          Bond.createMultiToken(
             ...Object.values(
               Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [] })
             )
@@ -182,7 +171,7 @@ describe('Bond', function () {
 
       it('should check if the length of step ranges are more than max steps', async function () {
         await expect(
-          Bond.createToken(
+          Bond.createMultiToken(
             ...Object.values(
               Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [...Array(1002).keys()].splice(1) })
             )
@@ -193,7 +182,7 @@ describe('Bond', function () {
 
       it('should check if the length of step ranges has the same length with step prices', async function () {
         await expect(
-          Bond.createToken(
+          Bond.createMultiToken(
             ...Object.values(
               Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [100, 200], stepPrices: [1] })
             )
@@ -204,7 +193,7 @@ describe('Bond', function () {
 
       it('should check if the max suppply matches with the last step range', async function () {
         await expect(
-          Bond.createToken(
+          Bond.createMultiToken(
             ...Object.values(
               Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [100, 200], stepPrices: [1, 2] })
             )
@@ -215,7 +204,7 @@ describe('Bond', function () {
 
       it('should check if any of step ranges has zero value', async function () {
         await expect(
-          Bond.createToken(
+          Bond.createMultiToken(
             ...Object.values(
               Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [0, BABY_TOKEN.maxSupply], stepPrices: [1, 2] })
             )
@@ -226,7 +215,7 @@ describe('Bond', function () {
 
       it('should check if any of step ranges is less than the previous step', async function () {
         await expect(
-          Bond.createToken(
+          Bond.createMultiToken(
             ...Object.values(
               Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [2, 1, BABY_TOKEN.maxSupply], stepPrices: [1, 2, 3] })
             )
@@ -237,7 +226,7 @@ describe('Bond', function () {
 
       it('should check if any of step prices is less than the previous step', async function () {
         await expect(
-          Bond.createToken(
+          Bond.createMultiToken(
             ...Object.values(
               Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [1, 2, BABY_TOKEN.maxSupply], stepPrices: [1, 3, 2] })
             )
@@ -247,14 +236,14 @@ describe('Bond', function () {
       });
 
       it('should revert if token symbol already exists', async function () {
-        await expect(Bond.createToken(...Object.values(BABY_TOKEN)))
+        await expect(Bond.createMultiToken(...Object.values(BABY_TOKEN)))
           .to.be.revertedWithCustomError(Bond, 'MCV2_Bond__TokenSymbolAlreadyExists');
       });
     });
 
     describe('Create Token: Edge Cases', function () {
       it('should not mint any tokens if the first step price is not zero', async function () {
-        await Bond.createToken(
+        await Bond.createMultiToken(
           ...Object.values(
             Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [1, 2, BABY_TOKEN.maxSupply], stepPrices: [1, 2, 3] })
           )
@@ -267,7 +256,7 @@ describe('Bond', function () {
       // NOTE: This could cost up to ~13M gas, which is ~43% of the block gas limit
       // Skipping this test because this exceptional case makes the average gas cost too high
       it.skip('should check if it support up to max steps', async function () {
-        await Bond.createToken(
+        await Bond.createMultiToken(
           ...Object.values(
             Object.assign({}, BABY_TOKEN, {
               symbol: 'BABY2',
@@ -291,7 +280,7 @@ describe('Bond', function () {
       beforeEach(async function () {
         // Start with 10000 BaseToken, purchasing BABY tokens with 1000 BaseToken
         this.initialBaseBalance = wei(1000000); // 1M BASE tokens
-        this.reserveToPurchase = wei(1000);
+        this.reserveToPurchase = wei(10);
 
         // { creatorFee, protocolFee, reserveOnBond, tokensToMint }
         this.buyTest = calculatePurchase(this.reserveToPurchase, BABY_TOKEN.stepPrices[1]);
@@ -695,9 +684,9 @@ describe('Bond', function () {
       const BABY_TOKEN2 = Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', reserveToken: this.BaseToken2.target });
       const BABY_TOKEN3 = Object.assign({}, BABY_TOKEN, { symbol: 'BABY3', reserveToken: this.BaseToken2.target });
 
-      await Bond.connect(alice).createToken(...Object.values(BABY_TOKEN));
-      await Bond.connect(alice).createToken(...Object.values(BABY_TOKEN2));
-      await Bond.connect(bob).createToken(...Object.values(BABY_TOKEN3));
+      await Bond.connect(alice).createMultiToken(...Object.values(BABY_TOKEN));
+      await Bond.connect(alice).createMultiToken(...Object.values(BABY_TOKEN2));
+      await Bond.connect(bob).createMultiToken(...Object.values(BABY_TOKEN3));
     });
 
     it('should return [0] for ReserveToken = BaseToken', async function () {

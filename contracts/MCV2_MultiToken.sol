@@ -55,4 +55,11 @@ contract MCV2_MultiToken is ERC1155Initializable {
         }
         _burn(account, 0, amount);
     }
+
+    /* @dev Helper function to provide the same interface as ERC20
+     * As we only have one token, we can simply return the balance of tokenId = 0
+     */
+    function balanceOf(address account) external view returns (uint256) {
+        return balanceOf(account, 0);
+    }
 }

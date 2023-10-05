@@ -178,7 +178,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
     ) external returns (address) {
          _validateParams(name, symbol, reserveToken, maxSupply, stepRanges, stepPrices);
 
-        address token = _clone(tokenImplementation, symbol);
+        address token = _clone(multiTokenImplementation, symbol);
         MCV2_MultiToken(token).init(name, symbol, uri);
         tokens.push(token);
 
