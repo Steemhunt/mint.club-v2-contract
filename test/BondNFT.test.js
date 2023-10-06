@@ -49,7 +49,7 @@ function calculateFees(reserveAmount) {
   return { creatorFee, protocolFee, totalFee: creatorFee + protocolFee };
 }
 
-describe.only('Bond', function () {
+describe('Bond', function () {
   async function deployFixtures() {
     const TokenImplementation = await ethers.deployContract('MCV2_Token');
     await TokenImplementation.waitForDeployment();
@@ -75,7 +75,7 @@ describe.only('Bond', function () {
     BABY_TOKEN.reserveToken = BaseToken.target; // set BaseToken address
   });
 
-  describe.only('Create NFT', function () {
+  describe('Create NFT', function () {
     beforeEach(async function () {
       const NFT = await ethers.getContractFactory('MCV2_MultiToken');
       this.creationTx = await Bond.createMultiToken(...Object.values(BABY_TOKEN));

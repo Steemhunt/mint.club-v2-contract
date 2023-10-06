@@ -40,11 +40,13 @@ contract MCV2_Bond is MCV2_FeeCollector {
     address private immutable multiTokenImplementation;
 
     struct Bond {
-        address creator;
-        address reserveToken;
-        uint128 maxSupply;
+        address creator; // immutable
+        address beneficiary;
+        uint16 tradingFee; // immutable - range: [0, 5000] - 0.00% ~ 50.00%
+        address reserveToken; // immutable
+        uint128 maxSupply; // immutable
         uint128 reserveBalance;
-        BondStep[] steps;
+        BondStep[] steps; // immutable
     }
 
     // Use uint128 to save storage cost & prevent integer overflow when calculating range * price
@@ -61,13 +63,13 @@ contract MCV2_Bond is MCV2_FeeCollector {
     event Buy(address indexed token, address indexed buyer, uint256 amountMinted, address indexed reserveToken, uint256 reserveAmount);
     event Sell(address indexed token, address indexed seller, uint256 amountBurned, address indexed reserveToken, uint256 refundAmount);
 
+    // MARK: - Constructor
+
     constructor(
         address tokenImplementation_,
         address multiTokenImplementation_,
-        address protocolBeneficiary_,
-        uint256 protocolFee_,
-        uint256 creatorFee_
-    ) MCV2_FeeCollector(protocolBeneficiary_, protocolFee_, creatorFee_) {
+        address protocolBeneficiary_
+    ) MCV2_FeeCollector(protocolBeneficiary_) {
         tokenImplementation = tokenImplementation_;
         multiTokenImplementation = multiTokenImplementation_;
     }
@@ -79,20 +81,71 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
     // MARK: - Factory
 
-    function _validateParams(
-        string calldata name,
-        string calldata symbol,
-        address reserveToken,
-        uint128 maxSupply,
-        uint128[] calldata stepRanges,
-        uint128[] calldata stepPrices
-    ) pure private {
-        if (bytes(name).length == 0) revert MCV2_Bond__InvalidTokenCreationParams('name');
-        if (bytes(symbol).length == 0) revert MCV2_Bond__InvalidTokenCreationParams('symbol');
-        if (reserveToken == address(0)) revert MCV2_Bond__InvalidTokenCreationParams('reserveToken');
-        if (maxSupply == 0) revert MCV2_Bond__InvalidTokenCreationParams('maxSupply');
-        if (stepRanges.length == 0 || stepRanges.length > MAX_STEPS) revert MCV2_Bond__InvalidStepParams('INVALID_LENGTH');
-        if (stepRanges.length != stepPrices.length) revert MCV2_Bond__InvalidStepParams('LENGTH_DO_NOT_MATCH');
+    // Use structs to avoid stack too deep error
+    struct TokenParams {
+        string name;
+        string symbol;
+    }
+
+    struct MultiTokenParams {
+        string name;
+        string symbol;
+        string uri;
+    }
+
+    struct BondParams {
+        uint16 tradingFee;
+        address reserveToken;
+        uint128 maxSupply;
+        uint128[] stepRanges;
+        uint128[] stepPrices;
+    }
+
+    function _validateTokenParams(TokenParams calldata tp) pure private {
+        if (bytes(tp.name).length == 0) revert MCV2_Bond__InvalidTokenCreationParams('name');
+        if (bytes(tp.symbol).length == 0) revert MCV2_Bond__InvalidTokenCreationParams('symbol');
+    }
+
+    function _validateMultiTokenParams(MultiTokenParams calldata tp) pure private {
+        if (bytes(tp.name).length == 0) revert MCV2_Bond__InvalidTokenCreationParams('name');
+        if (bytes(tp.symbol).length == 0) revert MCV2_Bond__InvalidTokenCreationParams('symbol');
+        if (bytes(tp.uri).length == 0) revert MCV2_Bond__InvalidTokenCreationParams('uri');
+    }
+
+    function _validateBondParams(BondParams calldata bp) pure private {
+        if (bp.tradingFee > MAX_FEE_RANGE) revert MCV2_Bond__InvalidTokenCreationParams('tradingFee');
+        if (bp.reserveToken == address(0)) revert MCV2_Bond__InvalidTokenCreationParams('reserveToken');
+        if (bp.maxSupply == 0) revert MCV2_Bond__InvalidTokenCreationParams('maxSupply');
+        if (bp.stepRanges.length == 0 || bp.stepRanges.length > MAX_STEPS) revert MCV2_Bond__InvalidStepParams('INVALID_LENGTH');
+        if (bp.stepRanges.length != bp.stepPrices.length) revert MCV2_Bond__InvalidStepParams('LENGTH_DO_NOT_MATCH');
+    }
+
+    function _setBond(address token, BondParams calldata bp) private {
+        // Set token bond data
+        Bond storage bond = tokenBond[token];
+        bond.creator = _msgSender();
+        bond.beneficiary = bond.creator;
+        bond.tradingFee = bp.tradingFee;
+        bond.reserveToken = bp.reserveToken;
+        bond.maxSupply = bp.maxSupply;
+
+        // Last value or the rangeTo must be the same as the maxSupply
+        if (bp.stepRanges[bp.stepRanges.length - 1] != bp.maxSupply) revert MCV2_Bond__InvalidStepParams('MAX_SUPPLY_MISMATCH');
+
+        for (uint256 i = 0; i < bp.stepRanges.length; ++i) {
+            if (bp.stepRanges[i] == 0) revert MCV2_Bond__InvalidStepParams('CANNOT_BE_ZERO');
+
+            // Ranges and prices must be strictly increasing
+            if (i > 0) {
+                if (bp.stepRanges[i] <= bp.stepRanges[i - 1]) revert MCV2_Bond__InvalidStepParams('DECREASING_RANGE');
+                if (bp.stepPrices[i] <= bp.stepPrices[i - 1]) revert MCV2_Bond__InvalidStepParams('DECREASING_PRICE');
+            }
+
+            bond.steps.push(BondStep({
+                rangeTo: bp.stepRanges[i],
+                price: bp.stepPrices[i]
+            }));
+        }
     }
 
     function _clone(address implementation, string calldata symbol) private returns (address) {
@@ -108,87 +161,43 @@ contract MCV2_Bond is MCV2_FeeCollector {
         return Clones.cloneDeterministic(implementation, salt);
     }
 
-    function _setBond(
-        address token,
-        address reserveToken,
-        uint128 maxSupply,
-        uint128[] calldata stepRanges,
-        uint128[] calldata stepPrices
-    ) private {
-        // Set token bond data
-        Bond storage bond = tokenBond[token];
-        bond.creator = _msgSender();
-        bond.reserveToken = reserveToken;
-        bond.maxSupply = maxSupply;
+    function createToken(TokenParams calldata tp, BondParams calldata bp) external returns (address) {
+        _validateTokenParams(tp);
+        _validateBondParams(bp);
 
-        // Last value or the rangeTo must be the same as the maxSupply
-        if (stepRanges[stepRanges.length - 1] != maxSupply) revert MCV2_Bond__InvalidStepParams('MAX_SUPPLY_MISMATCH');
-
-        for (uint256 i = 0; i < stepRanges.length; ++i) {
-            if (stepRanges[i] == 0) revert MCV2_Bond__InvalidStepParams('CANNOT_BE_ZERO');
-
-            // Ranges and prices must be strictly increasing
-            if (i > 0) {
-                if (stepRanges[i] <= stepRanges[i - 1]) revert MCV2_Bond__InvalidStepParams('DECREASING_RANGE');
-                if (stepPrices[i] <= stepPrices[i - 1]) revert MCV2_Bond__InvalidStepParams('DECREASING_PRICE');
-            }
-
-            bond.steps.push(BondStep({
-                rangeTo: stepRanges[i],
-                price: stepPrices[i]
-            }));
-        }
-    }
-
-    function createToken(
-        string calldata name,
-        string calldata symbol,
-        address reserveToken,
-        uint128 maxSupply,
-        uint128[] calldata stepRanges,
-        uint128[] calldata stepPrices
-    ) external returns (address) {
-        _validateParams(name, symbol, reserveToken, maxSupply, stepRanges, stepPrices);
-
-        address token = _clone(tokenImplementation, symbol);
+        address token = _clone(tokenImplementation, tp.symbol);
         MCV2_Token newToken = MCV2_Token(token);
-        newToken.init(name, symbol);
+        newToken.init(tp.name, tp.symbol);
         tokens.push(token);
 
-        _setBond(token, reserveToken, maxSupply, stepRanges, stepPrices);
+        _setBond(token, bp);
 
-        emit TokenCreated(token, name, symbol);
+        emit TokenCreated(token, tp.name, tp.symbol);
 
         // Send free tokens to the creator if a free minting range exists
-        if (stepPrices[0] == 0) {
-            newToken.mintByBond(_msgSender(), stepRanges[0]);
+        if (bp.stepPrices[0] == 0) {
+            newToken.mintByBond(_msgSender(), bp.stepRanges[0]);
         }
 
         return token;
     }
 
-    function createMultiToken(
-        string calldata name,
-        string calldata symbol,
-        string calldata uri,
-        address reserveToken,
-        uint128 maxSupply,
-        uint128[] calldata stepRanges,
-        uint128[] calldata stepPrices
-    ) external returns (address) {
-         _validateParams(name, symbol, reserveToken, maxSupply, stepRanges, stepPrices);
+    function createMultiToken(MultiTokenParams calldata tp, BondParams calldata bp) external returns (address) {
+        _validateMultiTokenParams(tp);
+        _validateBondParams(bp);
 
-        address token = _clone(multiTokenImplementation, symbol);
-        MCV2_MultiToken(token).init(name, symbol, uri);
+        address token = _clone(multiTokenImplementation, tp.symbol);
+        MCV2_MultiToken newToken = MCV2_MultiToken(token);
+        newToken.init(tp.name, tp.symbol, tp.uri);
         tokens.push(token);
 
-        _setBond(token, reserveToken, maxSupply, stepRanges, stepPrices);
+        _setBond(token, bp);
 
-        emit MultiTokenCreated(token, name, symbol, uri);
+        emit MultiTokenCreated(token, tp.name, tp.symbol, tp.uri);
 
         // Send free tokens to the creator if a free minting range exists
-        if (stepPrices[0] == 0) {
-            MCV2_MultiToken(token).mintByBond(_msgSender(), stepRanges[0]);
+        if (bp.stepPrices[0] == 0) {
+            newToken.mintByBond(_msgSender(), bp.stepRanges[0]);
         }
 
         return token;
@@ -217,7 +226,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
         uint256 currentStep = getCurrentStep(token, currentSupply);
 
         uint256 newSupply = currentSupply;
-        (creatorFee, protocolFee) = getFees(reserveAmount);
+        (creatorFee, protocolFee) = getFees(reserveAmount, bond.tradingFee);
 
         uint256 buyAmount = reserveAmount - creatorFee - protocolFee;
         for (uint256 i = currentStep; i < bond.steps.length; ++i) {
@@ -292,7 +301,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
         if(tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount(); // can never happen
 
-        (creatorFee, protocolFee) = getFees(reserveFromBond);
+        (creatorFee, protocolFee) = getFees(reserveFromBond, bond.tradingFee);
         refundAmount = reserveFromBond - creatorFee - protocolFee;
     }
 

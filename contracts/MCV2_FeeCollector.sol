@@ -11,25 +11,45 @@ abstract contract MCV2_FeeCollector is Ownable {
 
     error MCV2_FeeCollector__NothingToClaim();
     error MCV2_FeeCollector__TokenTransferFailed();
-    uint256 private constant MAX_FEE_BASE = 10000;
-    address internal protocolBeneficiary;
-    uint256 internal protocolFee;
-    uint256 internal creatorFee;
 
-    // User => Token => Fee Balance
+    uint256 private constant FEE_BASE = 10000; // 100.00%
+    uint256 private constant PROTOCOL_FEE_RATIO = 2000;
+    uint256 internal constant MAX_FEE_RANGE = 5000; // The max fee is set at 50% to offer flexibility in tokenomics
+
+    address public protocolBeneficiary;
+
+    // User => ReserveToken => Fee Balance
     mapping(address => mapping(address => uint256)) public userTokenFeeBalance;
     mapping(address => mapping(address => uint256)) public userTokenFeeClaimed; // INFO
 
-    // TODO: Custom creator fee for each token!
-    
+    event FeeClaimed(address indexed user, address reserveToken, uint256 amount);
 
-    constructor(address protocolBeneficiary_, uint256 protocolFee_, uint256 creatorFee_) {
-        updateFeeRates(protocolBeneficiary_, protocolFee_, creatorFee_);
+    constructor(address protocolBeneficiary_) {
+        updateProtocolBeneficiary(protocolBeneficiary_);
     }
 
-    function addFee(address wallet, address reserveToken, uint256 amount) internal {
-        userTokenFeeBalance[wallet][reserveToken] += amount;
+    function updateProtocolBeneficiary(address protocolBeneficiary_) public onlyOwner {
+        protocolBeneficiary = protocolBeneficiary_;
     }
+
+    // MARK: - Internal utility functions
+
+    // Returns (creatorFee, protocolFee)
+    function getFees(uint256 amount, uint16 feeRate) internal pure returns (uint256, uint256) {
+        uint256 totalFee = amount * feeRate / FEE_BASE;
+        uint256 protocolFee = totalFee * PROTOCOL_FEE_RATIO / FEE_BASE;
+
+        return (totalFee - protocolFee, protocolFee);
+    }
+
+    // Add fee to the fee balance of the beneficiary and the protocol
+    function addFee(address beneficiary, address reserveToken, uint256 feeAmount) internal {
+        uint256 protocolFee = feeAmount * PROTOCOL_FEE_RATIO / FEE_BASE;
+        userTokenFeeBalance[beneficiary][reserveToken] += feeAmount - protocolFee;
+        userTokenFeeBalance[protocolBeneficiary][reserveToken] += protocolFee;
+    }
+
+    // MARK: - External functions
 
     function claimFees(address reserveToken) external {
         address msgSender = _msgSender();
@@ -40,27 +60,13 @@ abstract contract MCV2_FeeCollector is Ownable {
         userTokenFeeClaimed[msgSender][reserveToken] += amount; // INFO
 
         IERC20(reserveToken).safeTransfer(msgSender, amount);
-    }
 
-    function updateFeeRates(address protocolBeneficiary_, uint256 protocolFee_, uint256 creatorFee_) public onlyOwner {
-        protocolBeneficiary = protocolBeneficiary_;
-        protocolFee = protocolFee_;
-        creatorFee = creatorFee_;
+        emit FeeClaimed(msgSender, reserveToken, amount);
     }
 
     // MARK: - Utility view functions
 
-    function getFeeConfigs() external view returns (address, uint256, uint256) {
-        return (protocolBeneficiary, protocolFee, creatorFee);
-    }
-
     function getFeeInfo(address wallet, address reserveToken) external view returns (uint256, uint256) {
         return (userTokenFeeBalance[wallet][reserveToken], userTokenFeeClaimed[wallet][reserveToken]);
-    }
-
-    // MARK: - Internal utility functions
-
-    function getFees(uint256 amount) internal view returns (uint256, uint256) {
-        return (amount * creatorFee / MAX_FEE_BASE, amount * protocolFee / MAX_FEE_BASE);
     }
 }
