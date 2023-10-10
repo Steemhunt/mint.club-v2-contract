@@ -6,15 +6,15 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol"; // include Context
 
-abstract contract MCV2_FeeCollector is Ownable {
+abstract contract MCV2_Royalty is Ownable {
     using SafeERC20 for IERC20;
 
-    error MCV2_FeeCollector__NothingToClaim();
-    error MCV2_FeeCollector__TokenTransferFailed();
+    error MCV2_Royalty__NothingToClaim();
+    error MCV2_Royalty__TokenTransferFailed();
 
-    uint256 private constant FEE_BASE = 10000; // 100.00%
-    uint256 private constant PROTOCOL_FEE_RATIO = 2000;
-    uint256 internal constant MAX_FEE_RANGE = 5000; // The max fee is set at 50% to offer flexibility in tokenomics
+    uint256 private constant RATIO_BASE = 10000; // 100.00%
+    uint256 private constant PROTOCOL_CUT = 2000;
+    uint256 internal constant MAX_ROYALTY_RANGE = 5000; // The max fee is set at 50% to offer flexibility in tokenomics
 
     address public protocolBeneficiary;
 
@@ -36,15 +36,15 @@ abstract contract MCV2_FeeCollector is Ownable {
 
     // Returns (creatorFee, protocolFee)
     function getFees(uint256 amount, uint16 feeRate) internal pure returns (uint256, uint256) {
-        uint256 totalFee = amount * feeRate / FEE_BASE;
-        uint256 protocolFee = totalFee * PROTOCOL_FEE_RATIO / FEE_BASE;
+        uint256 totalFee = amount * feeRate / RATIO_BASE;
+        uint256 protocolFee = totalFee * PROTOCOL_CUT / RATIO_BASE;
 
         return (totalFee - protocolFee, protocolFee);
     }
 
     // Add fee to the fee balance of the beneficiary and the protocol
     function addFee(address beneficiary, address reserveToken, uint256 feeAmount) internal {
-        uint256 protocolFee = feeAmount * PROTOCOL_FEE_RATIO / FEE_BASE;
+        uint256 protocolFee = feeAmount * PROTOCOL_CUT / RATIO_BASE;
         userTokenFeeBalance[beneficiary][reserveToken] += feeAmount - protocolFee;
         userTokenFeeBalance[protocolBeneficiary][reserveToken] += protocolFee;
     }
@@ -54,7 +54,7 @@ abstract contract MCV2_FeeCollector is Ownable {
     function claimFees(address reserveToken) external {
         address msgSender = _msgSender();
         uint256 amount = userTokenFeeBalance[msgSender][reserveToken];
-        if (amount == 0) revert MCV2_FeeCollector__NothingToClaim();
+        if (amount == 0) revert MCV2_Royalty__NothingToClaim();
 
         userTokenFeeBalance[msgSender][reserveToken] = 0;
         userTokenFeeClaimed[msgSender][reserveToken] += amount; // INFO

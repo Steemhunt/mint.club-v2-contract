@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "./MCV2_FeeCollector.sol";
+import "./MCV2_Royalty.sol";
 import "./MCV2_Token.sol";
 import "./MCV2_MultiToken.sol";
 import "./MCV2_ICommonToken.sol";
@@ -13,7 +13,7 @@ import "./MCV2_ICommonToken.sol";
 * @title MintClub Bond V2
 * Providing liquidity for MintClubV2 tokens with a bonding curve.
 */
-contract MCV2_Bond is MCV2_FeeCollector {
+contract MCV2_Bond is MCV2_Royalty {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
 
@@ -42,7 +42,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
     struct Bond {
         address creator; // immutable
         address beneficiary;
-        uint16 tradingFee; // immutable - range: [0, 5000] - 0.00% ~ 50.00%
+        uint16 royalty; // immutable - range: [0, 5000] - 0.00% ~ 50.00%
         address reserveToken; // immutable
         uint128 maxSupply; // immutable
         uint128 reserveBalance;
@@ -69,7 +69,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
         address tokenImplementation_,
         address multiTokenImplementation_,
         address protocolBeneficiary_
-    ) MCV2_FeeCollector(protocolBeneficiary_) {
+    ) MCV2_Royalty(protocolBeneficiary_) {
         tokenImplementation = tokenImplementation_;
         multiTokenImplementation = multiTokenImplementation_;
     }
@@ -94,7 +94,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
     }
 
     struct BondParams {
-        uint16 tradingFee;
+        uint16 royalty;
         address reserveToken;
         uint128 maxSupply;
         uint128[] stepRanges;
@@ -113,7 +113,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
     }
 
     function _validateBondParams(BondParams calldata bp) pure private {
-        if (bp.tradingFee > MAX_FEE_RANGE) revert MCV2_Bond__InvalidTokenCreationParams('tradingFee');
+        if (bp.royalty > MAX_ROYALTY_RANGE) revert MCV2_Bond__InvalidTokenCreationParams('royalty');
         if (bp.reserveToken == address(0)) revert MCV2_Bond__InvalidTokenCreationParams('reserveToken');
         if (bp.maxSupply == 0) revert MCV2_Bond__InvalidTokenCreationParams('maxSupply');
         if (bp.stepRanges.length == 0 || bp.stepRanges.length > MAX_STEPS) revert MCV2_Bond__InvalidStepParams('INVALID_LENGTH');
@@ -125,7 +125,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
         Bond storage bond = tokenBond[token];
         bond.creator = _msgSender();
         bond.beneficiary = bond.creator;
-        bond.tradingFee = bp.tradingFee;
+        bond.royalty = bp.royalty;
         bond.reserveToken = bp.reserveToken;
         bond.maxSupply = bp.maxSupply;
 
@@ -226,7 +226,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
         uint256 currentStep = getCurrentStep(token, currentSupply);
 
         uint256 newSupply = currentSupply;
-        (creatorFee, protocolFee) = getFees(reserveAmount, bond.tradingFee);
+        (creatorFee, protocolFee) = getFees(reserveAmount, bond.royalty);
 
         uint256 buyAmount = reserveAmount - creatorFee - protocolFee;
         for (uint256 i = currentStep; i < bond.steps.length; ++i) {
@@ -301,7 +301,7 @@ contract MCV2_Bond is MCV2_FeeCollector {
 
         if(tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount(); // can never happen
 
-        (creatorFee, protocolFee) = getFees(reserveFromBond, bond.tradingFee);
+        (creatorFee, protocolFee) = getFees(reserveFromBond, bond.royalty);
         refundAmount = reserveFromBond - creatorFee - protocolFee;
     }
 
