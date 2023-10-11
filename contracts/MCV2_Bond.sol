@@ -28,6 +28,7 @@ contract MCV2_Bond is MCV2_Royalty {
     error MCV2_Bond__InvalidRefundAmount();
     error MCV2_Bond__InvalidReserveAmount();
     error MCV2_Bond__InvalidCurrentSupply();
+    error MCV2_Bond__PermissionDenied();
 
     uint256 private constant MAX_STEPS = 1000;
 
@@ -62,6 +63,7 @@ contract MCV2_Bond is MCV2_Royalty {
     event MultiTokenCreated(address indexed token, string name, string symbol, string uri);
     event Buy(address indexed token, address indexed buyer, uint256 amountMinted, address indexed reserveToken, uint256 reserveAmount);
     event Sell(address indexed token, address indexed seller, uint256 amountBurned, address indexed reserveToken, uint256 refundAmount);
+    event BondBeneficiaryUpdated(address indexed token, address indexed beneficiary);
 
     // MARK: - Constructor
 
@@ -202,6 +204,15 @@ contract MCV2_Bond is MCV2_Royalty {
         return token;
     }
 
+    function updateBondBeneficiary(address token, address beneficiary) external _checkBondExists(token) {
+        Bond storage bond = tokenBond[token];
+        if (bond.creator != _msgSender()) revert MCV2_Bond__PermissionDenied();
+
+        bond.beneficiary = beneficiary;
+
+        emit BondBeneficiaryUpdated(token, beneficiary);
+    }
+
     function getCurrentStep(address token, uint256 currentSupply) internal view returns (uint256) {
         Bond storage bond = tokenBond[token];
         for(uint256 i = 0; i < bond.steps.length; ++i) {
@@ -215,7 +226,7 @@ contract MCV2_Bond is MCV2_Royalty {
     // MARK: - Buy
 
     function getTokensForReserve(address token, uint256 reserveAmount) public view _checkBondExists(token)
-        returns (uint256 tokensToMint, uint256 creatorFee, uint256 protocolFee)
+        returns (uint256 tokensToMint, uint256 royalty)
     {
         if (reserveAmount == 0) revert MCV2_Bond__InvalidReserveAmount();
 
@@ -225,9 +236,9 @@ contract MCV2_Bond is MCV2_Royalty {
         uint256 currentStep = getCurrentStep(token, currentSupply);
 
         uint256 newSupply = currentSupply;
-        (creatorFee, protocolFee) = getFees(reserveAmount, bond.royalty);
+        royalty = getRoyalty(reserveAmount, bond.royalty);
 
-        uint256 buyAmount = reserveAmount - creatorFee - protocolFee;
+        uint256 buyAmount = reserveAmount - royalty;
         for (uint256 i = currentStep; i < bond.steps.length; ++i) {
             uint256 supplyLeft = bond.steps[i].rangeTo - newSupply;
             uint256 reserveRequired = supplyLeft * bond.steps[i].price / 1e18;
@@ -252,7 +263,7 @@ contract MCV2_Bond is MCV2_Royalty {
         // TODO: Handle rebasing tokens
         // TODO: reentrancy handling for ERC777
 
-        (uint256 tokensToMint, uint256 creatorFee, uint256 protocolFee) = getTokensForReserve(token, reserveAmount);
+        (uint256 tokensToMint, uint256 royalty) = getTokensForReserve(token, reserveAmount);
         if (tokensToMint < minTokens) revert MCV2_Bond__SlippageLimitExceeded();
 
         Bond storage bond = tokenBond[token];
@@ -263,9 +274,8 @@ contract MCV2_Bond is MCV2_Royalty {
         reserveToken.safeTransferFrom(buyer, address(this), reserveAmount);
 
         // Update reserve & fee balances
-        bond.reserveBalance += (reserveAmount - creatorFee - protocolFee).toUint128();
-        addFee(bond.creator, bond.reserveToken, creatorFee);
-        addFee(protocolBeneficiary, bond.reserveToken, protocolFee);
+        bond.reserveBalance += (reserveAmount - royalty).toUint128();
+        addRoyalty(bond.beneficiary, bond.reserveToken, royalty);
 
         // Mint reward tokens to the buyer
         MCV2_ICommonToken(token).mintByBond(buyer, tokensToMint);
@@ -276,7 +286,7 @@ contract MCV2_Bond is MCV2_Royalty {
     // MARK: - Sell
 
     function getRefundForTokens(address token, uint256 tokensToSell) public view _checkBondExists(token)
-        returns (uint256 refundAmount, uint256 creatorFee, uint256 protocolFee)
+        returns (uint256 refundAmount, uint256 royalty)
     {
         if (tokensToSell == 0) revert MCV2_Bond__InvalidTokenAmount();
 
@@ -300,8 +310,8 @@ contract MCV2_Bond is MCV2_Royalty {
 
         if(tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount(); // can never happen
 
-        (creatorFee, protocolFee) = getFees(reserveFromBond, bond.royalty);
-        refundAmount = reserveFromBond - creatorFee - protocolFee;
+        royalty = getRoyalty(reserveFromBond, bond.royalty);
+        refundAmount = reserveFromBond - royalty;
     }
 
     function sell(address token, uint256 tokensToSell, uint256 minRefund) public {
@@ -309,7 +319,7 @@ contract MCV2_Bond is MCV2_Royalty {
         // TODO: Handle rebasing tokens
         // TODO: reentrancy handling for ERC777
 
-        (uint256 refundAmount, uint256 creatorFee, uint256 protocolFee) = getRefundForTokens(token, tokensToSell);
+        (uint256 refundAmount, uint256 royalty) = getRefundForTokens(token, tokensToSell);
         if (refundAmount < minRefund) revert MCV2_Bond__SlippageLimitExceeded();
 
         Bond storage bond = tokenBond[token];
@@ -319,9 +329,8 @@ contract MCV2_Bond is MCV2_Royalty {
         MCV2_ICommonToken(token).burnByBond(seller, tokensToSell);
 
         // Update reserve & fee balances
-        bond.reserveBalance -= (refundAmount + creatorFee + protocolFee).toUint128();
-        addFee(bond.creator, bond.reserveToken, creatorFee);
-        addFee(protocolBeneficiary, bond.reserveToken, protocolFee);
+        bond.reserveBalance -= (refundAmount + royalty).toUint128();
+        addRoyalty(bond.beneficiary, bond.reserveToken, royalty);
 
         // Transfer reserve tokens to the seller
         IERC20 reserveToken = IERC20(bond.reserveToken);
@@ -381,6 +390,25 @@ contract MCV2_Bond is MCV2_Royalty {
             uint256 j = 0;
             for (uint256 i = 0; i < tokensLength; ++i) {
                 if (tokenBond[tokens[i]].creator == creator) {
+                    ids[j++] = i;
+                    if (j == count) break;
+                }
+            }
+        }
+    }
+
+    function getTokenIdsByBeneficiary(address beneficiary) external view returns (uint256[] memory ids) {
+        unchecked {
+            uint256 count;
+            uint256 tokensLength = tokens.length;
+            for (uint256 i = 0; i < tokensLength; ++i) {
+                if (tokenBond[tokens[i]].beneficiary == beneficiary) ++count;
+            }
+            ids = new uint256[](count);
+
+            uint256 j = 0;
+            for (uint256 i = 0; i < tokensLength; ++i) {
+                if (tokenBond[tokens[i]].beneficiary == beneficiary) {
                     ids[j++] = i;
                     if (j == count) break;
                 }

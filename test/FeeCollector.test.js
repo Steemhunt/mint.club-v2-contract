@@ -64,7 +64,7 @@ describe('FeeCollector', function () {
     expect((await Bond.getFeeConfigs())[2]).to.equal(CREATOR_FEE);
   });
 
-  it('should be able to update fee rates by owner', async function () {
+  it('should be able to update fee rates by the protocol owner', async function () {
     await Bond.connect(owner).updateFeeRates(owner.address, 22, 33);
     const configs = await Bond.getFeeConfigs();
     expect(configs[0]).to.equal(owner.address);
@@ -156,4 +156,6 @@ describe('FeeCollector', function () {
       });
     }); // Sell fee
   }); // Buy fee
+
+  // TODO: updateBondBeneficiary on Bond.sol
 }); // FeeCollector

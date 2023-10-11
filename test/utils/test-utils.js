@@ -6,8 +6,8 @@ exports.NULL_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 exports.PROTOCOL_BENEFICIARY = '0x00000B655d573662B9921e14eDA96DBC9311fDe6'; // a random address for testing
 exports.MAX_ROYALTY_RANGE = 5000n; // 50%
-exports.PROTOCOL_CUT = 2000n; // 20% of the royalty
 exports.MAX_STEPS = 1000;
+const PROTOCOL_CUT = 2000n; // 20% of the royalty
 
 exports.wei = function(num, decimals = 18) {
   return BigInt(num) * 10n**BigInt(decimals);
