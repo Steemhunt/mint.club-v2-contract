@@ -1,62 +1,33 @@
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { expect } = require('chai');
 const web3 = require('web3');
-const { MAX_INT_256, wei } = require('./utils/test-utils');
+const {
+  MAX_INT_256,
+  NULL_ADDRESS,
+  PROTOCOL_BENEFICIARY,
+  MAX_ROYALTY_RANGE,
+  PROTOCOL_CUT,
+  MAX_STEPS,
+  wei,
+  modifiedValues,
+  computeCreate2Address,
+  calculatePurchase,
+  calculateSell
+} = require('./utils/test-utils');
 
-const BENEFICIARY = '0x00000B655d573662B9921e14eDA96DBC9311fDe6'; // a random address for testing
-const PROTOCOL_FEE = 10n; // 0.1%
-const CREATOR_FEE = 20n; // 0.2%
 const BABY_TOKEN = {
-  name: 'Baby Token',
-  symbol: 'BABY',
-  reserveToken: null, // Should be set later
-  maxSupply: wei(10000000), // supply: 10M
-  stepRanges: [wei(10000), wei(100000), wei(200000), wei(500000), wei(1000000), wei(2000000), wei(5000000), wei(10000000) ],
-  stepPrices: [wei(0), wei(2), wei(3), wei(4), wei(5), wei(7), wei(10), wei(15) ]
+  tokenParams: {
+    name: 'Baby Token',
+    symbol: 'BABY'
+  },
+  bondParams: {
+    royalty: 100, // 1%
+    reserveToken: null, // Should be set later
+    maxSupply: wei(10000000), // supply: 10M
+    stepRanges: [wei(10000), wei(100000), wei(200000), wei(500000), wei(1000000), wei(2000000), wei(5000000), wei(10000000) ],
+    stepPrices: [wei(0), wei(2), wei(3), wei(4), wei(5), wei(7), wei(10), wei(15) ]
+  }
 };
-
-// TODO: NFT Test
-// const BABY_NFT = {
-//   name: 'Baby NFT',
-//   symbol: 'BNFT',
-//   reserveToken: null, // Should be set later
-//   maxSupply: 100,
-//   stepRanges: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
-//   stepPrices: [wei(0), wei(1), wei(2), wei(3), wei(4), wei(5), wei(6), wei(7), wei(8), wei(9) ]
-// };
-
-function computeCreate2Address(saltHex, bytecode, deployer) {
-  return web3.utils.toChecksumAddress(
-    `0x${web3.utils
-      .sha3(`0x${['ff', deployer, saltHex, web3.utils.soliditySha3(bytecode)].map(x => x.replace(/0x/, '')).join('')}`)
-      .slice(-40)}`,
-  );
-}
-
-function calculatePurchase(reserveToPurchase, stepPrice) {
-  const creatorFee = reserveToPurchase * CREATOR_FEE / 10000n;
-  const protocolFee = reserveToPurchase * PROTOCOL_FEE / 10000n;
-  const reserveOnBond = reserveToPurchase - creatorFee - protocolFee;
-  const tokensToMint = 10n**18n * reserveOnBond / stepPrice;
-
-  return { creatorFee, protocolFee, reserveOnBond, tokensToMint };
-}
-
-function calculateSell(tokensToSell, stepPrice) {
-  const reserveFromBond = tokensToSell * stepPrice / 10n**18n;
-  const creatorFee = reserveFromBond * CREATOR_FEE / 10000n;
-  const protocolFee = reserveFromBond * PROTOCOL_FEE / 10000n;
-  const reserveToRefund = reserveFromBond - creatorFee - protocolFee; // after fee -
-
-  return { creatorFee, protocolFee, reserveFromBond, reserveToRefund };
-}
-
-function calculateFees(reserveAmount) {
-  const creatorFee = reserveAmount * CREATOR_FEE / 10000n;
-  const protocolFee = reserveAmount * PROTOCOL_FEE / 10000n;
-
-  return { creatorFee, protocolFee, totalFee: creatorFee + protocolFee };
-}
 
 describe('Bond', function () {
   async function deployFixtures() {
@@ -66,7 +37,7 @@ describe('Bond', function () {
     const NFTImplementation = await ethers.deployContract('MCV2_MultiToken');
     await NFTImplementation.waitForDeployment();
 
-    const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, NFTImplementation.target, BENEFICIARY, PROTOCOL_FEE, CREATOR_FEE]);
+    const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, NFTImplementation.target, PROTOCOL_BENEFICIARY]);
     await Bond.waitForDeployment();
 
     const BaseToken = await ethers.deployContract('TestToken', [wei(200000000)]); // supply: 200M
@@ -83,131 +54,157 @@ describe('Bond', function () {
   beforeEach(async function () {
     [TokenImplementation, NFTImplementation, Bond, BaseToken] = await loadFixture(deployFixtures);
     [owner, alice, bob] = await ethers.getSigners();
-    BABY_TOKEN.reserveToken = BaseToken.target; // set BaseToken address
+    BABY_TOKEN.bondParams.reserveToken = BaseToken.target; // set BaseToken address
   });
 
   describe('Create token', function () {
     beforeEach(async function () {
       const Token = await ethers.getContractFactory('MCV2_Token');
-      this.creationTx = await Bond.createToken(...Object.values(BABY_TOKEN));
+      this.creationTx = await Bond.createToken(Object.values(BABY_TOKEN.tokenParams), Object.values(BABY_TOKEN.bondParams));
       this.token = await Token.attach(await Bond.tokens(0));
       this.bond = await Bond.tokenBond(this.token.target);
     });
 
-    it('should create a contract addreess deterministically', async function() {
-      const creationCode = [
-        '0x3d602d80600a3d3981f3363d3d373d3d3d363d73',
-        TokenImplementation.target.replace(/0x/, '').toLowerCase(),
-        '5af43d82803e903d91602b57fd5bf3',
-      ].join('');
+    describe('Normal flow', function() {
+      it('should create a contract addreess deterministically', async function() {
+        const salt = web3.utils.soliditySha3(
+          { t: 'address', v: Bond.target },
+          { t: 'string', v: BABY_TOKEN.tokenParams.symbol }
+        );
+        const predicted = computeCreate2Address(salt, TokenImplementation.target, Bond.target);
 
-      const salt = web3.utils.soliditySha3(
-        { t: 'address', v: Bond.target },
-        { t: 'string', v: BABY_TOKEN.symbol }
-      );
-      const predicted = computeCreate2Address(salt, creationCode, Bond.target);
+        expect(this.token.target).to.be.equal(predicted);
+      });
 
-      expect(this.token.target).to.be.equal(predicted);
-    });
+      it('should create token with correct parameters', async function() {
+        expect(await this.token.name()).to.equal(BABY_TOKEN.tokenParams.name);
+        expect(await this.token.symbol()).to.equal(BABY_TOKEN.tokenParams.symbol);
+      });
 
-    it('should create token with correct parameters', async function() {
-      expect(await this.token.name()).to.equal(BABY_TOKEN.name);
-      expect(await this.token.symbol()).to.equal(BABY_TOKEN.symbol);
-    });
+      it('should mint free range tokens initially to the creator', async function () {
+        expect(await this.token.totalSupply()).to.equal(BABY_TOKEN.bondParams.stepRanges[0]);
+        expect(await this.token.balanceOf(owner.address)).to.equal(BABY_TOKEN.bondParams.stepRanges[0]);
+      });
 
-    it('should mint free range tokens initially to the creator', async function () {
-      expect(await this.token.totalSupply()).to.equal(BABY_TOKEN.stepRanges[0]);
-      expect(await this.token.balanceOf(owner.address)).to.equal(BABY_TOKEN.stepRanges[0]);
-    });
+      it('should set correct bond parameters', async function() {
+        expect(this.bond.creator).to.equal(owner.address);
+        expect(this.bond.reserveToken).to.equal(BABY_TOKEN.bondParams.reserveToken);
+        expect(this.bond.maxSupply).to.equal(BABY_TOKEN.bondParams.maxSupply);
+      });
 
-    it('should set correct bond parameters', async function() {
-      expect(this.bond.creator).to.equal(owner.address);
-      expect(this.bond.reserveToken).to.equal(BABY_TOKEN.reserveToken);
-      expect(this.bond.maxSupply).to.equal(BABY_TOKEN.maxSupply);
-    });
+      it('should set correct bond steps', async function() {
+        const steps = await Bond.getSteps(this.token.target);
+        for(let i = 0; i < steps.length; i++) {
+          expect(steps[i][0]).to.equal(BABY_TOKEN.bondParams.stepRanges[i]);
+          expect(steps[i][1]).to.equal(BABY_TOKEN.bondParams.stepPrices[i]);
+        }
+      });
 
-    it('should set correct bond steps', async function() {
-      const steps = await Bond.getSteps(this.token.target);
-      for(let i = 0; i < steps.length; i++) {
-        expect(steps[i][0]).to.equal(BABY_TOKEN.stepRanges[i]);
-        expect(steps[i][1]).to.equal(BABY_TOKEN.stepPrices[i]);
-      }
-    });
+      it('should emit TokenCreated event', async function () {
+        await expect(this.creationTx)
+          .emit(Bond, 'TokenCreated')
+          .withArgs(this.token.target, BABY_TOKEN.tokenParams.name, BABY_TOKEN.tokenParams.symbol);
+      });
 
-    it('should emit TokenCreated event', async function () {
-      await expect(this.creationTx)
-        .emit(Bond, 'TokenCreated')
-        .withArgs(this.token.target, BABY_TOKEN.name, BABY_TOKEN.symbol);
-    });
+      it('should return tokenCount = 1', async function () {
+        expect(await Bond.tokenCount()).to.equal(1);
+      });
 
-    it('should return tokenCount = 1', async function () {
-      expect(await Bond.tokenCount()).to.equal(1);
-    });
+      it('should return true for existence check', async function () {
+        expect(await Bond.exists(this.token.target)).to.equal(true);
+      });
+    }); // Normal flow
 
-    it('should return true for existence check', async function () {
-      expect(await Bond.exists(this.token.target)).to.equal(true);
-    });
+    describe.only('Validations', function () {
+      beforeEach(async function () {
+        this.newTokenParams = modifiedValues(BABY_TOKEN.tokenParams, { symbol: 'BABY2' });
+      });
 
-    describe('Validations', function () {
+      it('should check if name is blank', async function () {
+        await expect(
+          Bond.createToken(
+            modifiedValues(BABY_TOKEN.tokenParams, { name: '' }),
+            Object.values(BABY_TOKEN.bondParams)
+          )
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenCreationParams')
+        .withArgs('name');
+      });
+
+      it('should check if symbol is blank', async function () {
+        await expect(
+          Bond.createToken(
+            modifiedValues(BABY_TOKEN.tokenParams, { symbol: '' }),
+            Object.values(BABY_TOKEN.bondParams)
+          )
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenCreationParams')
+        .withArgs('symbol');
+      });
+
+      it('should check if royalty is less than the max range', async function () {
+        await expect(
+          Bond.createToken(
+            this.newTokenParams,
+            modifiedValues(BABY_TOKEN.bondParams, { royalty: MAX_ROYALTY_RANGE + 1n })
+          )
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenCreationParams')
+        .withArgs('royalty');
+      });
+
       it('should check if reserve token is valid', async function () {
         await expect(
           Bond.createToken(
-            ...Object.values(
-              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', reserveToken: '0x0000000000000000000000000000000000000000' })
-            )
+            this.newTokenParams,
+            modifiedValues(BABY_TOKEN.bondParams, { reserveToken: NULL_ADDRESS })
           )
-        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenCreationParams');
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenCreationParams')
+        .withArgs('reserveToken');
       });
 
       it('should check if max supply is valid', async function () {
         await expect(
           Bond.createToken(
-            ...Object.values(
-              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', maxSupply: 0 })
-            )
+            this.newTokenParams,
+            modifiedValues(BABY_TOKEN.bondParams, { maxSupply: 0 })
           )
-        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenCreationParams');
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenCreationParams')
+        .withArgs('maxSupply');
       });
 
       it('should check if step ranges are not empty', async function () {
         await expect(
           Bond.createToken(
-            ...Object.values(
-              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [] })
-            )
+            this.newTokenParams,
+            modifiedValues(BABY_TOKEN.bondParams, { stepRanges: [] })
           )
         ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepParams')
-        .withArgs('INVALID_LENGTH');
+        .withArgs('INVALID_STEP_LENGTH');
       });
 
       it('should check if the length of step ranges are more than max steps', async function () {
         await expect(
           Bond.createToken(
-            ...Object.values(
-              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [...Array(1002).keys()].splice(1) })
-            )
+            this.newTokenParams,
+            modifiedValues(BABY_TOKEN.bondParams, { stepRanges: [...Array(MAX_STEPS + 2).keys()].splice(1) })
           )
         ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepParams')
-        .withArgs('INVALID_LENGTH');
+        .withArgs('INVALID_STEP_LENGTH');
       });
 
       it('should check if the length of step ranges has the same length with step prices', async function () {
         await expect(
           Bond.createToken(
-            ...Object.values(
-              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [100, 200], stepPrices: [1] })
-            )
+            this.newTokenParams,
+            modifiedValues(BABY_TOKEN.bondParams, { stepRanges: [100, 200], stepPrices: [1] })
           )
         ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepParams')
-        .withArgs('LENGTH_DO_NOT_MATCH');
+        .withArgs('STEP_LENGTH_DO_NOT_MATCH');
       });
 
       it('should check if the max suppply matches with the last step range', async function () {
         await expect(
           Bond.createToken(
-            ...Object.values(
-              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [100, 200], stepPrices: [1, 2] })
-            )
+            this.newTokenParams,
+            modifiedValues(BABY_TOKEN.bondParams, { stepRanges: [100, 200], stepPrices: [1, 2] })
           )
         ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepParams')
         .withArgs('MAX_SUPPLY_MISMATCH');
@@ -216,20 +213,18 @@ describe('Bond', function () {
       it('should check if any of step ranges has zero value', async function () {
         await expect(
           Bond.createToken(
-            ...Object.values(
-              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [0, BABY_TOKEN.maxSupply], stepPrices: [1, 2] })
-            )
+            this.newTokenParams,
+            modifiedValues(BABY_TOKEN.bondParams, { stepRanges: [0, BABY_TOKEN.bondParams.maxSupply], stepPrices: [1, 2] })
           )
         ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepParams')
-        .withArgs('CANNOT_BE_ZERO');
+        .withArgs('STEP_CANNOT_BE_ZERO');
       });
 
       it('should check if any of step ranges is less than the previous step', async function () {
         await expect(
           Bond.createToken(
-            ...Object.values(
-              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [2, 1, BABY_TOKEN.maxSupply], stepPrices: [1, 2, 3] })
-            )
+            this.newTokenParams,
+            modifiedValues(BABY_TOKEN.bondParams, { stepRanges: [2, 1, BABY_TOKEN.bondParams.maxSupply], stepPrices: [1, 2, 3] })
           )
         ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepParams')
         .withArgs('DECREASING_RANGE');
@@ -238,25 +233,24 @@ describe('Bond', function () {
       it('should check if any of step prices is less than the previous step', async function () {
         await expect(
           Bond.createToken(
-            ...Object.values(
-              Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [1, 2, BABY_TOKEN.maxSupply], stepPrices: [1, 3, 2] })
-            )
+            this.newTokenParams,
+            modifiedValues(BABY_TOKEN.bondParams, { stepRanges: [1, 2, BABY_TOKEN.bondParams.maxSupply], stepPrices: [1, 3, 2] })
           )
         ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepParams')
         .withArgs('DECREASING_PRICE');
       });
 
       it('should revert if token symbol already exists', async function () {
-        await expect(Bond.createToken(...Object.values(BABY_TOKEN)))
+        await expect(Bond.createToken(BABY_TOKEN.tokenParams, BABY_TOKEN.bondParams))
           .to.be.revertedWithCustomError(Bond, 'MCV2_Bond__TokenSymbolAlreadyExists');
       });
-    });
+    }); // Validations
 
     describe('Create Token: Edge Cases', function () {
       it('should not mint any tokens if the first step price is not zero', async function () {
         await Bond.createToken(
           ...Object.values(
-            Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [1, 2, BABY_TOKEN.maxSupply], stepPrices: [1, 2, 3] })
+            Object.assign({}, BABY_TOKEN, { symbol: 'BABY2', stepRanges: [1, 2, BABY_TOKEN.bondParams.maxSupply], stepPrices: [1, 2, 3] })
           )
         );
         const Token = await ethers.getContractFactory('MCV2_Token');
@@ -294,7 +288,7 @@ describe('Bond', function () {
         this.reserveToPurchase = wei(1000);
 
         // { creatorFee, protocolFee, reserveOnBond, tokensToMint }
-        this.buyTest = calculatePurchase(this.reserveToPurchase, BABY_TOKEN.stepPrices[1]);
+        this.buyTest = calculatePurchase(this.reserveToPurchase, BABY_TOKEN.bondParams.stepPrices[1]);
         // should be minted: (1000 - 3)/2 = 498.5 BABY tokens
 
         await BaseToken.transfer(alice.address, this.initialBaseBalance);
@@ -317,8 +311,8 @@ describe('Bond', function () {
       });
 
       it('should increase the total supply', async function () {
-        // BABY_TOKEN.stepRanges[0] is automatically minted to the creator on initialization
-        expect(await this.token.totalSupply()).to.equal(BABY_TOKEN.stepRanges[0] + this.buyTest.tokensToMint);
+        // BABY_TOKEN.bondParams.stepRanges[0] is automatically minted to the creator on initialization
+        expect(await this.token.totalSupply()).to.equal(BABY_TOKEN.bondParams.stepRanges[0] + this.buyTest.tokensToMint);
       });
 
       it('should add claimable balance to the creator', async function () {
@@ -326,7 +320,7 @@ describe('Bond', function () {
       });
 
       it('should add claimable balance to the protocol beneficiary', async function () {
-        expect(await Bond.userTokenFeeBalance(BENEFICIARY, BaseToken.target)).to.equal(this.buyTest.protocolFee);
+        expect(await Bond.userTokenFeeBalance(PROTOCOL_BENEFICIARY, BaseToken.target)).to.equal(this.buyTest.protocolFee);
       });
 
       it('should emit Buy event', async function () {
@@ -352,11 +346,11 @@ describe('Bond', function () {
           // Until 200K BABY tokens, reserve required is 480K, thus
           // -> 200,000 + (997,000 - 480,000) / 4 = 329,250
           this.sum.totalSupply = wei(329250);
-          this.sum.tokensToMint = this.sum.totalSupply - BABY_TOKEN.stepRanges[0]; // 10,000 is the initial free mint
+          this.sum.tokensToMint = this.sum.totalSupply - BABY_TOKEN.bondParams.stepRanges[0]; // 10,000 is the initial free mint
         });
 
         it('should be at price of step 3', async function () {
-          expect(await Bond.currentPrice(this.token.target)).to.equal(BABY_TOKEN.stepPrices[3]);
+          expect(await Bond.currentPrice(this.token.target)).to.equal(BABY_TOKEN.bondParams.stepPrices[3]);
         });
 
         it('should mint correct amount after fees', async function () {
@@ -374,8 +368,8 @@ describe('Bond', function () {
         });
 
         it('should increase the total supply', async function () {
-          // BABY_TOKEN.stepRanges[0] is automatically minted to the creator on initialization
-          expect(await this.token.totalSupply()).to.equal(BABY_TOKEN.stepRanges[0] + this.sum.tokensToMint);
+          // BABY_TOKEN.bondParams.stepRanges[0] is automatically minted to the creator on initialization
+          expect(await this.token.totalSupply()).to.equal(BABY_TOKEN.bondParams.stepRanges[0] + this.sum.tokensToMint);
         });
 
         it('should add claimable balance to the creator', async function () {
@@ -383,7 +377,7 @@ describe('Bond', function () {
         });
 
         it('should add claimable balance to the protocol beneficiary', async function () {
-          expect(await Bond.userTokenFeeBalance(BENEFICIARY, BaseToken.target)).to.equal(this.sum.protocolFee);
+          expect(await Bond.userTokenFeeBalance(PROTOCOL_BENEFICIARY, BaseToken.target)).to.equal(this.sum.protocolFee);
         });
 
         describe('Massive sell through multiple steps', function () {
@@ -412,7 +406,7 @@ describe('Bond', function () {
           });
 
           it('should decrease the total supply', async function () {
-            expect(await this.token.totalSupply()).to.equal(BABY_TOKEN.stepRanges[0]); // except the free minting amount
+            expect(await this.token.totalSupply()).to.equal(BABY_TOKEN.bondParams.stepRanges[0]); // except the free minting amount
           });
 
           it('should decrease the reserveBalance on the bond', async function () {
@@ -428,7 +422,7 @@ describe('Bond', function () {
           });
 
           it('should add claimable balance to the creator', async function () {
-            expect(await Bond.userTokenFeeBalance(BENEFICIARY, BaseToken.target)).to.equal(
+            expect(await Bond.userTokenFeeBalance(PROTOCOL_BENEFICIARY, BaseToken.target)).to.equal(
               this.initialBaseBalance * PROTOCOL_FEE / 10000n + // buy
               this.initial.bondReserve * PROTOCOL_FEE / 10000n // sell
             );
@@ -454,7 +448,7 @@ describe('Bond', function () {
           this.tokensToSell = wei(100);
 
           // { reserveFromBond, creatorFee, protocolFee, reserveToRefund }
-          this.sellTest = calculateSell(this.tokensToSell, BABY_TOKEN.stepPrices[1]);
+          this.sellTest = calculateSell(this.tokensToSell, BABY_TOKEN.bondParams.stepPrices[1]);
 
           // should be 989, 200
           // console.log(this.initialBondReserve, this.sellTest.reserveFromBond);
@@ -490,7 +484,7 @@ describe('Bond', function () {
         });
 
         it('should add claimable balance to the protocol beneficiary', async function () {
-          expect(await Bond.userTokenFeeBalance(BENEFICIARY, BaseToken.target)).to.equal(this.buyTest.protocolFee + this.sellTest.protocolFee);
+          expect(await Bond.userTokenFeeBalance(PROTOCOL_BENEFICIARY, BaseToken.target)).to.equal(this.buyTest.protocolFee + this.sellTest.protocolFee);
         });
 
         it('should emit Sell event', async function () {
@@ -516,14 +510,14 @@ describe('Bond', function () {
         });
 
         it('should revert if the minTokens parameter is set more than the expected value', async function () {
-          const test = calculatePurchase(100n, BABY_TOKEN.stepPrices[1]);
+          const test = calculatePurchase(100n, BABY_TOKEN.bondParams.stepPrices[1]);
           await expect(
             Bond.connect(alice).buy(this.token.target, 100n, test.tokensToMint + 1n)
           ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__SlippageLimitExceeded');
         });
 
         it('should revert if the slippage limit exceeded due to a front-run', async function () {
-          const test = calculatePurchase(100n, BABY_TOKEN.stepPrices[1]);
+          const test = calculatePurchase(100n, BABY_TOKEN.bondParams.stepPrices[1]);
 
           // front-run till the next price step (price becomes 3 after 100k tokens, 180k reserve)
           await Bond.connect(alice).buy(this.token.target, wei(200000), test.tokensToMint)
@@ -613,7 +607,7 @@ describe('Bond', function () {
 
         it('should revert if the minTokens parameter is set more than the expected value', async function () {
           const sellAmount = wei(100);
-          const { reserveToRefund } = calculateSell(sellAmount, BABY_TOKEN.stepPrices[1]);
+          const { reserveToRefund } = calculateSell(sellAmount, BABY_TOKEN.bondParams.stepPrices[1]);
           await this.token.connect(alice).approve(Bond.target, sellAmount);
 
           await expect(
@@ -623,12 +617,12 @@ describe('Bond', function () {
 
         it('should revert if the slippage limit exceeded due to a front-run', async function () {
           const sellAmount = wei(100);
-          const { reserveToRefund } = calculateSell(sellAmount, BABY_TOKEN.stepPrices[1]);
+          const { reserveToRefund } = calculateSell(sellAmount, BABY_TOKEN.bondParams.stepPrices[1]);
           await this.token.connect(alice).approve(Bond.target, sellAmount);
 
           // Front-run the transaction - owner rugs the pool
-          await this.token.connect(owner).approve(Bond.target, BABY_TOKEN.stepRanges[0]);
-          await Bond.connect(owner).sell(this.token.target, BABY_TOKEN.stepRanges[0], 0);
+          await this.token.connect(owner).approve(Bond.target, BABY_TOKEN.bondParams.stepRanges[0]);
+          await Bond.connect(owner).sell(this.token.target, BABY_TOKEN.bondParams.stepRanges[0], 0);
 
           await expect(
             Bond.connect(alice).sell(this.token.target, sellAmount, reserveToRefund)

@@ -116,8 +116,10 @@ contract MCV2_Bond is MCV2_Royalty {
         if (bp.royalty > MAX_ROYALTY_RANGE) revert MCV2_Bond__InvalidTokenCreationParams('royalty');
         if (bp.reserveToken == address(0)) revert MCV2_Bond__InvalidTokenCreationParams('reserveToken');
         if (bp.maxSupply == 0) revert MCV2_Bond__InvalidTokenCreationParams('maxSupply');
-        if (bp.stepRanges.length == 0 || bp.stepRanges.length > MAX_STEPS) revert MCV2_Bond__InvalidStepParams('INVALID_LENGTH');
-        if (bp.stepRanges.length != bp.stepPrices.length) revert MCV2_Bond__InvalidStepParams('LENGTH_DO_NOT_MATCH');
+        if (bp.stepRanges.length == 0 || bp.stepRanges.length > MAX_STEPS) revert MCV2_Bond__InvalidStepParams('INVALID_STEP_LENGTH');
+        if (bp.stepRanges.length != bp.stepPrices.length) revert MCV2_Bond__InvalidStepParams('STEP_LENGTH_DO_NOT_MATCH');
+        // Last value or the rangeTo must be the same as the maxSupply
+        if (bp.stepRanges[bp.stepRanges.length - 1] != bp.maxSupply) revert MCV2_Bond__InvalidStepParams('MAX_SUPPLY_MISMATCH');
     }
 
     function _setBond(address token, BondParams calldata bp) private {
@@ -129,11 +131,8 @@ contract MCV2_Bond is MCV2_Royalty {
         bond.reserveToken = bp.reserveToken;
         bond.maxSupply = bp.maxSupply;
 
-        // Last value or the rangeTo must be the same as the maxSupply
-        if (bp.stepRanges[bp.stepRanges.length - 1] != bp.maxSupply) revert MCV2_Bond__InvalidStepParams('MAX_SUPPLY_MISMATCH');
-
         for (uint256 i = 0; i < bp.stepRanges.length; ++i) {
-            if (bp.stepRanges[i] == 0) revert MCV2_Bond__InvalidStepParams('CANNOT_BE_ZERO');
+            if (bp.stepRanges[i] == 0) revert MCV2_Bond__InvalidStepParams('STEP_CANNOT_BE_ZERO');
 
             // Ranges and prices must be strictly increasing
             if (i > 0) {
