@@ -52,3 +52,11 @@ exports.calculateSell = function(tokensToSell, stepPrice, royaltyRatio) {
 
   return { royalty, creatorCut, protocolCut, reserveFromBond, reserveToRefund };
 };
+
+exports.calculateRoyalty = function(reserveAmount, royaltyRatio) {
+  const total = reserveAmount * royaltyRatio / 10000n;
+  const protocolCut = total * PROTOCOL_CUT / 10000n;
+  const creatorCut = total - protocolCut;
+
+  return { total, creatorCut, protocolCut };
+};

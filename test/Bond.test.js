@@ -11,7 +11,8 @@ const {
   modifiedValues,
   computeCreate2Address,
   calculatePurchase,
-  calculateSell
+  calculateSell,
+  calculateRoyalty
 } = require('./utils/test-utils');
 
 const BABY_TOKEN = {
@@ -342,7 +343,7 @@ describe('Bond', function () {
           }
         });
 
-        describe.only('Massiv Buy', function () {
+        describe('Massiv Buy', function () {
           it('should be at 4th price', async function () {
             expect(await Bond.currentPrice(this.token.target)).to.equal(BABY_TOKEN.bondParams.stepPrices[3]);
           });
@@ -396,8 +397,9 @@ describe('Bond', function () {
           });
 
           it('should transfer BASE tokens to alice', async function () {
-            const royalties = calculateFees(this.initial.bondReserve); // FIXME: calculateFees is not defined
-            expect(await BaseToken.balanceOf(alice.address)).to.equal(this.initial.baseBalance + this.initial.bondReserve - royalties.totalFee);
+            const { total } = calculateRoyalty(this.initial.bondReserve, BABY_TOKEN.bondParams.royalty);
+            const toRefund =  this.initial.bondReserve - total;
+            expect(await BaseToken.balanceOf(alice.address)).to.equal(this.initial.baseBalance + toRefund);
           });
 
           it('should decrease the total supply', async function () {
@@ -410,76 +412,85 @@ describe('Bond', function () {
           });
 
           it('should add claimable balance to the creator', async function () {
+            const buyRoyalty = calculateRoyalty(this.initialBaseBalance, BABY_TOKEN.bondParams.royalty);
+            const sellRoyalty = calculateRoyalty(this.initial.bondReserve, BABY_TOKEN.bondParams.royalty);
+
             expect(await Bond.userTokenRoyaltyBalance(owner.address, BaseToken.target)).to.equal(
-              this.initialBaseBalance * CREATOR_FEE / 10000n + // buy
-              this.initial.bondReserve * CREATOR_FEE / 10000n // sell
+              buyRoyalty.creatorCut + sellRoyalty.creatorCut
             );
           });
 
-          it('should add claimable balance to the creator', async function () {
+          it('should add claimable balance to the protocol', async function () {
+            const buyRoyalty = calculateRoyalty(this.initialBaseBalance, BABY_TOKEN.bondParams.royalty);
+            const sellRoyalty = calculateRoyalty(this.initial.bondReserve, BABY_TOKEN.bondParams.royalty);
+
             expect(await Bond.userTokenRoyaltyBalance(PROTOCOL_BENEFICIARY, BaseToken.target)).to.equal(
-              this.initialBaseBalance * PROTOCOL_FEE / 10000n + // buy
-              this.initial.bondReserve * PROTOCOL_FEE / 10000n // sell
+              buyRoyalty.protocolCut + sellRoyalty.protocolCut
             );
           });
 
           it('should leave claimable royalty balance on the bond', async function () {
+            const buyRoyalty = calculateRoyalty(this.initialBaseBalance, BABY_TOKEN.bondParams.royalty);
+            const sellRoyalty = calculateRoyalty(this.initial.bondReserve, BABY_TOKEN.bondParams.royalty);
+
             expect(await BaseToken.balanceOf(Bond.target)).to.equal(
-              this.initialBaseBalance * (CREATOR_FEE + PROTOCOL_FEE) / 10000n + // buy
-              this.initial.bondReserve * (CREATOR_FEE + PROTOCOL_FEE) / 10000n // sell
+              buyRoyalty.total + sellRoyalty.total
             );
           });
-        });
-      }); // Massive buy through multiple steps
+        }); // Massive Sell
+      }); // Massive buy & sell through multiple steps
 
       describe('Sell', function () {
         beforeEach(async function () {
-          this.originalSupply = await this.token.totalSupply();
-          this.initialBaseBalance = await BaseToken.balanceOf(alice.address);
-          this.initialTokenBalance = await this.token.balanceOf(alice.address);
-          this.initialBondBalance = await BaseToken.balanceOf(Bond.target);
-          this.initialBondReserve = (await Bond.tokenBond(this.token.target)).reserveBalance;
-
+          this.initial = {
+            supply: await this.token.totalSupply(),
+            baseBalance: await BaseToken.balanceOf(alice.address),
+            tokenBalance: await this.token.balanceOf(alice.address),
+            bondBalance: await BaseToken.balanceOf(Bond.target),
+            bondReserve: (await Bond.tokenBond(this.token.target)).reserveBalance
+          };
           this.tokensToSell = wei(100);
 
-          // { reserveFromBond, creatorCut, protocolCut, reserveToRefund }
-          this.sellTest = calculateSell(this.tokensToSell, BABY_TOKEN.bondParams.stepPrices[1]);
-
-          // should be 989, 200
-          // console.log(this.initialBondReserve, this.sellTest.reserveFromBond);
+          // current price: wei(2)
+          this.sellTest = calculateSell(this.tokensToSell, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty);
+          // { royalty: 10, creatorCut: 8, protocolCut: 2, reserveFromBond: 200, reserveToRefund: 190 }
 
           await this.token.connect(alice).approve(Bond.target, MAX_INT_256);
           await Bond.connect(alice).sell(this.token.target, this.tokensToSell, 0);
         });
 
         it('should decrease the BABY tokens from Alice', async function () {
-          expect(await this.token.balanceOf(alice.address)).to.equal(this.initialTokenBalance - this.tokensToSell);
+          expect(await this.token.balanceOf(alice.address)).to.equal(this.initial.tokenBalance - this.tokensToSell);
         });
 
         it('should transfer correct amount of BASE tokens to Alice', async function () {
-          // should receive (100 - 1.1) * 2 = 197.8 BASE tokens for return
-          expect(await BaseToken.balanceOf(alice.address)).to.equal(this.initialBaseBalance + this.sellTest.reserveToRefund);
+          expect(await BaseToken.balanceOf(alice.address)).to.equal(this.initial.baseBalance + this.sellTest.reserveToRefund);
         });
 
         it('should decrease the BASE tokens balance from the bond', async function () {
-          expect(await BaseToken.balanceOf(Bond.target)).to.equal(this.initialBondBalance - this.sellTest.reserveToRefund);
+          // royalty is not claimed yet
+          expect(await BaseToken.balanceOf(Bond.target)).to.equal(this.initial.bondBalance - this.sellTest.reserveToRefund);
         });
 
         it('should decrease the total supply of BABY token', async function () {
-          expect(await this.token.totalSupply()).to.equal(this.originalSupply - this.tokensToSell);
+          expect(await this.token.totalSupply()).to.equal(this.initial.supply - this.tokensToSell);
         });
 
         it('should deduct reserveBalance from the bond', async function () {
           const bond = await Bond.tokenBond(this.token.target);
-          expect(bond.reserveBalance).to.equal(this.initialBondReserve - this.sellTest.reserveFromBond);
+          expect(bond.reserveBalance).to.equal(this.initial.bondReserve - this.sellTest.reserveFromBond);
         });
 
         it('should add claimable balance to the creator', async function () {
-          expect(await Bond.userTokenRoyaltyBalance(owner.address, BaseToken.target)).to.equal(this.buyTest.creatorCut + this.sellTest.creatorCut);
+          expect(await Bond.userTokenRoyaltyBalance(owner.address, BaseToken.target)).to.equal(
+            this.buyTest.creatorCut + this.sellTest.creatorCut
+          );
         });
 
         it('should add claimable balance to the protocol beneficiary', async function () {
-          expect(await Bond.userTokenRoyaltyBalance(PROTOCOL_BENEFICIARY, BaseToken.target)).to.equal(this.buyTest.protocolCut + this.sellTest.protocolCut);
+          expect(await Bond.userTokenRoyaltyBalance(PROTOCOL_BENEFICIARY, BaseToken.target)).to.equal(
+            this.buyTest.protocolCut + this.sellTest.protocolCut
+          );
         });
 
         it('should emit Sell event', async function () {
@@ -505,14 +516,14 @@ describe('Bond', function () {
         });
 
         it('should revert if the minTokens parameter is set more than the expected value', async function () {
-          const test = calculatePurchase(100n, BABY_TOKEN.bondParams.stepPrices[1]);
+          const test = calculatePurchase(100n, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty);
           await expect(
             Bond.connect(alice).buy(this.token.target, 100n, test.tokensToMint + 1n)
           ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__SlippageLimitExceeded');
         });
 
         it('should revert if the slippage limit exceeded due to a front-run', async function () {
-          const test = calculatePurchase(100n, BABY_TOKEN.bondParams.stepPrices[1]);
+          const test = calculatePurchase(100n, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty);
 
           // front-run till the next price step (price becomes 3 after 100k tokens, 180k reserve)
           await Bond.connect(alice).buy(this.token.target, wei(200000), test.tokensToMint)
@@ -538,13 +549,13 @@ describe('Bond', function () {
 
         it('should revert if user try to buy more than the available supply', async function () {
           // To mint 10M tokens, requires 116,180,000 reserve, 116,529,588.8 including royalties
-          // Ref: https://t.ly/LFfGh
+          // Ref: https://ipfs.io/ipfs/QmUpLBTjABeDtXuV4VpoMdhd415AqcVpc7ndy6FBRGeEVY
           await expect(
-            Bond.connect(alice).buy(this.token.target, wei(116529589), 0)
+            Bond.connect(alice).buy(this.token.target, wei(117353536), 0)
           ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__ExceedMaxSupply');
 
           await expect(
-            Bond.connect(alice).buy(this.token.target, wei(116529588), 0)
+            Bond.connect(alice).buy(this.token.target, wei(117353535), 0)
           ).not.to.be.reverted;
         });
 
@@ -564,7 +575,7 @@ describe('Bond', function () {
           this.initialBaseBalance = wei(200000000); // 200M
           await BaseToken.transfer(alice.address, this.initialBaseBalance);
           await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
-          await Bond.connect(alice).buy(this.token.target, wei(10000), 0); // Buys 4945
+          await Bond.connect(alice).buy(this.token.target, wei(10000), 0);
         });
 
         it('should revert if the sell amount is 0', async function () {
@@ -579,7 +590,17 @@ describe('Bond', function () {
           ).to.be.revertedWith('ERC20: insufficient allowance');
         });
 
+        it('should revert if alice try to sell more than the available balance', async function () {
+          const amount = await this.token.balanceOf(alice.address);
+          await this.token.connect(alice).approve(Bond.target, amount + 1n);
+
+          await expect(
+            Bond.connect(alice).sell(this.token.target, amount + 1n, 0)
+          ).to.be.revertedWith('ERC20: burn amount exceeds balance');
+        });
+
         it('should revert if alice try to sell more than the total supply', async function () {
+          // transfer all free minted tokens to alice
           await this.token.transfer(alice.address, await this.token.balanceOf(owner.address));
           const amount = await this.token.balanceOf(alice);
           const totalSupply = await this.token.totalSupply();
@@ -591,18 +612,9 @@ describe('Bond', function () {
           ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__ExceedTotalSupply');
         });
 
-        it('should revert if alice try to sell more than the available balance', async function () {
-          const amount = await this.token.balanceOf(alice.address);
-          await this.token.connect(alice).approve(Bond.target, amount + 1n);
-
-          await expect(
-            Bond.connect(alice).sell(this.token.target, amount + 1n, 0)
-          ).to.be.revertedWith('ERC20: burn amount exceeds balance');
-        });
-
         it('should revert if the minTokens parameter is set more than the expected value', async function () {
           const sellAmount = wei(100);
-          const { reserveToRefund } = calculateSell(sellAmount, BABY_TOKEN.bondParams.stepPrices[1]);
+          const { reserveToRefund } = calculateSell(sellAmount, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty);
           await this.token.connect(alice).approve(Bond.target, sellAmount);
 
           await expect(
@@ -612,7 +624,7 @@ describe('Bond', function () {
 
         it('should revert if the slippage limit exceeded due to a front-run', async function () {
           const sellAmount = wei(100);
-          const { reserveToRefund } = calculateSell(sellAmount, BABY_TOKEN.bondParams.stepPrices[1]);
+          const { reserveToRefund } = calculateSell(sellAmount, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty);
           await this.token.connect(alice).approve(Bond.target, sellAmount);
 
           // Front-run the transaction - owner rugs the pool
@@ -625,7 +637,7 @@ describe('Bond', function () {
         });
       }); // Sell: Edge Cases
 
-      describe('Rounding errors', function() {
+      describe.only('Rounding errors', function() {
         beforeEach(async function () {
           await BaseToken.transfer(alice.address, wei(999999));
           await BaseToken.connect(alice).approve(Bond.target, wei(999999));
