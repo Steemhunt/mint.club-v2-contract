@@ -230,30 +230,33 @@ contract MCV2_Bond is MCV2_Royalty {
         if (tokensToMint == 0) revert MCV2_Bond__InvalidTokenAmount();
 
         Bond storage bond = tokenBond[token];
+        // Create an array and variable to mention that this can be modified.
+        BondStep[] storage steps = bond.steps;
 
         MCV2_ICommonToken t = MCV2_ICommonToken(token);
         uint256 currentSupply = t.totalSupply();
-        uint256 decimals = t.decimals();
-        uint256 currentStep = getCurrentStep(token, currentSupply);
+        uint256 decimalFactor = 10 ** t.decimals();
         uint256 newSupply = currentSupply + tokensToMint;
 
         if (newSupply > bond.maxSupply) revert MCV2_Bond__ExceedMaxSupply();
 
         uint256 tokensLeft = tokensToMint;
-        uint256 reserveToBond;
-        for (uint256 i = currentStep; i < bond.steps.length; ++i) {
-            uint256 supplyLeft = bond.steps[i].rangeTo - currentSupply;
+        uint256 reserveToBond = 0;
+        uint256 supplyLeft;
+        for (uint256 i = getCurrentStep(token, currentSupply); i < steps.length; ++i) {
+            supplyLeft = steps[i].rangeTo - currentSupply;
 
             if (supplyLeft < tokensLeft) {
-                reserveToBond += supplyLeft * bond.steps[i].price / 10**decimals;
-                tokensLeft -= supplyLeft;
+                reserveToBond += ((supplyLeft * steps[i].price) / decimalFactor);
                 currentSupply += supplyLeft;
+                tokensLeft -= supplyLeft;
             } else {
-                reserveToBond += tokensLeft * bond.steps[i].price / 10**decimals;
+                reserveToBond += ((tokensLeft * steps[i].price) / decimalFactor);
                 tokensLeft = 0;
                 break;
             }
         }
+
         if (tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount(); // can never happen
 
         royalty = getRoyalty(reserveToBond, bond.royalty);
@@ -293,25 +296,30 @@ contract MCV2_Bond is MCV2_Royalty {
         if (tokensToBurn == 0) revert MCV2_Bond__InvalidTokenAmount();
 
         Bond storage bond = tokenBond[token];
+        // Store bond.steps in memory to minimize sloads
+        BondStep[] storage steps = bond.steps;
+
         MCV2_ICommonToken t = MCV2_ICommonToken(token);
         uint256 currentSupply = t.totalSupply();
-        uint256 decimals = t.decimals();
+        uint256 decimalFactor = 10 ** t.decimals();
+
         if (tokensToBurn > currentSupply) revert MCV2_Bond__ExceedTotalSupply();
 
         uint256 reserveFromBond;
         uint256 tokensLeft = tokensToBurn;
         uint256 i = getCurrentStep(token, currentSupply);
         while (i >= 0 && tokensLeft > 0) {
-            uint256 supplyLeft = i == 0 ? currentSupply : currentSupply - bond.steps[i - 1].rangeTo;
+            uint256 supplyLeft = i == 0 ? currentSupply : currentSupply - steps[i - 1].rangeTo;
+
             uint256 tokensToProcess = tokensLeft < supplyLeft ? tokensLeft : supplyLeft;
-            reserveFromBond += tokensToProcess * bond.steps[i].price / 10**decimals;
+            reserveFromBond += (tokensToProcess * steps[i].price) / decimalFactor;
 
             tokensLeft -= tokensToProcess;
             currentSupply -= tokensToProcess;
 
             if (i > 0) i--;
         }
-        if(tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount(); // can never happen
+        if (tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount();
 
         royalty = getRoyalty(reserveFromBond, bond.royalty);
         refundAmount = reserveFromBond - royalty;
