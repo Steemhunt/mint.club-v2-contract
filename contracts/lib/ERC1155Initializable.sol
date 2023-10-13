@@ -30,6 +30,10 @@ abstract contract ERC1155Initializable is Context, ERC165, IERC1155, IERC1155Met
     //     _setURI(uri_);
     // }
 
+    function decimals() public pure returns (uint8) { // MODIFIED: Added to support a common interface with ERC20
+        return 0;
+    }
+
     /**
      * @dev See {IERC165-supportsInterface}.
      */

@@ -54,7 +54,7 @@ abstract contract ERC20Initializable is Context, IERC20, IERC20Metadata {
      * no way affects any of the arithmetic of the contract, including
      * {IERC20-balanceOf} and {IERC20-transfer}.
      */
-    function decimals() public view virtual override returns (uint8) {
+    function decimals() public pure virtual override returns (uint8) {
         return 18;
     }
 

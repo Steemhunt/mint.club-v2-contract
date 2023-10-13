@@ -231,7 +231,9 @@ contract MCV2_Bond is MCV2_Royalty {
 
         Bond storage bond = tokenBond[token];
 
-        uint256 currentSupply = MCV2_ICommonToken(token).totalSupply();
+        MCV2_ICommonToken t = MCV2_ICommonToken(token);
+        uint256 currentSupply = t.totalSupply();
+        uint256 decimals = t.decimals();
         uint256 currentStep = getCurrentStep(token, currentSupply);
         uint256 newSupply = currentSupply + tokensToMint;
 
@@ -240,13 +242,14 @@ contract MCV2_Bond is MCV2_Royalty {
         uint256 tokensLeft = tokensToMint;
         uint256 reserveToBond;
         for (uint256 i = currentStep; i < bond.steps.length; ++i) {
-            uint256 supplyLeft = bond.steps[i].rangeTo - newSupply;
+            uint256 supplyLeft = bond.steps[i].rangeTo - currentSupply;
 
             if (supplyLeft < tokensLeft) {
-                reserveToBond += supplyLeft * bond.steps[i].price / 1e18;
+                reserveToBond += supplyLeft * bond.steps[i].price / 10**decimals;
                 tokensLeft -= supplyLeft;
+                currentSupply += supplyLeft;
             } else {
-                reserveToBond += tokensLeft * bond.steps[i].price / 1e18;
+                reserveToBond += tokensLeft * bond.steps[i].price / 10**decimals;
                 tokensLeft = 0;
                 break;
             }
@@ -290,7 +293,9 @@ contract MCV2_Bond is MCV2_Royalty {
         if (tokensToBurn == 0) revert MCV2_Bond__InvalidTokenAmount();
 
         Bond storage bond = tokenBond[token];
-        uint256 currentSupply = MCV2_ICommonToken(token).totalSupply();
+        MCV2_ICommonToken t = MCV2_ICommonToken(token);
+        uint256 currentSupply = t.totalSupply();
+        uint256 decimals = t.decimals();
         if (tokensToBurn > currentSupply) revert MCV2_Bond__ExceedTotalSupply();
 
         uint256 reserveFromBond;
@@ -299,7 +304,7 @@ contract MCV2_Bond is MCV2_Royalty {
         while (i >= 0 && tokensLeft > 0) {
             uint256 supplyLeft = i == 0 ? currentSupply : currentSupply - bond.steps[i - 1].rangeTo;
             uint256 tokensToProcess = tokensLeft < supplyLeft ? tokensLeft : supplyLeft;
-            reserveFromBond += tokensToProcess * bond.steps[i].price / 1e18;
+            reserveFromBond += tokensToProcess * bond.steps[i].price / 10**decimals;
 
             tokensLeft -= tokensToProcess;
             currentSupply -= tokensToProcess;
