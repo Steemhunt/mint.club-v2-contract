@@ -26,7 +26,6 @@ contract MCV2_Bond is MCV2_Royalty {
     error MCV2_Bond__InvalidTokenAmount();
     error MCV2_Bond__ExceedTotalSupply();
     error MCV2_Bond__InvalidRefundAmount();
-    error MCV2_Bond__InvalidReserveAmount();
     error MCV2_Bond__InvalidCurrentSupply();
     error MCV2_Bond__PermissionDenied();
 
@@ -225,46 +224,46 @@ contract MCV2_Bond is MCV2_Royalty {
 
     // MARK: - Buy
 
-    function getTokensForReserve(address token, uint256 reserveAmount) public view _checkBondExists(token)
-        returns (uint256 tokensToMint, uint256 royalty)
+    function getReserveForToken(address token, uint256 tokensToBuy) public view _checkBondExists(token)
+        returns (uint256 reserveAmount, uint256 royalty)
     {
-        if (reserveAmount == 0) revert MCV2_Bond__InvalidReserveAmount();
+        if (tokensToBuy == 0) revert MCV2_Bond__InvalidTokenAmount();
 
         Bond storage bond = tokenBond[token];
 
         uint256 currentSupply = MCV2_ICommonToken(token).totalSupply();
         uint256 currentStep = getCurrentStep(token, currentSupply);
+        uint256 newSupply = currentSupply + tokensToBuy;
 
-        uint256 newSupply = currentSupply;
-        royalty = getRoyalty(reserveAmount, bond.royalty);
+        if (newSupply > bond.maxSupply) revert MCV2_Bond__ExceedMaxSupply();
 
-        uint256 buyAmount = reserveAmount - royalty;
+        uint256 tokensLeft = tokensToBuy;
+        uint256 reserveToBond;
         for (uint256 i = currentStep; i < bond.steps.length; ++i) {
             uint256 supplyLeft = bond.steps[i].rangeTo - newSupply;
-            uint256 reserveRequired = supplyLeft * bond.steps[i].price / 1e18;
 
-            if (reserveRequired < buyAmount) {
-                buyAmount -= reserveRequired;
-                newSupply += supplyLeft;
+            if (supplyLeft < tokensLeft) {
+                reserveToBond += supplyLeft * bond.steps[i].price / 1e18;
+                tokensLeft -= supplyLeft;
             } else {
-                newSupply += 1e18 * buyAmount / bond.steps[i].price; // 1e18 for decimal adjustment on steps[i].price
-                buyAmount = 0;
+                reserveToBond += tokensLeft * bond.steps[i].price / 1e18;
+                tokensLeft = 0;
                 break;
             }
         }
+        if (tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount(); // can never happen
 
-        if (buyAmount != 0 || newSupply > bond.maxSupply) revert MCV2_Bond__ExceedMaxSupply();
-
-        tokensToMint = newSupply - currentSupply;
+        royalty = getRoyalty(reserveToBond, bond.royalty);
+        reserveAmount = reserveToBond + royalty;
     }
 
-    function buy(address token, uint256 reserveAmount, uint256 minTokens) public {
+    function buy(address token, uint256 tokensToBuy, uint256 maxReserveAmount) external {
         // TODO: Handle Fee-on-transfer tokens (maybe include wrong return value on transferFrom)
         // TODO: Handle rebasing tokens
         // TODO: reentrancy handling for ERC777
 
-        (uint256 tokensToMint, uint256 royalty) = getTokensForReserve(token, reserveAmount);
-        if (tokensToMint < minTokens) revert MCV2_Bond__SlippageLimitExceeded();
+        (uint256 reserveAmount, uint256 royalty) = getReserveForToken(token, tokensToBuy);
+        if (reserveAmount > maxReserveAmount) revert MCV2_Bond__SlippageLimitExceeded();
 
         Bond storage bond = tokenBond[token];
         address buyer = _msgSender();
@@ -278,9 +277,9 @@ contract MCV2_Bond is MCV2_Royalty {
         addRoyalty(bond.beneficiary, bond.reserveToken, royalty);
 
         // Mint reward tokens to the buyer
-        MCV2_ICommonToken(token).mintByBond(buyer, tokensToMint);
+        MCV2_ICommonToken(token).mintByBond(buyer, tokensToBuy);
 
-        emit Buy(token, buyer, tokensToMint, bond.reserveToken, reserveAmount);
+        emit Buy(token, buyer, tokensToBuy, bond.reserveToken, reserveAmount);
     }
 
     // MARK: - Sell
@@ -307,14 +306,13 @@ contract MCV2_Bond is MCV2_Royalty {
 
             if (i > 0) i--;
         }
-
         if(tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount(); // can never happen
 
         royalty = getRoyalty(reserveFromBond, bond.royalty);
         refundAmount = reserveFromBond - royalty;
     }
 
-    function sell(address token, uint256 tokensToSell, uint256 minRefund) public {
+    function sell(address token, uint256 tokensToSell, uint256 minRefund) external {
         // TODO: Handle Fee-on-transfer tokens (maybe include wrong return value on transferFrom)
         // TODO: Handle rebasing tokens
         // TODO: reentrancy handling for ERC777
