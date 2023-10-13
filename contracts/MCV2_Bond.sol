@@ -60,8 +60,8 @@ contract MCV2_Bond is MCV2_Royalty {
 
     event TokenCreated(address indexed token, string name, string symbol);
     event MultiTokenCreated(address indexed token, string name, string symbol, string uri);
-    event Buy(address indexed token, address indexed buyer, uint256 amountMinted, address indexed reserveToken, uint256 reserveAmount);
-    event Sell(address indexed token, address indexed seller, uint256 amountBurned, address indexed reserveToken, uint256 refundAmount);
+    event Mint(address indexed token, address indexed user, uint256 amountMinted, address indexed reserveToken, uint256 reserveAmount);
+    event Burn(address indexed token, address indexed user, uint256 amountBurned, address indexed reserveToken, uint256 refundAmount);
     event BondBeneficiaryUpdated(address indexed token, address indexed beneficiary);
 
     // MARK: - Constructor
@@ -222,22 +222,22 @@ contract MCV2_Bond is MCV2_Royalty {
         revert MCV2_Bond__InvalidCurrentSupply(); // can never happen
     }
 
-    // MARK: - Buy
+    // MARK: - Mint
 
-    function getReserveForToken(address token, uint256 tokensToBuy) public view _checkBondExists(token)
+    function getReserveForToken(address token, uint256 tokensToMint) public view _checkBondExists(token)
         returns (uint256 reserveAmount, uint256 royalty)
     {
-        if (tokensToBuy == 0) revert MCV2_Bond__InvalidTokenAmount();
+        if (tokensToMint == 0) revert MCV2_Bond__InvalidTokenAmount();
 
         Bond storage bond = tokenBond[token];
 
         uint256 currentSupply = MCV2_ICommonToken(token).totalSupply();
         uint256 currentStep = getCurrentStep(token, currentSupply);
-        uint256 newSupply = currentSupply + tokensToBuy;
+        uint256 newSupply = currentSupply + tokensToMint;
 
         if (newSupply > bond.maxSupply) revert MCV2_Bond__ExceedMaxSupply();
 
-        uint256 tokensLeft = tokensToBuy;
+        uint256 tokensLeft = tokensToMint;
         uint256 reserveToBond;
         for (uint256 i = currentStep; i < bond.steps.length; ++i) {
             uint256 supplyLeft = bond.steps[i].rangeTo - newSupply;
@@ -257,44 +257,44 @@ contract MCV2_Bond is MCV2_Royalty {
         reserveAmount = reserveToBond + royalty;
     }
 
-    function buy(address token, uint256 tokensToBuy, uint256 maxReserveAmount) external {
+    function mint(address token, uint256 tokensToMint, uint256 maxReserveAmount) external {
         // TODO: Handle Fee-on-transfer tokens (maybe include wrong return value on transferFrom)
         // TODO: Handle rebasing tokens
         // TODO: reentrancy handling for ERC777
 
-        (uint256 reserveAmount, uint256 royalty) = getReserveForToken(token, tokensToBuy);
+        (uint256 reserveAmount, uint256 royalty) = getReserveForToken(token, tokensToMint);
         if (reserveAmount > maxReserveAmount) revert MCV2_Bond__SlippageLimitExceeded();
 
         Bond storage bond = tokenBond[token];
-        address buyer = _msgSender();
+        address user = _msgSender();
 
         // Transfer reserve tokens
         IERC20 reserveToken = IERC20(bond.reserveToken);
-        reserveToken.safeTransferFrom(buyer, address(this), reserveAmount);
+        reserveToken.safeTransferFrom(user, address(this), reserveAmount);
 
         // Update reserve & fee balances
         bond.reserveBalance += (reserveAmount - royalty).toUint128();
         addRoyalty(bond.beneficiary, bond.reserveToken, royalty);
 
-        // Mint reward tokens to the buyer
-        MCV2_ICommonToken(token).mintByBond(buyer, tokensToBuy);
+        // Mint reward tokens to the user
+        MCV2_ICommonToken(token).mintByBond(user, tokensToMint);
 
-        emit Buy(token, buyer, tokensToBuy, bond.reserveToken, reserveAmount);
+        emit Mint(token, user, tokensToMint, bond.reserveToken, reserveAmount);
     }
 
-    // MARK: - Sell
+    // MARK: - Burn
 
-    function getRefundForTokens(address token, uint256 tokensToSell) public view _checkBondExists(token)
+    function getRefundForTokens(address token, uint256 tokensToBurn) public view _checkBondExists(token)
         returns (uint256 refundAmount, uint256 royalty)
     {
-        if (tokensToSell == 0) revert MCV2_Bond__InvalidTokenAmount();
+        if (tokensToBurn == 0) revert MCV2_Bond__InvalidTokenAmount();
 
         Bond storage bond = tokenBond[token];
         uint256 currentSupply = MCV2_ICommonToken(token).totalSupply();
-        if (tokensToSell > currentSupply) revert MCV2_Bond__ExceedTotalSupply();
+        if (tokensToBurn > currentSupply) revert MCV2_Bond__ExceedTotalSupply();
 
         uint256 reserveFromBond;
-        uint256 tokensLeft = tokensToSell;
+        uint256 tokensLeft = tokensToBurn;
         uint256 i = getCurrentStep(token, currentSupply);
         while (i >= 0 && tokensLeft > 0) {
             uint256 supplyLeft = i == 0 ? currentSupply : currentSupply - bond.steps[i - 1].rangeTo;
@@ -312,29 +312,29 @@ contract MCV2_Bond is MCV2_Royalty {
         refundAmount = reserveFromBond - royalty;
     }
 
-    function sell(address token, uint256 tokensToSell, uint256 minRefund) external {
+    function burn(address token, uint256 tokensToBurn, uint256 minRefund) external {
         // TODO: Handle Fee-on-transfer tokens (maybe include wrong return value on transferFrom)
         // TODO: Handle rebasing tokens
         // TODO: reentrancy handling for ERC777
 
-        (uint256 refundAmount, uint256 royalty) = getRefundForTokens(token, tokensToSell);
+        (uint256 refundAmount, uint256 royalty) = getRefundForTokens(token, tokensToBurn);
         if (refundAmount < minRefund) revert MCV2_Bond__SlippageLimitExceeded();
 
         Bond storage bond = tokenBond[token];
-        address seller = _msgSender();
+        address user = _msgSender();
 
-        // Burn tokens from the seller
-        MCV2_ICommonToken(token).burnByBond(seller, tokensToSell);
+        // Burn tokens from the user
+        MCV2_ICommonToken(token).burnByBond(user, tokensToBurn);
 
         // Update reserve & fee balances
         bond.reserveBalance -= (refundAmount + royalty).toUint128();
         addRoyalty(bond.beneficiary, bond.reserveToken, royalty);
 
-        // Transfer reserve tokens to the seller
+        // Transfer reserve tokens to the user
         IERC20 reserveToken = IERC20(bond.reserveToken);
-        reserveToken.safeTransfer(seller, refundAmount);
+        reserveToken.safeTransfer(user, refundAmount);
 
-        emit Sell(token, seller, tokensToSell, bond.reserveToken, refundAmount);
+        emit Burn(token, user, tokensToBurn, bond.reserveToken, refundAmount);
     }
 
     // MARK: - Utility functions
