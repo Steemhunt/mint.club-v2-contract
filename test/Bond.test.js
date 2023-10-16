@@ -278,20 +278,20 @@ describe('Bond', function () {
     }); // Validations
 
     describe('Mint', function () {
-      beforeEach(async function () {
-        // Start with 10000 BaseToken, purchasing BABY tokens with 1000 BaseToken
-        this.initialBaseBalance = wei(1000000); // 1M BASE tokens
-        this.tokensToMint = wei(495);
-
-        this.buyTest = calculateMint(this.tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty);
-        // { royalty: 10, creatorCut: 8, protocolCut: 2, reserveToBond: 990, reserveRequired: 1000 }
-
-        await BaseToken.transfer(alice.address, this.initialBaseBalance);
-        await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
-        await Bond.connect(alice).mint(this.token.target, this.tokensToMint, MAX_INT_256);
-      });
-
       describe.only('Mint once', function() {
+        beforeEach(async function () {
+          // Start with 10000 BaseToken, purchasing BABY tokens with 1000 BaseToken
+          this.initialBaseBalance = wei(1000000); // 1M BASE tokens
+          this.tokensToMint = wei(500);
+
+          this.buyTest = calculateMint(this.tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty);
+          // { royalty: 10, creatorCut: 8, protocolCut: 2, reserveToBond: 1000, reserveRequired: 1010 }
+
+          await BaseToken.transfer(alice.address, this.initialBaseBalance);
+          await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
+          await Bond.connect(alice).mint(this.token.target, this.tokensToMint, MAX_INT_256);
+        });
+
         it('should mint correct amount', async function () {
           expect(await this.token.balanceOf(alice.address)).to.equal(this.tokensToMint);
         });
@@ -328,28 +328,27 @@ describe('Bond', function () {
 
       describe('Massive mint & burn through multiple steps', function () {
         beforeEach(async function () {
-          // Mint with all base balance Alice has (1,000,000 - 1000 = 990,000)
-          const additionalPurchase = this.initialBaseBalance - this.reserveToPurchase;
-          await Bond.connect(alice).buy(this.token.target, additionalPurchase, 0);
-
-          // Calculation table:
-          // https://ipfs.io/ipfs/QmUpLBTjABeDtXuV4VpoMdhd415AqcVpc7ndy6FBRGeEVY
+          // Calculations: https://ipfs.io/ipfs/QmXaAwVLC8MyCKiWfy1EAsoAfuZ3Fw7nSdDebckcXkcJvJ
+          this.tokensToMint = wei(9990000); // 9.99M BABY tokens except 10K free mint
+          this.initialBaseBalance = wei(117341800); // 117,341,800 BASE tokens required
+          await BaseToken.transfer(alice.address, this.initialBaseBalance);
+          await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
+          await Bond.connect(alice).mint(this.token.target, this.tokensToMint, MAX_INT_256);
           this.predicted = {
-            reserveOnBond: wei(990000),
-            totalSupply: wei(327500),
-            tokensToMint: wei(317500), // 10,000 is the initial free mint
-            creatorCut: wei(8000),
-            protocolCut: wei(2000)
+            reserveOnBond: wei(116180000),
+            totalSupply: wei(10000000), // 10M = max supply
+            creatorCut: wei(929440), // 116180000 * 0.01 * 0.8
+            protocolCut: wei(232360) // 116180000 * 0.01 * 0.2
           }
         });
 
-        describe('Massiv Mint', function () {
-          it('should be at 4th price', async function () {
-            expect(await Bond.currentPrice(this.token.target)).to.equal(BABY_TOKEN.bondParams.stepPrices[3]);
+        describe.only('Massiv Mint', function () {
+          it('should be at the last price step', async function () {
+            expect(await Bond.currentPrice(this.token.target)).to.equal(BABY_TOKEN.bondParams.stepPrices[7]);
           });
 
           it('should mint correct amount after royalties', async function () {
-            expect(await this.token.balanceOf(alice.address)).to.equal(this.predicted.tokensToMint);
+            expect(await this.token.balanceOf(alice.address)).to.equal(this.tokensToMint);
           });
 
           it('should transfer BASE tokens to the bond', async function () {
@@ -549,7 +548,7 @@ describe('Bond', function () {
 
         it('should revert if user try to buy more than the available supply', async function () {
           // To mint 10M tokens, requires 116,180,000 reserve, 116,529,588.8 including royalties
-          // Ref: https://ipfs.io/ipfs/QmUpLBTjABeDtXuV4VpoMdhd415AqcVpc7ndy6FBRGeEVY
+          // Ref: https://ipfs.io/ipfs/QmXaAwVLC8MyCKiWfy1EAsoAfuZ3Fw7nSdDebckcXkcJvJ
           await expect(
             Bond.connect(alice).buy(this.token.target, wei(117353536), 0)
           ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__ExceedMaxSupply');
