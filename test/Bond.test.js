@@ -29,7 +29,7 @@ const BABY_TOKEN = {
   }
 };
 
-describe.only('Bond', function () {
+describe('Bond', function () {
   async function deployFixtures() {
     const TokenImplementation = await ethers.deployContract('MCV2_Token');
     await TokenImplementation.waitForDeployment();
@@ -655,8 +655,8 @@ describe.only('Bond', function () {
           royalty: 100n, // 1%
           reserveToken: BaseToken.target,
           maxSupply: 100n,
-          stepRanges: [10n, 50n, 100n],
-          stepPrices: [7n, 9n, 10n]
+          stepRanges: [10n, 30n, 100n],
+          stepPrices: [7n, 8n, 9n]
         }
       };
 
@@ -683,58 +683,27 @@ describe.only('Bond', function () {
       expect(await Bond.userTokenRoyaltyBalance(PROTOCOL_BENEFICIARY, BaseToken.target)).to.equal(0n);
     });
 
+    it('requires exact bond amount even if the royalty is omitted due to flooring', async function () {
+      // minting 100 BABY requires 10*7 + 20*8 + 70*9 = 860 BASE + 8.6 royalty
+      // after flooring:
+      const tokensToMint = 100n;
+      const predicted = {
+        reserveOnBond: 860n,
+        reserveRequired: 868n,
+        royalty: 8n, // 8.6 floored
+        protocolCut: 1n, // 8.6 * 0.2 = 1.72 floored
+        creatorCut: 7n
+      }
 
-    // it('mints 1 wei less BABY if BASE amount is 2 wei less (price = 2)', async function () {
-    //   await Bond.connect(alice).mint(this.token.target, this.reserveToPurchase - 2n, 0);
-    //   expect(await this.token.balanceOf(alice.address)).to.equal(this.mintTest.tokensToMint - 1n);
+      await Bond.connect(alice).mint(this.token.target, tokensToMint, MAX_INT_256);
 
-    //   expect(await Bond.userTokenRoyaltyBalance(owner.address, BaseToken.target)).to.equal(this.mintTest.creatorCut - 1n);
-    //   expect(await Bond.userTokenRoyaltyBalance(PROTOCOL_BENEFICIARY, BaseToken.target)).to.equal(this.mintTest.protocolCut - 1n);
-
-    //   const bond = await Bond.tokenBond(this.token.target);
-    //   expect(bond.reserveBalance).to.equal(this.mintTest.reserveOnBond - 2n);
-    // });
-
-    // it('mints 1 wei less BABY if BASE amount is 1 wei less', async function () {
-    //   await Bond.connect(alice).mint(this.token.target, this.reserveToPurchase - 1n, 0);
-    //   expect(await this.token.balanceOf(alice.address)).to.equal(this.mintTest.tokensToMint - 1n);
-
-    //   const bond = await Bond.tokenBond(this.token.target);
-    //   expect(bond.reserveBalance).to.equal(this.mintTest.reserveOnBond - 1n);
-    // });
-
-    // it('mints the same BABY even if BASE amount is 1 wei more', async function () {
-    //   await Bond.connect(alice).mint(this.token.target, this.reserveToPurchase + 1n, 0);
-    //   expect(await this.token.balanceOf(alice.address)).to.equal(this.mintTest.tokensToMint);
-
-    //   const bond = await Bond.tokenBond(this.token.target);
-    //   expect(bond.reserveBalance).to.equal(this.mintTest.reserveOnBond + 1n);
-    // });
-
-    // it('mints 1000 BABY, with 2000 BASE', async function () {
-    //   await Bond.connect(alice).mint(this.token.target, this.reversedCalculation - 1n, 0);
-    //   expect(await this.token.balanceOf(alice.address)).to.equal(this.tokensToMint);
-
-    //   const bond = await Bond.tokenBond(this.token.target);
-    //   expect(bond.reserveBalance).to.equal(this.reserveOnBond);
-    // });
-
-    // it('mints the same 1000 BABY, with 2000 BASE + 1 wei', async function () {
-    //   await Bond.connect(alice).mint(this.token.target, this.reversedCalculation, 0);
-    //   expect(await this.token.balanceOf(alice.address)).to.equal(this.tokensToMint);
-
-    //   const bond = await Bond.tokenBond(this.token.target);
-    //   expect(bond.reserveBalance).to.equal(this.reserveOnBond + 1n);
-    // });
-
-    // it('mints 1 wei more BABY, with 2000 BASE + 2 wei', async function () {
-    //   await Bond.connect(alice).mint(this.token.target, this.reversedCalculation + 1n, 0);
-    //   expect(await this.token.balanceOf(alice.address)).to.equal(this.tokensToMint + 1n);
-
-    //   const bond = await Bond.tokenBond(this.token.target);
-    //   expect(bond.reserveBalance).to.equal(this.reserveOnBond + 2n);
-    // });
-
+      expect(await this.token.balanceOf(alice.address)).to.equal(tokensToMint);
+      expect((await Bond.tokenBond(this.token.target)).reserveBalance).to.equal(predicted.reserveOnBond);
+      expect(await BaseToken.balanceOf(alice.address)).to.equal(this.initialBaseBalance - predicted.reserveRequired);
+      expect(await BaseToken.balanceOf(Bond.target)).to.equal(predicted.reserveRequired);
+      expect(await Bond.userTokenRoyaltyBalance(owner.address, BaseToken.target)).to.equal(predicted.creatorCut);
+      expect(await Bond.userTokenRoyaltyBalance(PROTOCOL_BENEFICIARY, BaseToken.target)).to.equal(predicted.protocolCut);
+    });
   }); // Rounding errors
 
   describe('Utility functions', function () {
