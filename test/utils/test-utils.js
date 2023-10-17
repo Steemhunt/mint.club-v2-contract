@@ -33,8 +33,8 @@ exports.computeCreate2Address = function(saltHex, implementation, deployer) {
   );
 };
 
-exports.calculateMint = function(tokensToMint, stepPrice, royaltyRatio, decimals = 18n) {
-  const reserveToBond = tokensToMint * stepPrice / 10n**18n;
+exports.calculateMint = function(tokensToMint, stepPrice, royaltyRatio) {
+  const reserveToBond = tokensToMint * stepPrice;
   const royalty = reserveToBond * royaltyRatio / 10000n;
   const protocolCut = royalty * PROTOCOL_CUT / 10000n;
   const creatorCut = royalty - protocolCut;
@@ -43,8 +43,8 @@ exports.calculateMint = function(tokensToMint, stepPrice, royaltyRatio, decimals
   return { royalty, creatorCut, protocolCut, reserveToBond, reserveRequired };
 };
 
-exports.calculateBurn = function(tokensToBurn, stepPrice, royaltyRatio, decimals = 18n) {
-  const reserveFromBond = tokensToBurn * stepPrice / 10n**decimals;
+exports.calculateBurn = function(tokensToBurn, stepPrice, royaltyRatio) {
+  const reserveFromBond = tokensToBurn * stepPrice;
   const royalty = reserveFromBond * royaltyRatio / 10000n;
   const protocolCut = royalty * PROTOCOL_CUT / 10000n;
   const creatorCut = royalty - protocolCut;

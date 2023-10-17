@@ -39,6 +39,7 @@ contract MCV2_Bond is MCV2_Royalty {
     address private immutable tokenImplementation;
     address private immutable multiTokenImplementation;
 
+    // TODO: `maxSupply` is unecessary becuase the last step rangeTo should be the same as maxSupply
     struct Bond {
         address creator; // immutable
         address beneficiary;
@@ -235,7 +236,6 @@ contract MCV2_Bond is MCV2_Royalty {
 
         MCV2_ICommonToken t = MCV2_ICommonToken(token);
         uint256 currentSupply = t.totalSupply();
-        uint256 decimalFactor = 10 ** t.decimals();
         uint256 newSupply = currentSupply + tokensToMint;
 
         if (newSupply > bond.maxSupply) revert MCV2_Bond__ExceedMaxSupply();
@@ -247,11 +247,11 @@ contract MCV2_Bond is MCV2_Royalty {
             supplyLeft = steps[i].rangeTo - currentSupply;
 
             if (supplyLeft < tokensLeft) {
-                reserveToBond += ((supplyLeft * steps[i].price) / decimalFactor);
+                reserveToBond += ((supplyLeft * steps[i].price));
                 currentSupply += supplyLeft;
                 tokensLeft -= supplyLeft;
             } else {
-                reserveToBond += ((tokensLeft * steps[i].price) / decimalFactor);
+                reserveToBond += ((tokensLeft * steps[i].price));
                 tokensLeft = 0;
                 break;
             }
@@ -301,7 +301,6 @@ contract MCV2_Bond is MCV2_Royalty {
 
         MCV2_ICommonToken t = MCV2_ICommonToken(token);
         uint256 currentSupply = t.totalSupply();
-        uint256 decimalFactor = 10 ** t.decimals();
 
         if (tokensToBurn > currentSupply) revert MCV2_Bond__ExceedTotalSupply();
 
@@ -312,12 +311,12 @@ contract MCV2_Bond is MCV2_Royalty {
             uint256 supplyLeft = i == 0 ? currentSupply : currentSupply - steps[i - 1].rangeTo;
 
             uint256 tokensToProcess = tokensLeft < supplyLeft ? tokensLeft : supplyLeft;
-            reserveFromBond += (tokensToProcess * steps[i].price) / decimalFactor;
+            reserveFromBond += (tokensToProcess * steps[i].price);
 
             tokensLeft -= tokensToProcess;
             currentSupply -= tokensToProcess;
 
-            if (i > 0) i--;
+            if (i > 0) --i;
         }
         if (tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount();
 
