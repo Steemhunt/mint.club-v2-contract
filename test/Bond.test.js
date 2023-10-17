@@ -278,7 +278,7 @@ describe('Bond', function () {
     }); // Validations
 
     describe('Mint', function () {
-      describe.only('Mint once', function() {
+      describe('Mint once', function() {
         beforeEach(async function () {
           // Start with 10000 BaseToken, purchasing BABY tokens with 1000 BaseToken
           this.initialBaseBalance = wei(1000000); // 1M BASE tokens
@@ -342,7 +342,7 @@ describe('Bond', function () {
           }
         });
 
-        describe.only('Massiv Mint', function () {
+        describe('Massiv Mint', function () {
           it('should be at the last price step', async function () {
             expect(await Bond.currentPrice(this.token.target)).to.equal(BABY_TOKEN.bondParams.stepPrices[7]);
           });
@@ -373,80 +373,83 @@ describe('Bond', function () {
           it('should add claimable balance to the protocol beneficiary', async function () {
             expect(await Bond.userTokenRoyaltyBalance(PROTOCOL_BENEFICIARY, BaseToken.target)).to.equal(this.predicted.protocolCut);
           });
+
+          describe('Massive Burn', function () {
+            beforeEach(async function () {
+              this.initial = {
+                supply: await this.token.totalSupply(),
+                baseBalance: await BaseToken.balanceOf(alice.address),
+                tokenBalance: await this.token.balanceOf(alice.address),
+                bondBalance: await BaseToken.balanceOf(Bond.target),
+                bondReserve: (await Bond.tokenBond(this.token.target)).reserveBalance
+              };
+
+              // Burn all BABY tokens Alice has
+              await this.token.connect(alice).approve(Bond.target, MAX_INT_256);
+
+              await Bond.connect(alice).burn(this.token.target, this.initial.tokenBalance, 0);
+            });
+
+            it('should burn all BABY tokens from alice', async function () {
+              expect(await this.token.balanceOf(alice.address)).to.equal(0);
+            });
+
+            it('should transfer BASE tokens to alice', async function () {
+              const { total } = calculateRoyalty(this.initial.bondReserve, BABY_TOKEN.bondParams.royalty);
+              const toRefund =  this.initial.bondReserve - total;
+              expect(await BaseToken.balanceOf(alice.address)).to.equal(this.initial.baseBalance + toRefund);
+            });
+
+            it('should decrease the total supply', async function () {
+              expect(await this.token.totalSupply()).to.equal(BABY_TOKEN.bondParams.stepRanges[0]); // except the free minting amount
+            });
+
+            it('should decrease the reserveBalance on the bond', async function () {
+              const bond = await Bond.tokenBond(this.token.target);
+              expect(bond.reserveBalance).to.equal(0);
+            });
+
+            it('should add claimable balance to the creator', async function () {
+              // buy + sell = 2
+              const royalty = calculateRoyalty(this.initial.bondReserve * 2n, BABY_TOKEN.bondParams.royalty);
+
+              expect(await Bond.userTokenRoyaltyBalance(owner.address, BaseToken.target)).to.equal(royalty.creatorCut);
+            });
+
+            it('should add claimable balance to the protocol', async function () {
+              const royalty = calculateRoyalty(this.initial.bondReserve * 2n, BABY_TOKEN.bondParams.royalty);
+
+              expect(await Bond.userTokenRoyaltyBalance(PROTOCOL_BENEFICIARY, BaseToken.target)).to.equal(royalty.protocolCut);
+            });
+
+            it('should leave claimable royalty balance on the bond', async function () {
+              const royalty = calculateRoyalty(this.initial.bondReserve * 2n, BABY_TOKEN.bondParams.royalty);
+
+              expect(await BaseToken.balanceOf(Bond.target)).to.equal(royalty.total);
+            });
+          }); // Massive Burn
         }); // Massive Mint
-
-        describe('Massive Burn', function () {
-          beforeEach(async function () {
-            this.initial = {
-              supply: await this.token.totalSupply(),
-              baseBalance: await BaseToken.balanceOf(alice.address),
-              tokenBalance: await this.token.balanceOf(alice.address),
-              bondBalance: await BaseToken.balanceOf(Bond.target),
-              bondReserve: (await Bond.tokenBond(this.token.target)).reserveBalance
-            };
-
-            // Burn all BABY tokens Alice has
-            await this.token.connect(alice).approve(Bond.target, MAX_INT_256);
-
-            await Bond.connect(alice).sell(this.token.target, this.initial.tokenBalance, 0);
-          });
-
-          it('should burn all BABY tokens from alice', async function () {
-            expect(await this.token.balanceOf(alice.address)).to.equal(0);
-          });
-
-          it('should transfer BASE tokens to alice', async function () {
-            const { total } = calculateRoyalty(this.initial.bondReserve, BABY_TOKEN.bondParams.royalty);
-            const toRefund =  this.initial.bondReserve - total;
-            expect(await BaseToken.balanceOf(alice.address)).to.equal(this.initial.baseBalance + toRefund);
-          });
-
-          it('should decrease the total supply', async function () {
-            expect(await this.token.totalSupply()).to.equal(BABY_TOKEN.bondParams.stepRanges[0]); // except the free minting amount
-          });
-
-          it('should decrease the reserveBalance on the bond', async function () {
-            const bond = await Bond.tokenBond(this.token.target);
-            expect(bond.reserveBalance).to.equal(0);
-          });
-
-          it('should add claimable balance to the creator', async function () {
-            const buyRoyalty = calculateRoyalty(this.initialBaseBalance, BABY_TOKEN.bondParams.royalty);
-            const sellRoyalty = calculateRoyalty(this.initial.bondReserve, BABY_TOKEN.bondParams.royalty);
-
-            expect(await Bond.userTokenRoyaltyBalance(owner.address, BaseToken.target)).to.equal(
-              buyRoyalty.creatorCut + sellRoyalty.creatorCut
-            );
-          });
-
-          it('should add claimable balance to the protocol', async function () {
-            const buyRoyalty = calculateRoyalty(this.initialBaseBalance, BABY_TOKEN.bondParams.royalty);
-            const sellRoyalty = calculateRoyalty(this.initial.bondReserve, BABY_TOKEN.bondParams.royalty);
-
-            expect(await Bond.userTokenRoyaltyBalance(PROTOCOL_BENEFICIARY, BaseToken.target)).to.equal(
-              buyRoyalty.protocolCut + sellRoyalty.protocolCut
-            );
-          });
-
-          it('should leave claimable royalty balance on the bond', async function () {
-            const buyRoyalty = calculateRoyalty(this.initialBaseBalance, BABY_TOKEN.bondParams.royalty);
-            const sellRoyalty = calculateRoyalty(this.initial.bondReserve, BABY_TOKEN.bondParams.royalty);
-
-            expect(await BaseToken.balanceOf(Bond.target)).to.equal(
-              buyRoyalty.total + sellRoyalty.total
-            );
-          });
-        }); // Massive Burn
       }); // Massive buy & sell through multiple steps
 
       describe('Burn', function () {
         beforeEach(async function () {
+          // Mint 500 BABY tokens with 1010 BASE (fee: 10 BASE)
+          const initialBaseBalance = wei(1010);
+          const tokensToMint = wei(500);
+
+          this.buyTest = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty);
+          // { royalty: 10, creatorCut: 8, protocolCut: 2, reserveToBond: 1000, reserveRequired: 1010 }
+
+          await BaseToken.transfer(alice.address, initialBaseBalance);
+          await BaseToken.connect(alice).approve(Bond.target, initialBaseBalance);
+          await Bond.connect(alice).mint(this.token.target, tokensToMint, MAX_INT_256);
+
           this.initial = {
-            supply: await this.token.totalSupply(),
-            baseBalance: await BaseToken.balanceOf(alice.address),
-            tokenBalance: await this.token.balanceOf(alice.address),
-            bondBalance: await BaseToken.balanceOf(Bond.target),
-            bondReserve: (await Bond.tokenBond(this.token.target)).reserveBalance
+            supply: await this.token.totalSupply(), // 10,500
+            baseBalance: await BaseToken.balanceOf(alice.address), // 0
+            tokenBalance: await this.token.balanceOf(alice.address), // 500
+            bondBalance: await BaseToken.balanceOf(Bond.target), // 1010
+            bondReserve: (await Bond.tokenBond(this.token.target)).reserveBalance // 1000
           };
           this.tokensToBurn = wei(100);
 
@@ -455,7 +458,7 @@ describe('Bond', function () {
           // { royalty: 10, creatorCut: 8, protocolCut: 2, reserveFromBond: 200, reserveToRefund: 190 }
 
           await this.token.connect(alice).approve(Bond.target, MAX_INT_256);
-          await Bond.connect(alice).sell(this.token.target, this.tokensToBurn, 0);
+          await Bond.connect(alice).burn(this.token.target, this.tokensToBurn, 0);
         });
 
         it('should decrease the BABY tokens from Alice', async function () {
@@ -493,7 +496,7 @@ describe('Bond', function () {
         });
 
         it('should emit Burn event', async function () {
-          await expect(Bond.connect(alice).sell(this.token.target, this.tokensToBurn, 0))
+          await expect(Bond.connect(alice).burn(this.token.target, this.tokensToBurn, 0))
             .emit(Bond, 'Burn')
             .withArgs(this.token.target, alice.address, this.tokensToBurn, BaseToken.target, this.sellTest.reserveToRefund);
         });
