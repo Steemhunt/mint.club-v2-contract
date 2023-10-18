@@ -277,6 +277,42 @@ describe('Bond', function () {
       });
     }); // Validations
 
+    describe('Update bond creator', function () {
+      beforeEach(async function () {
+        await Bond.connect(owner).updateBondCreator(this.token.target, bob.address);
+      });
+
+      it('should update the creator', async function () {
+        const bond = await Bond.tokenBond(this.token.target);
+        expect(bond.creator).to.equal(bob.address);
+      });
+
+      it('should reject if the msg.sender is not current creator', async function () {
+        await expect(Bond.connect(owner).updateBondCreator(this.token.target, bob.address))
+          .to.be.revertedWithCustomError(Bond, 'MCV2_Bond__PermissionDenied');
+      });
+
+      it('should emit BondCreatorUpdated event', async function () {
+        await expect(Bond.connect(bob).updateBondCreator(this.token.target, bob.address))
+          .emit(Bond, 'BondCreatorUpdated')
+          .withArgs(this.token.target, bob.address);
+      });
+
+      it('should send fees to the new creator', async function () {
+        const tokensToMint = wei(500);
+        const test = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty);
+        // { royalty: 10, creatorCut: 8, protocolCut: 2, reserveToBond: 1000, reserveRequired: 1010 }
+
+        await BaseToken.transfer(alice.address, wei(9999999));
+        await BaseToken.connect(alice).approve(Bond.target, MAX_INT_256);
+        await Bond.connect(alice).mint(this.token.target, tokensToMint, MAX_INT_256);
+
+        const fees = await Bond.getRoyaltyInfo(bob.address, BaseToken.target);
+        expect(fees[0]).to.equal(test.creatorCut);
+        expect(fees[1]).to.equal(0n);
+      });
+    });
+
     describe('Mint', function () {
       describe('Mint once', function() {
         beforeEach(async function () {

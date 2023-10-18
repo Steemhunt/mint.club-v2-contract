@@ -41,8 +41,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
     // TODO: `maxSupply` is unecessary becuase the last step rangeTo should be the same as maxSupply
     struct Bond {
-        address creator; // immutable
-        address beneficiary;
+        address creator;
         uint16 royalty; // immutable - range: [0, 5000] - 0.00% ~ 50.00%
         address reserveToken; // immutable
         uint128 maxSupply; // immutable
@@ -63,7 +62,7 @@ contract MCV2_Bond is MCV2_Royalty {
     event MultiTokenCreated(address indexed token, string name, string symbol, string uri);
     event Mint(address indexed token, address indexed user, uint256 amountMinted, address indexed reserveToken, uint256 reserveAmount);
     event Burn(address indexed token, address indexed user, uint256 amountBurned, address indexed reserveToken, uint256 refundAmount);
-    event BondBeneficiaryUpdated(address indexed token, address indexed beneficiary);
+    event BondCreatorUpdated(address indexed token, address indexed creator);
 
     // MARK: - Constructor
 
@@ -128,7 +127,6 @@ contract MCV2_Bond is MCV2_Royalty {
         // Set token bond data
         Bond storage bond = tokenBond[token];
         bond.creator = _msgSender();
-        bond.beneficiary = bond.creator;
         bond.royalty = bp.royalty;
         bond.reserveToken = bp.reserveToken;
         bond.maxSupply = bp.maxSupply;
@@ -204,13 +202,13 @@ contract MCV2_Bond is MCV2_Royalty {
         return token;
     }
 
-    function updateBondBeneficiary(address token, address beneficiary) external _checkBondExists(token) {
+    function updateBondCreator(address token, address creator) external _checkBondExists(token) {
         Bond storage bond = tokenBond[token];
         if (bond.creator != _msgSender()) revert MCV2_Bond__PermissionDenied();
 
-        bond.beneficiary = beneficiary;
+        bond.creator = creator;
 
-        emit BondBeneficiaryUpdated(token, beneficiary);
+        emit BondCreatorUpdated(token, creator);
     }
 
     function getCurrentStep(address token, uint256 currentSupply) internal view returns (uint256) {
@@ -280,7 +278,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
         // Update reserve & fee balances
         bond.reserveBalance += (reserveAmount - royalty).toUint128();
-        addRoyalty(bond.beneficiary, bond.reserveToken, royalty);
+        addRoyalty(bond.creator, bond.reserveToken, royalty);
 
         // Mint reward tokens to the user
         MCV2_ICommonToken(token).mintByBond(user, tokensToMint);
@@ -340,7 +338,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
         // Update reserve & fee balances
         bond.reserveBalance -= (refundAmount + royalty).toUint128();
-        addRoyalty(bond.beneficiary, bond.reserveToken, royalty);
+        addRoyalty(bond.creator, bond.reserveToken, royalty);
 
         // Transfer reserve tokens to the user
         IERC20 reserveToken = IERC20(bond.reserveToken);
@@ -400,25 +398,6 @@ contract MCV2_Bond is MCV2_Royalty {
             uint256 j = 0;
             for (uint256 i = 0; i < tokensLength; ++i) {
                 if (tokenBond[tokens[i]].creator == creator) {
-                    ids[j++] = i;
-                    if (j == count) break;
-                }
-            }
-        }
-    }
-
-    function getTokenIdsByBeneficiary(address beneficiary) external view returns (uint256[] memory ids) {
-        unchecked {
-            uint256 count;
-            uint256 tokensLength = tokens.length;
-            for (uint256 i = 0; i < tokensLength; ++i) {
-                if (tokenBond[tokens[i]].beneficiary == beneficiary) ++count;
-            }
-            ids = new uint256[](count);
-
-            uint256 j = 0;
-            for (uint256 i = 0; i < tokensLength; ++i) {
-                if (tokenBond[tokens[i]].beneficiary == beneficiary) {
                     ids[j++] = i;
                     if (j == count) break;
                 }
