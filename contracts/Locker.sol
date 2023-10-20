@@ -21,6 +21,7 @@ contract Locker {
         bool unlocked;
         uint128 amount; // 128 + 8 + 40 = 176 bits
         address receiver;
+        string title; // optional
     }
 
     LockUp[] public lockUps;
@@ -30,7 +31,7 @@ contract Locker {
         _;
     }
 
-    function createLockUp(address token, uint128 amount, uint40 unlockTime, address receiver) external {
+    function createLockUp(address token, uint128 amount, uint40 unlockTime, address receiver, string calldata title) external {
         if (token == address(0)) revert LockUp__InvalidParams('token');
         if (amount == 0) revert LockUp__InvalidParams('amount');
         if (unlockTime <= block.timestamp) revert LockUp__InvalidParams('unlockTime');
@@ -46,6 +47,7 @@ contract Locker {
         // lockUp.unlocked = false;
         lockUp.amount = amount;
         lockUp.receiver = receiver;
+        lockUp.title = title;
 
         emit LockedUp(lockUps.length - 1, token, receiver, amount, unlockTime);
     }
@@ -63,17 +65,22 @@ contract Locker {
 
     // MARK: - Utility functions
 
-    function getLockUpIdsByToken(address token) external view returns (uint256[] memory ids) {
+    // Get lockupIds by token address in the range where `start` <= id < stop
+    function getLockUpIdsByToken(address token, uint256 start, uint256 stop) external view returns (uint256[] memory ids) {
         unchecked {
-            uint256 count;
             uint256 lockUpsLength = lockUps.length;
-            for (uint256 i = 0; i < lockUpsLength; ++i) {
+            if (stop > lockUpsLength) {
+                stop = lockUpsLength;
+            }
+
+            uint256 count;
+            for (uint256 i = start; i < stop; ++i) {
                 if (lockUps[i].token == token) ++count;
             }
-            ids = new uint256[](count);
 
+            ids = new uint256[](count);
             uint256 j;
-            for (uint256 i = 0; i < lockUpsLength; ++i) {
+            for (uint256 i = start; i < stop; ++i) {
                 if (lockUps[i].token == token) {
                     ids[j++] = i;
                     if (j == count) break;
@@ -82,17 +89,22 @@ contract Locker {
         }
     }
 
-    function getLockUpIdsByReceiver(address receiver) external view returns (uint256[] memory ids) {
+    // Get lockupIds by token address in the range where `start` <= id < stop
+    function getLockUpIdsByReceiver(address receiver, uint256 start, uint256 stop) external view returns (uint256[] memory ids) {
         unchecked {
-            uint256 count;
             uint256 lockUpsLength = lockUps.length;
-            for (uint256 i = 0; i < lockUpsLength; ++i) {
+            if (stop > lockUpsLength) {
+                stop = lockUpsLength;
+            }
+
+            uint256 count;
+            for (uint256 i = start; i < stop; ++i) {
                 if (lockUps[i].receiver == receiver) ++count;
             }
-            ids = new uint256[](count);
 
+            ids = new uint256[](count);
             uint256 j;
-            for (uint256 i = 0; i < lockUpsLength; ++i) {
+            for (uint256 i = start; i < stop; ++i) {
                 if (lockUps[i].receiver == receiver) {
                     ids[j++] = i;
                     if (j == count) break;

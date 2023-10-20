@@ -3,7 +3,6 @@ const { time } = require('@nomicfoundation/hardhat-network-helpers');
 const { expect } = require('chai');
 const { NULL_ADDRESS, wei } = require('./utils/test-utils');
 
-
 const ORIGINAL_BALANCE = wei(200000000);
 const LOCKUP_AMOUNT = wei(1000);
 
@@ -31,7 +30,7 @@ describe('Locker', function () {
       this.unlockTime = Math.floor(Date.now() / 1000) + 60 * 60 * 24; // 24 hours from now
 
       await Token.approve(Locker.target, LOCKUP_AMOUNT);
-      await Locker.createLockUp(Token.target, LOCKUP_AMOUNT, this.unlockTime, alice);
+      await Locker.createLockUp(Token.target, LOCKUP_AMOUNT, this.unlockTime, alice.address, 'Test Lockup');
 
       this.lockUp = await Locker.lockUps(0);
     });
@@ -42,6 +41,7 @@ describe('Locker', function () {
       expect(this.lockUp.unlockTime).to.equal(this.unlockTime);
       expect(this.lockUp.receiver).to.equal(alice.address);
       expect(this.lockUp.unlocked).to.equal(false);
+      expect(this.lockUp.title).to.equal('Test Lockup');
     });
 
     it('should transfer tokens to the Locker', async function () {
@@ -51,7 +51,7 @@ describe('Locker', function () {
 
     it('should emit LockedUp event', async function () {
       await Token.approve(Locker.target, LOCKUP_AMOUNT);
-      await expect(Locker.createLockUp(Token.target, LOCKUP_AMOUNT, this.unlockTime, alice))
+      await expect(Locker.createLockUp(Token.target, LOCKUP_AMOUNT, this.unlockTime, alice.address, ''))
         .to.emit(Locker, 'LockedUp')
         .withArgs(1, Token.target, alice.address, LOCKUP_AMOUNT, this.unlockTime);
     });
@@ -115,7 +115,7 @@ describe('Locker', function () {
     });
 
     it('should not allow creating a lockup with a zero address token', async function () {
-      await expect(Locker.createLockUp(NULL_ADDRESS, LOCKUP_AMOUNT, this.unlockTime, alice))
+      await expect(Locker.createLockUp(NULL_ADDRESS, LOCKUP_AMOUNT, this.unlockTime, alice.address, ''))
         .to.be.revertedWithCustomError(
           Locker,
           'LockUp__InvalidParams'
@@ -123,7 +123,7 @@ describe('Locker', function () {
     });
 
     it('should not allow creating a lockup with a zero amount', async function () {
-      await expect(Locker.createLockUp(Token.target, 0, this.unlockTime, alice))
+      await expect(Locker.createLockUp(Token.target, 0, this.unlockTime, alice.address, ''))
         .to.be.revertedWithCustomError(
           Locker,
           'LockUp__InvalidParams'
@@ -132,7 +132,7 @@ describe('Locker', function () {
 
     it('should not allow creating a lockup with an unlock time in the past', async function () {
       const now = await time.latest();
-      await expect(Locker.createLockUp(Token.target, LOCKUP_AMOUNT, now - 1, alice))
+      await expect(Locker.createLockUp(Token.target, LOCKUP_AMOUNT, now - 1, alice.address, ''))
         .to.be.revertedWithCustomError(
           Locker,
           'LockUp__InvalidParams'
@@ -148,22 +148,37 @@ describe('Locker', function () {
       await this.Token2.waitForDeployment();
 
       await Token.approve(Locker.target, LOCKUP_AMOUNT);
-      await this.Token2.approve(Locker.target, LOCKUP_AMOUNT * 3n);
-      await Locker.createLockUp(Token.target, LOCKUP_AMOUNT, unlockTime, alice);
-      await Locker.createLockUp(this.Token2.target, LOCKUP_AMOUNT, unlockTime, alice);
-      await Locker.createLockUp(this.Token2.target, LOCKUP_AMOUNT, unlockTime, bob);
-      await Locker.createLockUp(this.Token2.target, LOCKUP_AMOUNT, unlockTime, carol);
+      await this.Token2.approve(Locker.target, LOCKUP_AMOUNT * 4n);
+      await Locker.createLockUp(Token.target, LOCKUP_AMOUNT, unlockTime, alice.address, ''); // id: 0
+      await Locker.createLockUp(this.Token2.target, LOCKUP_AMOUNT, unlockTime, alice.address, ''); // id: 1
+      await Locker.createLockUp(this.Token2.target, LOCKUP_AMOUNT, unlockTime, bob.address, ''); // id: 2
+      await Locker.createLockUp(this.Token2.target, LOCKUP_AMOUNT, unlockTime, carol.address, ''); // id: 3
+      await Locker.createLockUp(this.Token2.target, LOCKUP_AMOUNT, unlockTime, alice.address, ''); // id: 4
     });
 
     it('should filter ids with token', async function () {
-      expect(await Locker.getLockUpIdsByToken(Token.target)).to.deep.equal([0]);
-      expect(await Locker.getLockUpIdsByToken(this.Token2.target)).to.deep.equal([1, 2, 3]);
+      expect(await Locker.getLockUpIdsByToken(Token.target, 0, 9999)).to.deep.equal([0]);
+      expect(await Locker.getLockUpIdsByToken(this.Token2.target, 0, 9999)).to.deep.equal([1, 2, 3, 4]);
+    });
+
+    it('should filter token and paginate properly', async function () {
+      // stop parameter is exclusive
+      expect(await Locker.getLockUpIdsByToken(this.Token2.target, 0, 1)).to.deep.equal([]);
+      expect(await Locker.getLockUpIdsByToken(this.Token2.target, 0, 2)).to.deep.equal([1]);
+      expect(await Locker.getLockUpIdsByToken(this.Token2.target, 0, 4)).to.deep.equal([1, 2, 3]);
     });
 
     it('should filter ids with receiver', async function () {
-      expect(await Locker.getLockUpIdsByReceiver(alice.address)).to.deep.equal([0, 1]);
-      expect(await Locker.getLockUpIdsByReceiver(bob.address)).to.deep.equal([2]);
-      expect(await Locker.getLockUpIdsByReceiver(carol.address)).to.deep.equal([3]);
+      expect(await Locker.getLockUpIdsByReceiver(alice.address, 0, 9999)).to.deep.equal([0, 1, 4]);
+      expect(await Locker.getLockUpIdsByReceiver(bob.address, 0, 9999)).to.deep.equal([2]);
+      expect(await Locker.getLockUpIdsByReceiver(carol.address, 0, 9999)).to.deep.equal([3]);
+    });
+
+    it('should filter receiver and paginate properly', async function () {
+      // stop parameter is exclusive
+      expect(await Locker.getLockUpIdsByReceiver(alice.address, 0, 1)).to.deep.equal([0]);
+      expect(await Locker.getLockUpIdsByReceiver(alice.address, 0, 2)).to.deep.equal([0, 1]);
+      expect(await Locker.getLockUpIdsByReceiver(alice.address, 0, 5)).to.deep.equal([0, 1, 4]);
     });
   }); // Utility functions
 }); // Locker
