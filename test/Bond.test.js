@@ -16,10 +16,7 @@ const {
 } = require('./utils/test-utils');
 
 const BABY_TOKEN = {
-  tokenParams: {
-    name: 'Baby Token',
-    symbol: 'BABY'
-  },
+  tokenParams: { name: 'Baby Token', symbol: 'BABY' },
   bondParams: {
     royalty: 100n, // 1%
     reserveToken: null, // Should be set later
