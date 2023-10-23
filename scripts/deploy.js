@@ -41,6 +41,7 @@ async function main() {
 
   console.log(`
     npx hardhat verify --network ${hre.network.name} ${tokenImplementation.target}
+    npx hardhat verify --network ${hre.network.name} ${NFTImplementation.target}
     npx hardhat verify --network ${hre.network.name} ${bond.target} ${tokenImplementation.target} ${NFTImplementation.target} ${PROTOCOL_BENEFIARY}
     npx hardhat verify --network ${hre.network.name} ${locker.target}
     npx hardhat verify --network ${hre.network.name} ${merkleDistributor.target}
