@@ -53,13 +53,26 @@ contract MCV2_MultiToken is ERC1155Initializable {
         unchecked {
             totalSupply -= amount;
         }
+
         _burn(account, 0, amount);
     }
 
-    /* @dev Helper function to provide the same interface as ERC20
-     * As we only have one token, we can simply return the balance of tokenId = 0
-     */
+    // MARK: - Helper function to provide the same interface as ERC20 (tokenId is always 0)
+
     function balanceOf(address account) external view returns (uint256) {
         return balanceOf(account, 0);
     }
+
+    function transfer(address to, uint256 amount) external returns (bool) {
+        _safeTransferFrom(_msgSender(), to, 0, amount, "");
+
+        return true;
+    }
+
+    // MARK: - Metadata for OpenSea compatibility
+
+    // TODO: https://docs.opensea.io/docs/contract-level-metadata
+    // function contractURI() public view returns (string memory) {
+    //     return "https://mint.club/metadata/${chain}/${symbol}.json";
+    // }
 }

@@ -31,6 +31,8 @@ contract Locker {
         _;
     }
 
+    // TODO: Add ERC1155 support - maybe a wrapper contract?
+
     function createLockUp(address token, uint128 amount, uint40 unlockTime, address receiver, string calldata title) external {
         if (token == address(0)) revert LockUp__InvalidParams('token');
         if (amount == 0) revert LockUp__InvalidParams('amount');

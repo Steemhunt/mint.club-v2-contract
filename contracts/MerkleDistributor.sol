@@ -49,6 +49,8 @@ contract MerkleDistributor {
         _;
     }
 
+    // TODO: Add ERC1155 support - maybe a wrapper contract?
+
     function createDistribution(
         address token,
         uint96 amountPerClaim,
