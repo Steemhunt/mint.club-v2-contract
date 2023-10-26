@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.20;
 
-import "./lib/ERC1155Initializable.sol";
+import {ERC1155Initializable} from "./lib/ERC1155Initializable.sol";
 
 contract MCV2_MultiToken is ERC1155Initializable {
     error MCV2_MultiToken__PermissionDenied();

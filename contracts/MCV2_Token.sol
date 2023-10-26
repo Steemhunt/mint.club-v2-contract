@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.20;
 
-import "./lib/ERC20Initializable.sol";
+import {ERC20Initializable} from "./lib/ERC20Initializable.sol";
 
 contract MCV2_Token is ERC20Initializable {
     error MCV2_Token__PermissionDenied();
