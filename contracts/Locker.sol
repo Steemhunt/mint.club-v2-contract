@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
 contract Locker {
     using SafeERC20 for IERC20;
@@ -12,14 +13,15 @@ contract Locker {
     error LockUp__AlreadyClaimed();
     error LockUp__NotYetUnlocked();
 
-    event LockedUp(uint256 indexed lockUpId, address indexed token, address indexed receiver, uint128 amount, uint40 unlockTime);
-    event Unlocked(uint256 indexed lockUpId, address indexed token, address indexed receiver, uint128 amount);
+    event LockedUp(uint256 indexed lockUpId, address indexed token, bool isERC20, address indexed receiver, uint256 amount, uint40 unlockTime);
+    event Unlocked(uint256 indexed lockUpId, address indexed token, bool isERC20, address indexed receiver, uint256 amount);
 
     struct LockUp { // 3 slots
         address token; // 160 bits
+        bool isERC20;
         uint40 unlockTime; // supports up to year 36,825
-        bool unlocked;
-        uint128 amount; // 128 + 8 + 40 = 176 bits
+        bool unlocked; // 160 + 8 + 40 + 8 = 216 bits
+        uint256 amount;
         address receiver;
         string title; // optional
     }
@@ -31,27 +33,43 @@ contract Locker {
         _;
     }
 
-    // TODO: Add ERC1155 support - maybe a wrapper contract?
+    function onERC1155Received(address, address, uint256, uint256, bytes memory) external pure returns (bytes4) {
+        return this.onERC1155Received.selector;
+    }
 
-    function createLockUp(address token, uint128 amount, uint40 unlockTime, address receiver, string calldata title) external {
+    function onERC1155BatchReceived(address, address, uint256[] memory, uint256[] memory, bytes memory) external pure returns (bytes4) {
+        return this.onERC1155BatchReceived.selector;
+    }
+
+    function onERC721Received(address, address, uint256, bytes memory) external pure returns (bytes4) {
+        return this.onERC721Received.selector;
+    }
+
+    function createLockUp(address token, bool isERC20, uint256 amount, uint40 unlockTime, address receiver, string calldata title) external {
         if (token == address(0)) revert LockUp__InvalidParams('token');
         if (amount == 0) revert LockUp__InvalidParams('amount');
         if (unlockTime <= block.timestamp) revert LockUp__InvalidParams('unlockTime');
 
         // Deposit total amount of tokens to this contract
-        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+        if (isERC20) {
+            IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+        } else {
+            // Only support an ERC1155 token at id = 0
+            IERC1155(token).safeTransferFrom(msg.sender, address(this), 0, amount, "");
+        }
 
         // Create a new lockUp
         lockUps.push();
         LockUp storage lockUp = lockUps[lockUps.length - 1];
         lockUp.token = token;
+        lockUp.isERC20 = isERC20;
         lockUp.unlockTime = unlockTime;
         // lockUp.unlocked = false;
         lockUp.amount = amount;
         lockUp.receiver = receiver;
         lockUp.title = title;
 
-        emit LockedUp(lockUps.length - 1, token, receiver, amount, unlockTime);
+        emit LockedUp(lockUps.length - 1, token, isERC20, receiver, amount, unlockTime);
     }
 
     function unlock(uint256 lockUpId) external onlyReceiver(lockUpId) {
@@ -60,9 +78,14 @@ contract Locker {
         if (lockUp.unlockTime > block.timestamp) revert LockUp__NotYetUnlocked();
 
         lockUp.unlocked = true;
-        IERC20(lockUp.token).safeTransfer(lockUp.receiver, lockUp.amount);
 
-        emit Unlocked(lockUpId, lockUp.token, lockUp.receiver, lockUp.amount);
+        if (lockUp.isERC20) {
+            IERC20(lockUp.token).safeTransfer(lockUp.receiver, lockUp.amount);
+        } else {
+            IERC1155(lockUp.token).safeTransferFrom(address(this), lockUp.receiver, 0, lockUp.amount, "");
+        }
+
+        emit Unlocked(lockUpId, lockUp.token, lockUp.isERC20, lockUp.receiver, lockUp.amount);
     }
 
     // MARK: - Utility functions
