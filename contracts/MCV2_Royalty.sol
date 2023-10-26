@@ -24,7 +24,7 @@ abstract contract MCV2_Royalty is Ownable {
 
     event RoyaltyClaimed(address indexed user, address reserveToken, uint256 amount);
 
-    constructor(address protocolBeneficiary_) {
+    constructor(address protocolBeneficiary_, address msgSender) Ownable(msgSender) {
         updateProtocolBeneficiary(protocolBeneficiary_);
     }
 

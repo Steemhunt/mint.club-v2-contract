@@ -70,7 +70,7 @@ contract MCV2_Bond is MCV2_Royalty {
         address tokenImplementation_,
         address multiTokenImplementation_,
         address protocolBeneficiary_
-    ) MCV2_Royalty(protocolBeneficiary_) {
+    ) MCV2_Royalty(protocolBeneficiary_, msg.sender) {
         tokenImplementation = tokenImplementation_;
         multiTokenImplementation = multiTokenImplementation_;
     }

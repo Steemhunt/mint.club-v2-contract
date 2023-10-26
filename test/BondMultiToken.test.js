@@ -574,7 +574,7 @@ describe('BondMultiToken', function () {
 
           await expect(
             Bond.connect(alice).mint(this.token.target, 10n, MAX_INT_256)
-          ).to.be.revertedWith('ERC20: insufficient allowance');
+          ).to.be.revertedWithCustomError(BaseToken, 'ERC20InsufficientAllowance');
         });
 
         it('should revert if reserve amount is zero', async function () {
@@ -603,7 +603,7 @@ describe('BondMultiToken', function () {
 
           await expect(
             Bond.connect(alice).mint(this.token.target, tokensToMint + 1n, MAX_INT_256)
-          ).to.be.revertedWith('ERC20: transfer amount exceeds balance');
+          ).to.be.revertedWithCustomError(BaseToken, 'ERC20InsufficientBalance');
         });
       }); // Mint: Edge Cases
 
@@ -633,7 +633,7 @@ describe('BondMultiToken', function () {
 
           await expect(
             Bond.connect(alice).burn(this.token.target, this.tokensToMint + 1n, 0)
-          ).to.be.revertedWith('ERC1155: burn amount exceeds balance');
+          ).to.be.revertedWithCustomError(this.token, 'ERC1155InsufficientBalance');
         });
 
         it('should revert if alice try to burn more than the total supply', async function () {

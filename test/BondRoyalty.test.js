@@ -62,7 +62,7 @@ describe('Royalty', function () {
 
     it('should not be able to update protocol beneficiary by non-owner', async function () {
       await expect(Bond.connect(alice).updateProtocolBeneficiary(bob.address)).to.be.
-        revertedWith('Ownable: caller is not the owner');
+        revertedWithCustomError(Bond, 'OwnableUnauthorizedAccount');
     });
   });
 
