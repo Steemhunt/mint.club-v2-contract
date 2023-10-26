@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 contract MerkleDistributor {
@@ -20,13 +21,15 @@ contract MerkleDistributor {
     error MerkleDistributor__NoRefundDuringClaim();
     error MerkleDistributor__NothingToRefund();
 
-    event Refunded(uint256 distributionId, uint256 amount);
-    event Claimed(uint256 distributionId, address account);
+    event Created(uint256 indexed distributionId, address indexed token, bool isERC20, uint40 startTime);
+    event Refunded(uint256 indexed distributionId, uint256 amount);
+    event Claimed(uint256 indexed distributionId, address account);
 
     struct Distribution {
         address token;
+        bool isERC20;
         uint24 walletCount;
-        uint24 claimedCount; // 160 + 24 + 24 = 208 bits
+        uint24 claimedCount; // 160 + 8 + 24 + 24 = 216 bits
 
         uint128 amountPerClaim;
         uint40 startTime; // supports up to year 36,825
@@ -53,6 +56,7 @@ contract MerkleDistributor {
 
     function createDistribution(
         address token,
+        bool isERC20,
         uint96 amountPerClaim,
         uint24 walletCount,
         uint40 startTime,
@@ -68,12 +72,18 @@ contract MerkleDistributor {
         if (startTime >= endTime) revert MerkleDistributor__InvalidParams('startTime');
 
         // Deposit total amount of tokens to this contract
-        IERC20(token).safeTransferFrom(msg.sender, address(this), amountPerClaim * walletCount);
+        if (isERC20) {
+            IERC20(token).safeTransferFrom(msg.sender, address(this), amountPerClaim * walletCount);
+        } else {
+            // Only support an ERC1155 token at id = 0
+            IERC1155(token).safeTransferFrom(msg.sender, address(this), 0, amountPerClaim * walletCount, "");
+        }
 
         // Create a new distribution
         distributions.push();
         Distribution storage distribution = distributions[distributions.length - 1];
         distribution.token = token;
+        distribution.isERC20 = isERC20;
         distribution.walletCount = walletCount;
         // distribution.claimedCount = 0;
 
@@ -86,6 +96,8 @@ contract MerkleDistributor {
         distribution.merkleRoot = merkleRoot; // optional
         distribution.title = title; // optional
         distribution.ipfsCID = ipfsCID; // optional
+
+        emit Created(distributions.length - 1, token, isERC20, startTime);
     }
 
     function claim(uint256 distributionId, bytes32[] calldata merkleProof) external {
@@ -108,7 +120,12 @@ contract MerkleDistributor {
         distribution.isClaimed[msg.sender] = true;
         distribution.claimedCount += 1;
 
-        IERC20(distribution.token).safeTransfer(msg.sender, distribution.amountPerClaim);
+        if (distribution.isERC20) {
+            IERC20(distribution.token).safeTransfer(msg.sender, distribution.amountPerClaim);
+        } else {
+            // Only support an ERC1155 token at id = 0
+            IERC1155(distribution.token).safeTransferFrom(address(this), msg.sender, 0, distribution.amountPerClaim, "");
+        }
 
         emit Claimed(distributionId, msg.sender);
     }
@@ -123,7 +140,12 @@ contract MerkleDistributor {
         if (amountLeft == 0) revert MerkleDistributor__NothingToRefund();
 
         distribution.refunded = true;
-        IERC20(distribution.token).safeTransfer(distribution.owner, amountLeft);
+        if (distribution.isERC20) {
+            IERC20(distribution.token).safeTransfer(distribution.owner, amountLeft);
+        } else {
+            // Only support an ERC1155 token at id = 0
+            IERC1155(distribution.token).safeTransferFrom(address(this), distribution.owner, 0, amountLeft, "");
+        }
 
         emit Refunded(distributionId, amountLeft);
     }
@@ -158,6 +180,7 @@ contract MerkleDistributor {
         return distribution.amountPerClaim * distribution.claimedCount;
     }
 
+    // TODO: pagination
     function getDistributionIdsByToken(address token) external view returns (uint256[] memory ids) {
         unchecked {
             uint256 count;
@@ -177,6 +200,7 @@ contract MerkleDistributor {
         }
     }
 
+    // TODO: pagination
     function getDistributionIdsByOwner(address owner) external view returns (uint256[] memory ids) {
         unchecked {
             uint256 count;
@@ -194,5 +218,19 @@ contract MerkleDistributor {
                 }
             }
         }
+    }
+
+    // MARK: - ERC1155 Receiver
+
+    function onERC1155Received(address, address, uint256, uint256, bytes memory) external pure returns (bytes4) {
+        return this.onERC1155Received.selector;
+    }
+
+    function onERC1155BatchReceived(address, address, uint256[] memory, uint256[] memory, bytes memory) external pure returns (bytes4) {
+        return this.onERC1155BatchReceived.selector;
+    }
+
+    function onERC721Received(address, address, uint256, bytes memory) external pure returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 }

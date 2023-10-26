@@ -369,6 +369,7 @@ contract MCV2_Bond is MCV2_Royalty {
         return tokenBond[token].steps[i].price;
     }
 
+    // TODO: pagination
     function getTokenIdsByReserveToken(address reserveToken) external view returns (uint256[] memory ids) {
         unchecked {
             uint256 count;
@@ -388,6 +389,7 @@ contract MCV2_Bond is MCV2_Royalty {
         }
     }
 
+    // TODO: pagination
     function getTokenIdsByCreator(address creator) external view returns (uint256[] memory ids) {
         unchecked {
             uint256 count;

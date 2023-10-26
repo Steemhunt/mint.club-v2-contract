@@ -33,18 +33,6 @@ contract Locker {
         _;
     }
 
-    function onERC1155Received(address, address, uint256, uint256, bytes memory) external pure returns (bytes4) {
-        return this.onERC1155Received.selector;
-    }
-
-    function onERC1155BatchReceived(address, address, uint256[] memory, uint256[] memory, bytes memory) external pure returns (bytes4) {
-        return this.onERC1155BatchReceived.selector;
-    }
-
-    function onERC721Received(address, address, uint256, bytes memory) external pure returns (bytes4) {
-        return this.onERC721Received.selector;
-    }
-
     function createLockUp(address token, bool isERC20, uint256 amount, uint40 unlockTime, address receiver, string calldata title) external {
         if (token == address(0)) revert LockUp__InvalidParams('token');
         if (amount == 0) revert LockUp__InvalidParams('amount');
@@ -136,5 +124,19 @@ contract Locker {
                 }
             }
         }
+    }
+
+    // MARK: - ERC1155 Receiver
+
+    function onERC1155Received(address, address, uint256, uint256, bytes memory) external pure returns (bytes4) {
+        return this.onERC1155Received.selector;
+    }
+
+    function onERC1155BatchReceived(address, address, uint256[] memory, uint256[] memory, bytes memory) external pure returns (bytes4) {
+        return this.onERC1155BatchReceived.selector;
+    }
+
+    function onERC721Received(address, address, uint256, bytes memory) external pure returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 }

@@ -27,23 +27,26 @@ describe('MerkleDistributor', function () {
     const Token = await ethers.deployContract('TestToken', [ORIGINAL_BALANCE]); // supply: 1M
     await Token.waitForDeployment();
 
+    const MultiToken = await ethers.deployContract('TestMultiToken', [ORIGINAL_BALANCE]);
+    await MultiToken.waitForDeployment();
+
     const MerkleDistributor = await ethers.deployContract('MerkleDistributor');
     await MerkleDistributor.waitForDeployment();
 
-    return [Token, MerkleDistributor];
+    return [Token, MultiToken, MerkleDistributor];
   }
 
-  let Token, MerkleDistributor;
+  let Token, MultiToken, MerkleDistributor;
   let owner, alice, bob, carol, david;
   let defaultWhiltelist;
 
   beforeEach(async function () {
-    [Token, MerkleDistributor] = await loadFixture(deployFixtures);
+    [Token, MultiToken, MerkleDistributor] = await loadFixture(deployFixtures);
     [owner, alice, bob, carol, david] = await ethers.getSigners();
     defaultWhiltelist = [alice.address, bob.address, carol.address];
   });
 
-  describe('Create distribution', function () {
+  describe('Create distribution: ERC20', function () {
     beforeEach(async function () {
       this.totalAirdropAmount = TEST_DATA.amountPerClaim * TEST_DATA.walletCount;
       await Token.approve(MerkleDistributor.target, this.totalAirdropAmount);
@@ -53,6 +56,7 @@ describe('MerkleDistributor', function () {
       beforeEach(async function () {
         await MerkleDistributor.createDistribution(
           Token.target,
+          true,
           TEST_DATA.amountPerClaim,
           TEST_DATA.walletCount,
           TEST_DATA.startTime,
@@ -64,47 +68,18 @@ describe('MerkleDistributor', function () {
         this.distribution = await MerkleDistributor.distributions(0);
       });
 
-      it('should set properties correctly - token', async function() {
+      it('should set properties correctly', async function() {
         expect(this.distribution.token).to.equal(Token.target);
-      });
-
-      it('should set properties correctly - amountPerClaim', async function() {
+        expect(this.distribution.isERC20).to.equal(true);
         expect(this.distribution.amountPerClaim).to.equal(TEST_DATA.amountPerClaim);
-      });
-
-      it('should set properties correctly - walletCount', async function() {
         expect(this.distribution.walletCount).to.equal(TEST_DATA.walletCount);
-      });
-
-      it('should set properties correctly - claimedCount', async function() {
         expect(this.distribution.claimedCount).to.equal(0);
-      });
-
-      it('should set properties correctly - startTime', async function() {
         expect(this.distribution.startTime).to.equal(TEST_DATA.startTime);
-      });
-
-      it('should set properties correctly - endTime', async function() {
         expect(this.distribution.endTime).to.equal(TEST_DATA.endTime);
-      });
-
-      it('should set properties correctly - refunded', async function() {
         expect(this.distribution.refunded).to.equal(false);
-      });
-
-      it('should set properties correctly - owner', async function() {
         expect(this.distribution.owner).to.equal(owner.address);
-      });
-
-      it('should set properties correctly - merkleRoot', async function() {
         expect(this.distribution.merkleRoot).to.equal(ZERO_BYTES32);
-      });
-
-      it('should set properties correctly - title', async function() {
         expect(this.distribution.title).to.equal(TEST_DATA.title);
-      });
-
-      it('should set properties correctly - ipfsCID', async function() {
         expect(this.distribution.ipfsCID).to.equal('');
       });
 
@@ -127,12 +102,21 @@ describe('MerkleDistributor', function () {
       it('should deduct the total airdrop amount from the owner', async function() {
         expect(await Token.balanceOf(owner.address)).to.equal(ORIGINAL_BALANCE - this.totalAirdropAmount);
       });
+
+      it('should allow anyone to claim', async function() {
+        await MerkleDistributor.connect(alice).claim(0, []);
+        await MerkleDistributor.connect(bob).claim(0, []);
+
+        expect(await Token.balanceOf(alice.address)).to.equal(TEST_DATA.amountPerClaim);
+        expect(await Token.balanceOf(bob.address)).to.equal(TEST_DATA.amountPerClaim);
+      });
     }); // Normal cases
 
     describe('Edge cases', function () {
       beforeEach(async function () {
         this.testParams = [
           Token.target,
+          true,
           TEST_DATA.amountPerClaim,
           TEST_DATA.walletCount,
           TEST_DATA.startTime,
@@ -154,7 +138,7 @@ describe('MerkleDistributor', function () {
       });
 
       it('should revert if amountPerClaim is zero', async function() {
-        this.testParams[1] = 0;
+        this.testParams[2] = 0;
         await expect(MerkleDistributor.createDistribution(...this.testParams)).
           to.be.revertedWithCustomError(
             MerkleDistributor,
@@ -163,7 +147,7 @@ describe('MerkleDistributor', function () {
       });
 
       it('should revert if walletCount is zero', async function() {
-        this.testParams[2] = 0;
+        this.testParams[3] = 0;
         await expect(MerkleDistributor.createDistribution(...this.testParams)).
           to.be.revertedWithCustomError(
             MerkleDistributor,
@@ -172,7 +156,7 @@ describe('MerkleDistributor', function () {
       });
 
       it('should revert if endTime is in the past', async function() {
-        this.testParams[4] = (await time.latest()) - 1;
+        this.testParams[5] = (await time.latest()) - 1;
         await expect(MerkleDistributor.createDistribution(...this.testParams)).
           to.be.revertedWithCustomError(
             MerkleDistributor,
@@ -180,13 +164,74 @@ describe('MerkleDistributor', function () {
           ).withArgs('endTime');
       });
     }); // Edge cases
-  }); // Create distribution
+  }); // Create distribution: ERC20
 
+  describe('Create distribution: ERC1155', function () {
+    beforeEach(async function () {
+      this.totalAirdropAmount = TEST_DATA.amountPerClaim * TEST_DATA.walletCount;
+      await MultiToken.setApprovalForAll(MerkleDistributor.target, true);
+    });
 
+    describe('Normal cases', function () {
+      beforeEach(async function () {
+        await MerkleDistributor.createDistribution(
+          MultiToken.target,
+          false,
+          TEST_DATA.amountPerClaim,
+          TEST_DATA.walletCount,
+          TEST_DATA.startTime,
+          TEST_DATA.endTime,
+          ZERO_BYTES32,
+          TEST_DATA.title,
+          ''
+        );
+        this.distribution = await MerkleDistributor.distributions(0);
+      });
 
-  // TODO: Test for non-whitelist case
+      it('should set properties correctly', async function() {
+        expect(this.distribution.token).to.equal(MultiToken.target);
+        expect(this.distribution.isERC20).to.equal(false);
+        expect(this.distribution.amountPerClaim).to.equal(TEST_DATA.amountPerClaim);
+        expect(this.distribution.walletCount).to.equal(TEST_DATA.walletCount);
+        expect(this.distribution.claimedCount).to.equal(0);
+        expect(this.distribution.startTime).to.equal(TEST_DATA.startTime);
+        expect(this.distribution.endTime).to.equal(TEST_DATA.endTime);
+        expect(this.distribution.refunded).to.equal(false);
+        expect(this.distribution.owner).to.equal(owner.address);
+        expect(this.distribution.merkleRoot).to.equal(ZERO_BYTES32);
+        expect(this.distribution.title).to.equal(TEST_DATA.title);
+        expect(this.distribution.ipfsCID).to.equal('');
+      });
 
+      it('should return total airdrop amount as amountLeft', async function() {
+        expect(await MerkleDistributor.getAmountLeft(0)).to.equal(this.totalAirdropAmount);
+      });
 
+      it('should return 0 on getAmountClaimed', async function() {
+        expect(await MerkleDistributor.getAmountClaimed(0)).to.equal(0n);
+      });
+
+      it('should return false on isWhitelistOnly', async function() {
+        expect(await MerkleDistributor.isWhitelistOnly(0)).to.equal(false);
+      });
+
+      it('should transfer the total airdrop amount to the contract', async function() {
+        expect(await MultiToken.balanceOf(MerkleDistributor.target, 0)).to.equal(this.totalAirdropAmount);
+      });
+
+      it('should deduct the total airdrop amount from the owner', async function() {
+        expect(await MultiToken.balanceOf(owner.address, 0)).to.equal(ORIGINAL_BALANCE - this.totalAirdropAmount);
+      });
+
+      it('should allow anyone to claim', async function() {
+        await MerkleDistributor.connect(alice).claim(0, []);
+        await MerkleDistributor.connect(bob).claim(0, []);
+
+        expect(await MultiToken.balanceOf(alice.address, 0)).to.equal(TEST_DATA.amountPerClaim);
+        expect(await MultiToken.balanceOf(bob.address, 0)).to.equal(TEST_DATA.amountPerClaim);
+      });
+    }); // Normal cases
+  }); // Create distribution: ERC1155
 
   describe('Set merkle root', function () {
     beforeEach(async function () {
@@ -196,6 +241,7 @@ describe('MerkleDistributor', function () {
       await Token.approve(MerkleDistributor.target, TEST_DATA.amountPerClaim * 3n);
       await MerkleDistributor.createDistribution(
         Token.target,
+        true,
         TEST_DATA.amountPerClaim, // wei(100)
         3n,
         TEST_DATA.startTime,
@@ -279,6 +325,7 @@ describe('MerkleDistributor', function () {
         await Token.approve(MerkleDistributor.target, TEST_DATA.amountPerClaim * 3n);
         await MerkleDistributor.createDistribution(
           Token.target,
+          true,
           TEST_DATA.amountPerClaim,
           3n,
           await time.latest() + 9999,
@@ -362,6 +409,7 @@ describe('MerkleDistributor', function () {
       await Token.approve(MerkleDistributor.target, TEST_DATA.amountPerClaim * 2n);
       await MerkleDistributor.createDistribution(
         Token.target,
+        true,
         TEST_DATA.amountPerClaim, // wei(100)
         2n, // only 2 can calim
         TEST_DATA.startTime,
@@ -393,6 +441,7 @@ describe('MerkleDistributor', function () {
       await Token.connect(alice).approve(MerkleDistributor.target, 10000);
       await MerkleDistributor.connect(alice).createDistribution(
         Token.target,
+        true,
         100,
         100,
         TEST_DATA.startTime,
@@ -406,6 +455,7 @@ describe('MerkleDistributor', function () {
       await this.Token2.connect(alice).approve(MerkleDistributor.target, 10000);
       await MerkleDistributor.connect(alice).createDistribution(
         this.Token2.target,
+        true,
         100,
         100,
         TEST_DATA.startTime,
@@ -419,6 +469,7 @@ describe('MerkleDistributor', function () {
       await this.Token2.connect(bob).approve(MerkleDistributor.target, 10000);
       await MerkleDistributor.connect(bob).createDistribution(
         this.Token2.target,
+        true,
         100,
         100,
         TEST_DATA.startTime,
