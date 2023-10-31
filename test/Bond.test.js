@@ -785,9 +785,7 @@ describe('Bond', function () {
     });
 
     it('should return all tokens and their bond parameters', async function () {
-      const info = await Bond.getList(0, 100);
-
-      expect(info).to.deep.equal([
+      expect(await Bond.getList(0, 100)).to.deep.equal([
         [
           this.token0,
           18n,
@@ -824,6 +822,28 @@ describe('Bond', function () {
           BABY_TOKEN.bondParams.maxSupply,
           0n
         ]
+      ]);
+    });
+
+    it('should return detailed bond information', async function () {
+      const steps = BABY_TOKEN.bondParams.stepRanges.map((step, i) => [step, BABY_TOKEN.bondParams.stepPrices[i]]);
+
+      expect(await Bond.getDetail(this.token0)).to.deep.equal([
+        alice.address,
+        BABY_TOKEN.bondParams.royalty,
+        [
+          this.token0,
+          18n,
+          'BABY',
+          BABY_TOKEN.tokenParams.name,
+          BaseToken.target,
+          18n,
+          'TEST',
+          'Test Token',
+          BABY_TOKEN.bondParams.maxSupply,
+          0n
+        ],
+        steps
       ]);
     });
   }); // Utility functions

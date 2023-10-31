@@ -371,7 +371,6 @@ contract MCV2_Bond is MCV2_Royalty {
         return tokenBond[token].steps[tokenBond[token].steps.length - 1].rangeTo;
     }
 
-    // Get all tokens and their bond parameters in the range where start <= id < stop
     struct BondInfo {
         address token;
         uint8 decimals;
@@ -384,6 +383,26 @@ contract MCV2_Bond is MCV2_Royalty {
         uint128 maxSupply;
         uint256 reserveBalance;
     }
+    function _getBondInfo(address token) private view returns(BondInfo memory info) {
+        MCV2_ICommonToken t = MCV2_ICommonToken(token);
+        Bond memory bond = tokenBond[token];
+        IERC20Metadata r = IERC20Metadata(bond.reserveToken);
+
+        info = BondInfo({
+            token: token,
+            decimals: t.decimals(),
+            symbol: t.symbol(),
+            name: t.name(),
+            reserveToken: bond.reserveToken,
+            reserveDecimals: r.decimals(),
+            reserveSymbol: r.symbol(),
+            reserveName: r.name(),
+            maxSupply: maxSupply(token),
+            reserveBalance: bond.reserveBalance
+        });
+    }
+
+    // Get all tokens and their bond parameters in the range where start <= id < stop
     function getList(uint256 start, uint256 stop) external view returns(BondInfo[] memory info) {
         unchecked {
             uint256 tokensLength = tokens.length;
@@ -396,24 +415,25 @@ contract MCV2_Bond is MCV2_Royalty {
 
             uint256 j;
             for (uint256 i = start; i < stop; ++i) {
-                MCV2_ICommonToken token = MCV2_ICommonToken(tokens[i]);
-                Bond memory bond = tokenBond[tokens[i]];
-                IERC20Metadata reserveToken = IERC20Metadata(bond.reserveToken);
-
-                info[j++] = BondInfo({
-                    token: tokens[i],
-                    decimals: token.decimals(),
-                    symbol: token.symbol(),
-                    name: token.name(),
-                    reserveToken: bond.reserveToken,
-                    reserveDecimals: reserveToken.decimals(),
-                    reserveSymbol: reserveToken.symbol(),
-                    reserveName: reserveToken.name(),
-                    maxSupply: maxSupply(tokens[i]),
-                    reserveBalance: bond.reserveBalance
-                });
+                info[j++] = _getBondInfo(tokens[i]);
             }
         }
+    }
+
+    struct BondDetail {
+        address creator;
+        uint16 royalty;
+        BondInfo info;
+        BondStep[] steps;
+    }
+    function getDetail(address token) external view returns(BondDetail memory detail) {
+        Bond memory bond = tokenBond[token];
+        detail = BondDetail({
+            creator: bond.creator,
+            royalty: bond.royalty,
+            info: _getBondInfo(token),
+            steps: bond.steps
+        });
     }
 
     // Get tokens filtered by reserve token in the range where start <= id < stop
