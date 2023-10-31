@@ -371,6 +371,7 @@ contract MCV2_Bond is MCV2_Royalty {
         return tokenBond[token].steps[tokenBond[token].steps.length - 1].rangeTo;
     }
 
+    // Get all tokens and their bond parameters in the range where start <= id < stop
     struct BondInfo {
         address token;
         uint8 decimals;
@@ -383,8 +384,6 @@ contract MCV2_Bond is MCV2_Royalty {
         uint128 maxSupply;
         uint256 reserveBalance;
     }
-
-    // Get all tokens and their bond parameters in the range where start <= id < stop
     function getList(uint256 start, uint256 stop) external view returns(BondInfo[] memory info) {
         unchecked {
             uint256 tokensLength = tokens.length;
