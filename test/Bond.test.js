@@ -783,5 +783,48 @@ describe('Bond', function () {
       const addresses = await Bond.getTokensByCreator(bob.address, 0, 1);
       expect(addresses).to.deep.equal([]);
     });
+
+    it('should return all tokens and their bond parameters', async function () {
+      const info = await Bond.getList(0, 100);
+
+      expect(info).to.deep.equal([
+        [
+          this.token0,
+          18n,
+          'BABY',
+          BABY_TOKEN.tokenParams.name,
+          BaseToken.target,
+          18n,
+          'TEST',
+          'Test Token',
+          BABY_TOKEN.bondParams.maxSupply,
+          0n
+        ],
+        [
+          this.token1,
+          18n,
+          'BABY2',
+          BABY_TOKEN.tokenParams.name,
+          this.BaseToken2.target,
+          18n,
+          'TEST',
+          'Test Token',
+          BABY_TOKEN.bondParams.maxSupply,
+          0n
+        ],
+        [
+          this.token2,
+          18n,
+          'BABY3',
+          BABY_TOKEN.tokenParams.name,
+          this.BaseToken2.target,
+          18n,
+          'TEST',
+          'Test Token',
+          BABY_TOKEN.bondParams.maxSupply,
+          0n
+        ]
+      ]);
+    });
   }); // Utility functions
 }); // Bond

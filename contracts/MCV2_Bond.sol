@@ -5,6 +5,7 @@ pragma solidity ^0.8.20;
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {MCV2_Royalty} from "./MCV2_Royalty.sol";
 import {MCV2_Token} from "./MCV2_Token.sol";
@@ -41,13 +42,11 @@ contract MCV2_Bond is MCV2_Royalty {
     address private immutable tokenImplementation;
     address private immutable multiTokenImplementation;
 
-    // TODO: `maxSupply` is unecessary becuase the last step rangeTo should be the same as maxSupply
     struct Bond {
         address creator;
         uint16 royalty; // immutable - range: [0, 5000] - 0.00% ~ 50.00%
         address reserveToken; // immutable
-        uint128 maxSupply; // immutable
-        uint128 reserveBalance;
+        uint256 reserveBalance;
         BondStep[] steps; // immutable
     }
 
@@ -78,7 +77,7 @@ contract MCV2_Bond is MCV2_Royalty {
     }
 
     modifier _checkBondExists(address token) {
-        if(tokenBond[token].maxSupply == 0) revert MCV2_Bond__TokenNotFound();
+        if(tokenBond[token].reserveToken == address(0)) revert MCV2_Bond__TokenNotFound();
         _;
     }
 
@@ -131,7 +130,6 @@ contract MCV2_Bond is MCV2_Royalty {
         bond.creator = _msgSender();
         bond.royalty = bp.royalty;
         bond.reserveToken = bp.reserveToken;
-        bond.maxSupply = bp.maxSupply;
 
         for (uint256 i = 0; i < bp.stepRanges.length; ++i) {
             if (bp.stepRanges[i] == 0) revert MCV2_Bond__InvalidStepParams('STEP_CANNOT_BE_ZERO');
@@ -157,7 +155,7 @@ contract MCV2_Bond is MCV2_Royalty {
         // error anyway, and the collision is nearly impossible (one in 2^160).
         // However, we retain this check to provide a clearer error message, albeit at the expense of an additional gas cost.
         address predicted = Clones.predictDeterministicAddress(implementation, salt);
-        if (tokenBond[predicted].maxSupply > 0) revert MCV2_Bond__TokenSymbolAlreadyExists();
+        if (exists(predicted)) revert MCV2_Bond__TokenSymbolAlreadyExists();
 
         return Clones.cloneDeterministic(implementation, salt);
     }
@@ -238,7 +236,7 @@ contract MCV2_Bond is MCV2_Royalty {
         uint256 currentSupply = t.totalSupply();
         uint256 newSupply = currentSupply + tokensToMint;
 
-        if (newSupply > bond.maxSupply) revert MCV2_Bond__ExceedMaxSupply();
+        if (newSupply > maxSupply(token)) revert MCV2_Bond__ExceedMaxSupply();
 
         uint256 tokensLeft = tokensToMint;
         uint256 reserveToBond = 0;
@@ -355,8 +353,8 @@ contract MCV2_Bond is MCV2_Royalty {
         return tokens.length;
     }
 
-    function exists(address token) external view returns (bool) {
-        return tokenBond[token].maxSupply > 0;
+    function exists(address token) public view returns (bool) {
+        return tokenBond[token].reserveToken != address(0);
     }
 
     function getSteps(address token) external view returns (BondStep[] memory) {
@@ -367,6 +365,56 @@ contract MCV2_Bond is MCV2_Royalty {
         uint256 i = getCurrentStep(token, MCV2_ICommonToken(token).totalSupply());
 
         return tokenBond[token].steps[i].price;
+    }
+
+    function maxSupply(address token) public view returns (uint128) {
+        return tokenBond[token].steps[tokenBond[token].steps.length - 1].rangeTo;
+    }
+
+    struct BondInfo {
+        address token;
+        uint8 decimals;
+        string symbol;
+        string name;
+        address reserveToken;
+        uint8 reserveDecimals;
+        string reserveSymbol;
+        string reserveName;
+        uint128 maxSupply;
+        uint256 reserveBalance;
+    }
+
+    // Get all tokens and their bond parameters in the range where start <= id < stop
+    function getList(uint256 start, uint256 stop) external view returns(BondInfo[] memory info) {
+        unchecked {
+            uint256 tokensLength = tokens.length;
+            if (stop > tokensLength) {
+                stop = tokensLength;
+            }
+
+            uint256 arrayLength = stop - start;
+            info = new BondInfo[](arrayLength);
+
+            uint256 j;
+            for (uint256 i = start; i < stop; ++i) {
+                MCV2_ICommonToken token = MCV2_ICommonToken(tokens[i]);
+                Bond memory bond = tokenBond[tokens[i]];
+                IERC20Metadata reserveToken = IERC20Metadata(bond.reserveToken);
+
+                info[j++] = BondInfo({
+                    token: tokens[i],
+                    decimals: token.decimals(),
+                    symbol: token.symbol(),
+                    name: token.name(),
+                    reserveToken: bond.reserveToken,
+                    reserveDecimals: reserveToken.decimals(),
+                    reserveSymbol: reserveToken.symbol(),
+                    reserveName: reserveToken.name(),
+                    maxSupply: maxSupply(tokens[i]),
+                    reserveBalance: bond.reserveBalance
+                });
+            }
+        }
     }
 
     // Get tokens filtered by reserve token in the range where start <= id < stop
