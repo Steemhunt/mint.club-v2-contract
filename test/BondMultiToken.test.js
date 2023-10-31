@@ -751,26 +751,35 @@ describe('BondMultiToken', function () {
       await Bond.connect(alice).createMultiToken(...Object.values(BABY_TOKEN));
       await Bond.connect(alice).createMultiToken(...Object.values(BABY_TOKEN2));
       await Bond.connect(bob).createMultiToken(...Object.values(BABY_TOKEN3));
+
+      this.token0 = await Bond.tokens(0);
+      this.token1 = await Bond.tokens(1);
+      this.token2 = await Bond.tokens(2);
     });
 
     it('should return [0] for ReserveToken = BaseToken', async function () {
-      const ids = await Bond.getTokenIdsByReserveToken(BaseToken.target);
-      expect(ids).to.deep.equal([0]);
+      const addresses = await Bond.getTokensByReserveToken(BaseToken.target, 0, 100);
+      expect(addresses).to.deep.equal([this.token0]);
     });
 
     it('should return [1, 2] for ReserveToken = BaseToken2', async function () {
-      const ids = await Bond.getTokenIdsByReserveToken(this.BaseToken2.target);
-      expect(ids).to.deep.equal([1, 2]);
+      const addresses = await Bond.getTokensByReserveToken(this.BaseToken2.target, 0, 100);
+      expect(addresses).to.deep.equal([this.token1, this.token2]);
     });
 
     it('should return [0, 1] for creator = alice', async function () {
-      const ids = await Bond.getTokenIdsByCreator(alice.address);
-      expect(ids).to.deep.equal([0, 1]);
+      const addresses = await Bond.getTokensByCreator(alice.address, 0, 100);
+      expect(addresses).to.deep.equal([this.token0, this.token1]);
     });
 
     it('should return [2] for creator = bob', async function () {
-      const ids = await Bond.getTokenIdsByCreator(bob.address);
-      expect(ids).to.deep.equal([2]);
+      const addresses = await Bond.getTokensByCreator(bob.address, 0, 100);
+      expect(addresses).to.deep.equal([this.token2]);
+    });
+
+    it('should return an empty array with a stop param', async function () {
+      const addresses = await Bond.getTokensByCreator(bob.address, 0, 1);
+      expect(addresses).to.deep.equal([]);
     });
   }); // Utility functions
 }); // Bond

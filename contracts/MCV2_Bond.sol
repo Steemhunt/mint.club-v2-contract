@@ -369,40 +369,48 @@ contract MCV2_Bond is MCV2_Royalty {
         return tokenBond[token].steps[i].price;
     }
 
-    // TODO: pagination
-    function getTokenIdsByReserveToken(address reserveToken) external view returns (uint256[] memory ids) {
+    // Get tokens filtered by reserve token in the range where start <= id < stop
+    function getTokensByReserveToken(address reserveToken, uint256 start, uint256 stop) external view returns (address[] memory addresses) {
         unchecked {
-            uint256 count;
             uint256 tokensLength = tokens.length;
-            for (uint256 i = 0; i < tokensLength; ++i) {
+            if (stop > tokensLength) {
+                stop = tokensLength;
+            }
+
+            uint256 count;
+            for (uint256 i = start; i < stop; ++i) {
                 if (tokenBond[tokens[i]].reserveToken == reserveToken) ++count;
             }
-            ids = new uint256[](count);
+            addresses = new address[](count);
 
             uint256 j = 0;
-            for (uint256 i = 0; i < tokensLength; ++i) {
+            for (uint256 i = start; i < stop; ++i) {
                 if (tokenBond[tokens[i]].reserveToken == reserveToken){
-                    ids[j++] = i;
+                    addresses[j++] = tokens[i];
                     if (j == count) break;
                 }
             }
         }
     }
 
-    // TODO: pagination
-    function getTokenIdsByCreator(address creator) external view returns (uint256[] memory ids) {
+    // Get tokens filtered by creator address in the range where start <= id < stop
+    function getTokensByCreator(address creator, uint256 start, uint256 stop) external view returns (address[] memory addresses) {
         unchecked {
-            uint256 count;
             uint256 tokensLength = tokens.length;
-            for (uint256 i = 0; i < tokensLength; ++i) {
+            if (stop > tokensLength) {
+                stop = tokensLength;
+            }
+
+            uint256 count;
+            for (uint256 i = start; i < stop; ++i) {
                 if (tokenBond[tokens[i]].creator == creator) ++count;
             }
-            ids = new uint256[](count);
+            addresses = new address[](count);
 
             uint256 j = 0;
-            for (uint256 i = 0; i < tokensLength; ++i) {
-                if (tokenBond[tokens[i]].creator == creator) {
-                    ids[j++] = i;
+            for (uint256 i = start; i < stop; ++i) {
+                if (tokenBond[tokens[i]].creator == creator){
+                    addresses[j++] = tokens[i];
                     if (j == count) break;
                 }
             }

@@ -52,8 +52,6 @@ contract MerkleDistributor {
         _;
     }
 
-    // TODO: Add ERC1155 support - maybe a wrapper contract?
-
     function createDistribution(
         address token,
         bool isERC20,
@@ -180,18 +178,22 @@ contract MerkleDistributor {
         return distribution.amountPerClaim * distribution.claimedCount;
     }
 
-    // TODO: pagination
-    function getDistributionIdsByToken(address token) external view returns (uint256[] memory ids) {
+    // Get DistributionIds by token address in the range where start <= id < stop
+    function getDistributionIdsByToken(address token, uint256 start, uint256 stop) external view returns (uint256[] memory ids) {
         unchecked {
-            uint256 count;
             uint256 distributionsLength = distributions.length;
-            for (uint256 i = 0; i < distributionsLength; ++i) {
+            if (stop > distributionsLength) {
+                stop = distributionsLength;
+            }
+
+            uint256 count;
+            for (uint256 i = start; i < stop; ++i) {
                 if (distributions[i].token == token) ++count;
             }
-            ids = new uint256[](count);
 
+            ids = new uint256[](count);
             uint256 j;
-            for (uint256 i = 0; i < distributionsLength; ++i) {
+            for (uint256 i = start; i < stop; ++i) {
                 if (distributions[i].token == token) {
                     ids[j++] = i;
                     if (j == count) break;
@@ -200,18 +202,22 @@ contract MerkleDistributor {
         }
     }
 
-    // TODO: pagination
-    function getDistributionIdsByOwner(address owner) external view returns (uint256[] memory ids) {
+    // Get DistributionIds by owner address in the range where start <= id < stop
+    function getDistributionIdsByOwner(address owner, uint256 start, uint256 stop) external view returns (uint256[] memory ids) {
         unchecked {
-            uint256 count;
             uint256 distributionsLength = distributions.length;
-            for (uint256 i = 0; i < distributionsLength; ++i) {
+            if (stop > distributionsLength) {
+                stop = distributionsLength;
+            }
+
+            uint256 count;
+            for (uint256 i = start; i < stop; ++i) {
                 if (distributions[i].owner == owner) ++count;
             }
-            ids = new uint256[](count);
 
+            ids = new uint256[](count);
             uint256 j;
-            for (uint256 i = 0; i < distributionsLength; ++i) {
+            for (uint256 i = start; i < stop; ++i) {
                 if (distributions[i].owner == owner) {
                     ids[j++] = i;
                     if (j == count) break;

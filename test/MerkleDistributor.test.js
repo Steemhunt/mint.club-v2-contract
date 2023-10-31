@@ -481,22 +481,22 @@ describe('MerkleDistributor', function () {
     });
 
     it('should return [0] for token = Token', async function () {
-      const ids = await MerkleDistributor.getDistributionIdsByToken(Token.target);
+      const ids = await MerkleDistributor.getDistributionIdsByToken(Token.target, 0, 100);
       expect(ids).to.deep.equal([0]);
     });
 
     it('should return [1, 2] for token = Token2', async function () {
-      const ids = await MerkleDistributor.getDistributionIdsByToken(this.Token2.target);
+      const ids = await MerkleDistributor.getDistributionIdsByToken(this.Token2.target, 0, 100);
       expect(ids).to.deep.equal([1, 2]);
     });
 
     it('should return [0, 1] for owner = alice', async function () {
-      const ids = await MerkleDistributor.getDistributionIdsByOwner(alice.address);
+      const ids = await MerkleDistributor.getDistributionIdsByOwner(alice.address, 0, 100);
       expect(ids).to.deep.equal([0, 1]);
     });
 
     it('should return [2] for owner = bob', async function () {
-      const ids = await MerkleDistributor.getDistributionIdsByOwner(bob.address);
+      const ids = await MerkleDistributor.getDistributionIdsByOwner(bob.address, 0, 100);
       expect(ids).to.deep.equal([2]);
     });
   }); // Utility functions
