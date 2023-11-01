@@ -37,7 +37,7 @@ describe('Bond', function () {
     const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, NFTImplementation.target, PROTOCOL_BENEFICIARY]);
     await Bond.waitForDeployment();
 
-    const BaseToken = await ethers.deployContract('TestToken', [wei(200000000)]); // supply: 200M
+    const BaseToken = await ethers.deployContract('TestToken', [wei(200000000), 'Test Token', 'TEST']); // supply: 200M
     await BaseToken.waitForDeployment();
 
     return [TokenImplementation, Bond, BaseToken];
@@ -84,7 +84,7 @@ describe('Bond', function () {
       it('should set correct bond parameters', async function() {
         expect(this.bond.creator).to.equal(owner.address);
         expect(this.bond.reserveToken).to.equal(BABY_TOKEN.bondParams.reserveToken);
-        expect(this.bond.maxSupply).to.equal(BABY_TOKEN.bondParams.maxSupply);
+        expect(await Bond.maxSupply(this.token.target)).to.equal(BABY_TOKEN.bondParams.maxSupply);
       });
 
       it('should set correct bond steps', async function() {
@@ -145,7 +145,7 @@ describe('Bond', function () {
         .withArgs('royalty');
       });
 
-      it('should check if reserve token is valid', async function () {
+      it('should check if the reserve token is valid', async function () {
         await expect(
           Bond.createToken(
             this.newTokenParams,
@@ -153,6 +153,42 @@ describe('Bond', function () {
           )
         ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenCreationParams')
         .withArgs('reserveToken');
+      });
+
+      it('should check if the reserve token is a valid contract', async function () {
+        await expect(
+          Bond.createToken(
+            this.newTokenParams,
+            modifiedValues(BABY_TOKEN.bondParams, { reserveToken: owner.address })
+          )
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidReserveToken')
+        .withArgs('decimals');
+      });
+
+      it.only('should check if the reserve token implements name()', async function () {
+        const r2 = await ethers.deployContract('TestToken', [wei(200000000), '', 'TEST']);
+        await r2.waitForDeployment();
+
+        await expect(
+          Bond.createToken(
+            this.newTokenParams,
+            modifiedValues(BABY_TOKEN.bondParams, { reserveToken: r2.target })
+          )
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidReserveToken')
+        .withArgs('name');
+      });
+
+      it.only('should check if the reserve token implements symbol()', async function () {
+        const r2 = await ethers.deployContract('TestToken', [wei(200000000), 'Test Token', '1']);
+        await r2.waitForDeployment();
+
+        await expect(
+          Bond.createToken(
+            this.newTokenParams,
+            modifiedValues(BABY_TOKEN.bondParams, { reserveToken: r2.target })
+          )
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidReserveToken')
+        .withArgs('symbol');
       });
 
       it('should check if max supply is valid', async function () {
@@ -739,7 +775,7 @@ describe('Bond', function () {
 
   describe('Utility functions', function () {
     beforeEach(async function () {
-      this.BaseToken2 = await ethers.deployContract('TestToken', [wei(200000000)]);
+      this.BaseToken2 = await ethers.deployContract('TestToken', [wei(200000000), 'Test Token', 'TEST']);
       await this.BaseToken2.waitForDeployment();
 
       const BABY_TOKEN2 = structuredClone(BABY_TOKEN);

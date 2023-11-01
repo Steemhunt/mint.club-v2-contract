@@ -37,7 +37,7 @@ describe('BondMultiToken', function () {
     const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, NFTImplementation.target, PROTOCOL_BENEFICIARY]);
     await Bond.waitForDeployment();
 
-    const BaseToken = await ethers.deployContract('TestToken', [wei(2000)]); // supply: 2,000
+    const BaseToken = await ethers.deployContract('TestToken', [wei(2000), 'Test Token', 'TEST']); // supply: 2,000
     await BaseToken.waitForDeployment();
 
     return [NFTImplementation, Bond, BaseToken];
@@ -84,7 +84,7 @@ describe('BondMultiToken', function () {
       it('should set correct bond parameters', async function() {
         expect(this.bond.creator).to.equal(owner.address);
         expect(this.bond.reserveToken).to.equal(BABY_TOKEN.bondParams.reserveToken);
-        expect(this.bond.maxSupply).to.equal(BABY_TOKEN.bondParams.maxSupply);
+        expect(await Bond.maxSupply(this.token.target)).to.equal(BABY_TOKEN.bondParams.maxSupply);
       });
 
       it('should set correct bond steps', async function() {
@@ -737,7 +737,7 @@ describe('BondMultiToken', function () {
 
   describe('Utility functions', function () {
     beforeEach(async function () {
-      this.BaseToken2 = await ethers.deployContract('TestToken', [wei(200000000)]);
+      this.BaseToken2 = await ethers.deployContract('TestToken', [wei(200000000), 'Test Token', 'TEST']);
       await this.BaseToken2.waitForDeployment();
 
       const BABY_TOKEN2 = structuredClone(BABY_TOKEN);

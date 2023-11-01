@@ -21,6 +21,7 @@ contract MCV2_Bond is MCV2_Royalty {
     using SafeCast for uint256;
 
     error MCV2_Bond__InvalidTokenCreationParams(string reason);
+    error MCV2_Bond__InvalidReserveToken(string reason);
     error MCV2_Bond__InvalidStepParams(string reason);
     error MCV2_Bond__TokenSymbolAlreadyExists();
     error MCV2_Bond__TokenNotFound();
@@ -114,9 +115,24 @@ contract MCV2_Bond is MCV2_Royalty {
         if (bytes(tp.uri).length == 0) revert MCV2_Bond__InvalidTokenCreationParams('uri');
     }
 
-    function _validateBondParams(BondParams calldata bp) pure private {
+    // Check if the contract has the method with the minimum length of the return data
+    // - uint8 = 32 bytes
+    // - empty string = 64 bytes (32:length + 32:padding)
+    function _checkMethodExists(address implementation, string memory method, uint256 minLength) private view returns (bool) {
+        (bool success, bytes memory data) = implementation.staticcall(abi.encodeWithSignature(method));
+        return success && data.length > minLength;
+    }
+
+    function _validateBondParams(BondParams calldata bp) view private {
         if (bp.royalty > MAX_ROYALTY_RANGE) revert MCV2_Bond__InvalidTokenCreationParams('royalty');
-        if (bp.reserveToken == address(0)) revert MCV2_Bond__InvalidTokenCreationParams('reserveToken');
+
+        // Check if the reserveToken is compatible with IERC20Metadata
+        address r = bp.reserveToken;
+        if (r == address(0)) revert MCV2_Bond__InvalidTokenCreationParams('reserveToken');
+        if(!_checkMethodExists(r, "decimals()", 31)) revert MCV2_Bond__InvalidReserveToken('decimals');
+        if(!_checkMethodExists(r, "name()", 64)) revert MCV2_Bond__InvalidReserveToken('name');
+        if(!_checkMethodExists(r, "symbol()", 64)) revert MCV2_Bond__InvalidReserveToken('symbol');
+
         if (bp.maxSupply == 0) revert MCV2_Bond__InvalidTokenCreationParams('maxSupply');
         if (bp.stepRanges.length == 0 || bp.stepRanges.length > MAX_STEPS) revert MCV2_Bond__InvalidStepParams('INVALID_STEP_LENGTH');
         if (bp.stepRanges.length != bp.stepPrices.length) revert MCV2_Bond__InvalidStepParams('STEP_LENGTH_DO_NOT_MATCH');
@@ -262,10 +278,6 @@ contract MCV2_Bond is MCV2_Royalty {
     }
 
     function mint(address token, uint256 tokensToMint, uint256 maxReserveAmount) external {
-        // TODO: Handle Fee-on-transfer tokens (maybe include wrong return value on transferFrom)
-        // TODO: Handle rebasing tokens
-        // TODO: reentrancy handling for ERC777
-
         (uint256 reserveAmount, uint256 royalty) = getReserveForToken(token, tokensToMint);
         if (reserveAmount > maxReserveAmount) revert MCV2_Bond__SlippageLimitExceeded();
 
@@ -323,10 +335,6 @@ contract MCV2_Bond is MCV2_Royalty {
     }
 
     function burn(address token, uint256 tokensToBurn, uint256 minRefund) external {
-        // TODO: Handle Fee-on-transfer tokens (maybe include wrong return value on transferFrom)
-        // TODO: Handle rebasing tokens
-        // TODO: reentrancy handling for ERC777
-
         (uint256 refundAmount, uint256 royalty) = getRefundForTokens(token, tokensToBurn);
         if (refundAmount < minRefund) revert MCV2_Bond__SlippageLimitExceeded();
 

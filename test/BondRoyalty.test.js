@@ -33,7 +33,7 @@ describe('Royalty', function () {
     const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, NFTImplementation.target, beneficiary.address]);
     await Bond.waitForDeployment();
 
-    const BaseToken = await ethers.deployContract('TestToken', [wei(200000000)]); // supply: 200M
+    const BaseToken = await ethers.deployContract('TestToken', [wei(200000000), 'Test Token', 'TEST']); // supply: 200M
     await BaseToken.waitForDeployment();
 
     return [Bond, BaseToken];

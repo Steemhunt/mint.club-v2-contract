@@ -11,7 +11,7 @@ describe('Locker', function () {
     const Locker = await ethers.deployContract('Locker');
     await Locker.waitForDeployment();
 
-    const Token = await ethers.deployContract('TestToken', [ORIGINAL_BALANCE]); // supply: 200M
+    const Token = await ethers.deployContract('TestToken', [ORIGINAL_BALANCE, 'Test Token', 'TEST']); // supply: 200M
     await Token.waitForDeployment();
 
     const MultiToken = await ethers.deployContract('TestMultiToken', [ORIGINAL_BALANCE]); // supply: 200M
@@ -204,7 +204,7 @@ describe('Locker', function () {
   describe('Utility functions', function () {
     beforeEach(async function () {
       const unlockTime = Math.floor(Date.now() / 1000) + 60 * 60 * 24;
-      this.Token2 = await ethers.deployContract('TestToken', [ORIGINAL_BALANCE]); // supply: 200M
+      this.Token2 = await ethers.deployContract('TestToken', [ORIGINAL_BALANCE, 'Test Token', 'TEST']); // supply: 200M
       await this.Token2.waitForDeployment();
 
       await Token.approve(Locker.target, LOCKUP_AMOUNT);
