@@ -165,7 +165,7 @@ describe('Bond', function () {
         .withArgs('decimals');
       });
 
-      it.only('should check if the reserve token implements name()', async function () {
+      it('should check if the reserve token implements name()', async function () {
         const r2 = await ethers.deployContract('TestToken', [wei(200000000), '', 'TEST']);
         await r2.waitForDeployment();
 
@@ -178,8 +178,8 @@ describe('Bond', function () {
         .withArgs('name');
       });
 
-      it.only('should check if the reserve token implements symbol()', async function () {
-        const r2 = await ethers.deployContract('TestToken', [wei(200000000), 'Test Token', '1']);
+      it('should check if the reserve token implements symbol()', async function () {
+        const r2 = await ethers.deployContract('TestToken', [wei(200000000), 'Test Token', '']);
         await r2.waitForDeployment();
 
         await expect(
