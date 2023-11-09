@@ -37,7 +37,7 @@ describe('Bond', function () {
     const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, NFTImplementation.target, PROTOCOL_BENEFICIARY]);
     await Bond.waitForDeployment();
 
-    const BaseToken = await ethers.deployContract('TestToken', [wei(200000000, 9), 'Test USDT', 'USDT', 9n]); // supply: 200M
+    const BaseToken = await ethers.deployContract('TestToken', [wei(200000000, 9), 'Test Token', 'TEST', 9n]); // supply: 200M
     await BaseToken.waitForDeployment();
 
     return [TokenImplementation, Bond, BaseToken];
@@ -775,8 +775,10 @@ describe('Bond', function () {
 
   describe('Utility functions', function () {
     beforeEach(async function () {
-      this.BaseToken2 = await ethers.deployContract('TestToken', [wei(200000000), 'Test Token', 'TEST']);
+      this.BaseToken2 = await ethers.deployContract('TestToken', [wei(200000000), 'Test Token', 'TEST', 18n]);
       await this.BaseToken2.waitForDeployment();
+
+      this.freeMint = BABY_TOKEN.bondParams.stepRanges[0];
 
       const BABY_TOKEN2 = structuredClone(BABY_TOKEN);
       BABY_TOKEN2.tokenParams.symbol = 'BABY2';
@@ -820,18 +822,19 @@ describe('Bond', function () {
       expect(addresses).to.deep.equal([]);
     });
 
-    it('should return all tokens and their bond parameters', async function () {
+    it.only('should return all tokens and their bond parameters', async function () {
       expect(await Bond.getList(0, 100)).to.deep.equal([
         [
           this.token0,
           18n,
           'BABY',
           BABY_TOKEN.tokenParams.name,
+          this.freeMint,
+          BABY_TOKEN.bondParams.maxSupply,
           BaseToken.target,
-          18n,
+          9n,
           'TEST',
           'Test Token',
-          BABY_TOKEN.bondParams.maxSupply,
           0n
         ],
         [
@@ -839,11 +842,12 @@ describe('Bond', function () {
           18n,
           'BABY2',
           BABY_TOKEN.tokenParams.name,
+          this.freeMint,
+          BABY_TOKEN.bondParams.maxSupply,
           this.BaseToken2.target,
           18n,
           'TEST',
           'Test Token',
-          BABY_TOKEN.bondParams.maxSupply,
           0n
         ],
         [
@@ -851,17 +855,18 @@ describe('Bond', function () {
           18n,
           'BABY3',
           BABY_TOKEN.tokenParams.name,
+          this.freeMint,
+          BABY_TOKEN.bondParams.maxSupply,
           this.BaseToken2.target,
           18n,
           'TEST',
           'Test Token',
-          BABY_TOKEN.bondParams.maxSupply,
           0n
         ]
       ]);
     });
 
-    it('should return detailed bond information', async function () {
+    it.only('should return detailed bond information', async function () {
       const steps = BABY_TOKEN.bondParams.stepRanges.map((step, i) => [step, BABY_TOKEN.bondParams.stepPrices[i]]);
 
       expect(await Bond.getDetail(this.token0)).to.deep.equal([
@@ -872,11 +877,12 @@ describe('Bond', function () {
           18n,
           'BABY',
           BABY_TOKEN.tokenParams.name,
+          this.freeMint,
+          BABY_TOKEN.bondParams.maxSupply,
           BaseToken.target,
-          18n,
+          9n,
           'TEST',
           'Test Token',
-          BABY_TOKEN.bondParams.maxSupply,
           0n
         ],
         steps

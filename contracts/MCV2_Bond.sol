@@ -386,11 +386,12 @@ contract MCV2_Bond is MCV2_Royalty {
         uint8 decimals;
         string symbol;
         string name;
+        uint128 currentSupply;
+        uint128 maxSupply;
         address reserveToken;
         uint8 reserveDecimals;
         string reserveSymbol;
         string reserveName;
-        uint128 maxSupply;
         uint256 reserveBalance;
     }
     function _getBondInfo(address token) private view returns(BondInfo memory info) {
@@ -407,6 +408,7 @@ contract MCV2_Bond is MCV2_Royalty {
             reserveDecimals: r.decimals(),
             reserveSymbol: r.symbol(),
             reserveName: r.name(),
+            currentSupply: uint128(t.totalSupply()),
             maxSupply: maxSupply(token),
             reserveBalance: bond.reserveBalance
         });
