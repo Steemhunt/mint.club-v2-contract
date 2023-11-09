@@ -3,11 +3,11 @@ The inherited token creator employs a bonding curve to generate new tokens using
 
 ## Contract addresses 📜
 ### Ethereum Sepolia Testnet
-- MCV2_Token: [0x0260e429aFA67b60a511Aae280D3f501E06F4286](https://sepolia.etherscan.io/address/0x0260e429aFA67b60a511Aae280D3f501E06F4286#code)
-- MCV2_MultiToken: [0x5D448367D1334098A6Ae7F8140bAFFfdc646A5C1](https://sepolia.etherscan.io/address/0x5D448367D1334098A6Ae7F8140bAFFfdc646A5C1#code)
-- MCV2_Bond: [0x4E0378F4849e88717C44C7457f5D95d4F856496a](https://sepolia.etherscan.io/address/0x4E0378F4849e88717C44C7457f5D95d4F856496a#code)
-- Locker: [0x3e03be477656D180DB7c26D55969655f73aAE9cD](https://sepolia.etherscan.io/address/0x3e03be477656D180DB7c26D55969655f73aAE9cD#code)
-- MerkleDistributor: [0x39D061671b92acFd061Bf7D9F1D34763d10A6090](https://sepolia.etherscan.io/address/0x39D061671b92acFd061Bf7D9F1D34763d10A6090#code)
+- MCV2_Token: [0x607E557229F8f289109e93e14900aE06C541C839](https://sepolia.etherscan.io/address/0x607E557229F8f289109e93e14900aE06C541C839#code)
+- MCV2_MultiToken: [0xe3Ab60CA499408BAafc236ae6aEF2ED7074A9A96](https://sepolia.etherscan.io/address/0xe3Ab60CA499408BAafc236ae6aEF2ED7074A9A96#code)
+- MCV2_Bond: [0x8e5c9b3642C5dD6b3D2A2B996dC72cE156120939](https://sepolia.etherscan.io/address/0x8e5c9b3642C5dD6b3D2A2B996dC72cE156120939#code)
+- Locker: [0x59ca07679c53567992E0D00d0E78bFF0B62833b3](https://sepolia.etherscan.io/address/0x59ca07679c53567992E0D00d0E78bFF0B62833b3#code)
+- MerkleDistributor: [0xCb7729dDd135758362747C4936356768541BCbc9](https://sepolia.etherscan.io/address/0xCb7729dDd135758362747C4936356768541BCbc9#code)
 
 ## Design Choices 📐
 Unlike Mint Club V1's bonding curve (`y = x` -> `total supply = token price`), the V2 contract uses a custom increasing price step array for the following reasons:

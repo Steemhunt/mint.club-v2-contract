@@ -34,7 +34,7 @@ exports.computeCreate2Address = function(saltHex, implementation, deployer) {
 };
 
 exports.calculateMint = function(tokensToMint, stepPrice, royaltyRatio) {
-  const reserveToBond = tokensToMint * stepPrice;
+  const reserveToBond = tokensToMint * stepPrice / 10n**18n; // assume BASE token has 18 decimals
   const royalty = reserveToBond * royaltyRatio / 10000n;
   const protocolCut = royalty * PROTOCOL_CUT / 10000n;
   const creatorCut = royalty - protocolCut;
@@ -44,7 +44,7 @@ exports.calculateMint = function(tokensToMint, stepPrice, royaltyRatio) {
 };
 
 exports.calculateBurn = function(tokensToBurn, stepPrice, royaltyRatio) {
-  const reserveFromBond = tokensToBurn * stepPrice;
+  const reserveFromBond = tokensToBurn * stepPrice / 10n**18n; // assume BASE token has 18 decimals
   const royalty = reserveFromBond * royaltyRatio / 10000n;
   const protocolCut = royalty * PROTOCOL_CUT / 10000n;
   const creatorCut = royalty - protocolCut;

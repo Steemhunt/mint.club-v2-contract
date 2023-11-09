@@ -22,7 +22,7 @@ const BABY_TOKEN = {
     reserveToken: null, // Should be set later
     maxSupply: wei(10000000), // supply: 10M
     stepRanges: [ wei(10000), wei(100000), wei(200000), wei(500000), wei(1000000), wei(2000000), wei(5000000), wei(10000000) ],
-    stepPrices: [ 0n, 2n, 3n, 4n, 5n, 7n, 10n, 15n ]
+    stepPrices: [ wei(0), wei(2), wei(3), wei(4), wei(5), wei(7), wei(10), wei(15) ]
   }
 };
 
