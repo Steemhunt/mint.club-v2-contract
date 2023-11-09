@@ -37,7 +37,7 @@ describe('Bond', function () {
     const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, NFTImplementation.target, PROTOCOL_BENEFICIARY]);
     await Bond.waitForDeployment();
 
-    const BaseToken = await ethers.deployContract('TestToken', [wei(200000000), 'Test Token', 'TEST']); // supply: 200M
+    const BaseToken = await ethers.deployContract('TestToken', [wei(200000000, 9), 'Test USDT', 'USDT', 9n]); // supply: 200M
     await BaseToken.waitForDeployment();
 
     return [TokenImplementation, Bond, BaseToken];
@@ -334,7 +334,7 @@ describe('Bond', function () {
         const test = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty);
         // { royalty: 10, creatorCut: 8, protocolCut: 2, reserveToBond: 1000, reserveRequired: 1010 }
 
-        await BaseToken.transfer(alice.address, wei(9999999));
+        await BaseToken.transfer(alice.address, wei(9999999, 9));
         await BaseToken.connect(alice).approve(Bond.target, MAX_INT_256);
         await Bond.connect(alice).mint(this.token.target, tokensToMint, MAX_INT_256);
 
@@ -397,15 +397,15 @@ describe('Bond', function () {
         beforeEach(async function () {
           // Calculations: https://ipfs.io/ipfs/QmXaAwVLC8MyCKiWfy1EAsoAfuZ3Fw7nSdDebckcXkcJvJ
           this.tokensToMint = wei(9990000); // 9.99M BABY tokens except 10K free mint
-          this.initialBaseBalance = wei(117341800); // 117,341,800 BASE tokens required
+          this.initialBaseBalance = wei(117341800, 9); // 117,341,800 BASE tokens required
           await BaseToken.transfer(alice.address, this.initialBaseBalance);
           await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
           await Bond.connect(alice).mint(this.token.target, this.tokensToMint, MAX_INT_256);
           this.predicted = {
-            reserveOnBond: wei(116180000),
+            reserveOnBond: wei(116180000, 9),
             totalSupply: wei(10000000), // 10M = max supply
-            creatorCut: wei(929440), // 116180000 * 0.01 * 0.8
-            protocolCut: wei(232360) // 116180000 * 0.01 * 0.2
+            creatorCut: wei(929440, 9), // 116180000 * 0.01 * 0.8
+            protocolCut: wei(232360, 9) // 116180000 * 0.01 * 0.2
           }
         });
 
@@ -721,9 +721,9 @@ describe('Bond', function () {
         bondParams: {
           royalty: 100n, // 1%
           reserveToken: BaseToken.target,
-          maxSupply: 100n,
-          stepRanges: [10n, 30n, 100n],
-          stepPrices: [7n, 8n, 9n]
+          maxSupply: wei(100),
+          stepRanges: [wei(50), wei(100)],
+          stepPrices: [7n, 8n] // prices are extremely low to cause rounding errors
         }
       };
 
@@ -731,16 +731,16 @@ describe('Bond', function () {
       const Token = await ethers.getContractFactory('MCV2_Token');
       this.token = await Token.attach(await Bond.tokens(0));
 
-      this.initialBaseBalance = 10000n;
+      this.initialBaseBalance = wei(1000, 9);
       await BaseToken.transfer(alice.address, this.initialBaseBalance);
       await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
     });
 
     it('does not collect any royalties if the amount is too small, due to flooring', async function () {
-      // minting 10 BABY requires 70.7 BASE, but it will be floored to 70
-      await Bond.connect(alice).mint(this.token.target, 10n, MAX_INT_256);
+      // minting 10 BABY requires 70.7 BASE, but it it will be floored to 70
+      await Bond.connect(alice).mint(this.token.target, wei(10), MAX_INT_256);
 
-      expect(await this.token.balanceOf(alice.address)).to.equal(10n);
+      expect(await this.token.balanceOf(alice.address)).to.equal(wei(10));
       expect(await BaseToken.balanceOf(alice.address)).to.equal(this.initialBaseBalance - 70n);
 
       const bond = await Bond.tokenBond(this.token.target);
@@ -751,15 +751,15 @@ describe('Bond', function () {
     });
 
     it('requires exact bond amount even if the royalty is omitted due to flooring', async function () {
-      // minting 100 BABY requires 10*7 + 20*8 + 70*9 = 860 BASE + 8.6 royalty
+      // minting 100 BABY requires 50*7 + 50*8 = 750 BASE + 7.5 royalty
       // after flooring:
-      const tokensToMint = 100n;
+      const tokensToMint = wei(100);
       const predicted = {
-        reserveOnBond: 860n,
-        reserveRequired: 868n,
-        royalty: 8n, // 8.6 floored
-        protocolCut: 1n, // 8.6 * 0.2 = 1.72 floored
-        creatorCut: 7n
+        reserveOnBond: 750n,
+        reserveRequired: 757n,
+        royalty: 7n, // 7.5 floored
+        protocolCut: 1n, // 7 * 2000 / 10000 = 1.4 floored
+        creatorCut: 6n
       }
 
       await Bond.connect(alice).mint(this.token.target, tokensToMint, MAX_INT_256);
@@ -768,8 +768,8 @@ describe('Bond', function () {
       expect((await Bond.tokenBond(this.token.target)).reserveBalance).to.equal(predicted.reserveOnBond);
       expect(await BaseToken.balanceOf(alice.address)).to.equal(this.initialBaseBalance - predicted.reserveRequired);
       expect(await BaseToken.balanceOf(Bond.target)).to.equal(predicted.reserveRequired);
-      expect(await Bond.userTokenRoyaltyBalance(owner.address, BaseToken.target)).to.equal(predicted.creatorCut);
       expect(await Bond.userTokenRoyaltyBalance(PROTOCOL_BENEFICIARY, BaseToken.target)).to.equal(predicted.protocolCut);
+      expect(await Bond.userTokenRoyaltyBalance(owner.address, BaseToken.target)).to.equal(predicted.creatorCut);
     });
   }); // Rounding errors
 

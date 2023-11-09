@@ -37,7 +37,7 @@ describe('BondMultiToken', function () {
     const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, NFTImplementation.target, PROTOCOL_BENEFICIARY]);
     await Bond.waitForDeployment();
 
-    const BaseToken = await ethers.deployContract('TestToken', [wei(2000), 'Test Token', 'TEST']); // supply: 2,000
+    const BaseToken = await ethers.deployContract('TestToken', [wei(2000, 9), 'Test Token', 'TEST', 9n]); // supply: 2,000
     await BaseToken.waitForDeployment();
 
     return [NFTImplementation, Bond, BaseToken];
@@ -684,8 +684,8 @@ describe('BondMultiToken', function () {
           royalty: 100n, // 1%
           reserveToken: BaseToken.target,
           maxSupply: 100n,
-          stepRanges: [10n, 30n, 100n],
-          stepPrices: [7n, 8n, 9n]
+          stepRanges: [50n, 100n],
+          stepPrices: [7n, 8n]
         }
       };
 
@@ -693,13 +693,13 @@ describe('BondMultiToken', function () {
       const Token = await ethers.getContractFactory('MCV2_MultiToken');
       this.token = await Token.attach(await Bond.tokens(0));
 
-      this.initialBaseBalance = 10000n;
+      this.initialBaseBalance = wei(1000, 9);
       await BaseToken.transfer(alice.address, this.initialBaseBalance);
       await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
     });
 
     it('does not collect any royalties if the amount is too small, due to flooring', async function () {
-      // minting 10 BABY requires 70.7 BASE, but it will be floored to 70
+      // minting 10 BABY requires 70.7 BASE because it will be floored to 70
       await Bond.connect(alice).mint(this.token.target, 10n, MAX_INT_256);
 
       expect(await this.token.balanceOf(alice.address)).to.equal(10n);
@@ -713,15 +713,15 @@ describe('BondMultiToken', function () {
     });
 
     it('requires exact bond amount even if the royalty is omitted due to flooring', async function () {
-      // minting 100 BABY requires 10*7 + 20*8 + 70*9 = 860 BASE + 8.6 royalty
+      // minting 100 BABY requires 50*7 + 50*8 = 750 BASE + 7.5 royalty
       // after flooring:
       const tokensToMint = 100n;
       const predicted = {
-        reserveOnBond: 860n,
-        reserveRequired: 868n,
-        royalty: 8n, // 8.6 floored
-        protocolCut: 1n, // 8.6 * 0.2 = 1.72 floored
-        creatorCut: 7n
+        reserveOnBond: 750n,
+        reserveRequired: 757n,
+        royalty: 7n, // 7.5 floored
+        protocolCut: 1n, // 7 * 2000 / 10000 = 1.4 floored
+        creatorCut: 6n
       }
 
       await Bond.connect(alice).mint(this.token.target, tokensToMint, MAX_INT_256);

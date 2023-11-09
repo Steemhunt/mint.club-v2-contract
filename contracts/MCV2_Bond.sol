@@ -254,7 +254,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
         if (newSupply > maxSupply(token)) revert MCV2_Bond__ExceedMaxSupply();
 
-        uint256 reserveDecimals = IERC20Metadata(bond.reserveToken).decimals();
+        uint256 decimals = t.decimals();
         uint256 tokensLeft = tokensToMint;
         uint256 reserveToBond = 0;
         uint256 supplyLeft;
@@ -262,11 +262,11 @@ contract MCV2_Bond is MCV2_Royalty {
             supplyLeft = steps[i].rangeTo - currentSupply;
 
             if (supplyLeft < tokensLeft) {
-                reserveToBond += ((supplyLeft * steps[i].price) / 10**reserveDecimals);
+                reserveToBond += ((supplyLeft * steps[i].price) / 10**decimals);
                 currentSupply += supplyLeft;
                 tokensLeft -= supplyLeft;
             } else {
-                reserveToBond += ((tokensLeft * steps[i].price) / 10**reserveDecimals);
+                reserveToBond += ((tokensLeft * steps[i].price) / 10**decimals);
                 tokensLeft = 0;
                 break;
             }
@@ -315,7 +315,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
         if (tokensToBurn > currentSupply) revert MCV2_Bond__ExceedTotalSupply();
 
-        uint256 reserveDecimals = IERC20Metadata(bond.reserveToken).decimals();
+        uint256 decimals = t.decimals();
         uint256 reserveFromBond;
         uint256 tokensLeft = tokensToBurn;
         uint256 i = getCurrentStep(token, currentSupply);
@@ -323,7 +323,7 @@ contract MCV2_Bond is MCV2_Royalty {
             uint256 supplyLeft = i == 0 ? currentSupply : currentSupply - steps[i - 1].rangeTo;
 
             uint256 tokensToProcess = tokensLeft < supplyLeft ? tokensLeft : supplyLeft;
-            reserveFromBond += ((tokensToProcess * steps[i].price) / 10**reserveDecimals);
+            reserveFromBond += ((tokensToProcess * steps[i].price) / 10**decimals);
 
             tokensLeft -= tokensToProcess;
             currentSupply -= tokensToProcess;
