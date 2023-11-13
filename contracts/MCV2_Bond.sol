@@ -11,6 +11,7 @@ import {MCV2_Royalty} from "./MCV2_Royalty.sol";
 import {MCV2_Token} from "./MCV2_Token.sol";
 import {MCV2_MultiToken} from "./MCV2_MultiToken.sol";
 import {MCV2_ICommonToken} from "./MCV2_ICommonToken.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
 * @title MintClub Bond V2
@@ -254,7 +255,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
         if (newSupply > maxSupply(token)) revert MCV2_Bond__ExceedMaxSupply();
 
-        uint256 decimals = t.decimals();
+        uint256 multiFactor = 10**t.decimals();
         uint256 tokensLeft = tokensToMint;
         uint256 reserveToBond = 0;
         uint256 supplyLeft;
@@ -262,17 +263,19 @@ contract MCV2_Bond is MCV2_Royalty {
             supplyLeft = steps[i].rangeTo - currentSupply;
 
             if (supplyLeft < tokensLeft) {
-                reserveToBond += ((supplyLeft * steps[i].price) / 10**decimals);
+                // ensure reserve is calculated with ceiling
+                reserveToBond += Math.ceilDiv(supplyLeft * steps[i].price, multiFactor);
                 currentSupply += supplyLeft;
                 tokensLeft -= supplyLeft;
             } else {
-                reserveToBond += ((tokensLeft * steps[i].price) / 10**decimals);
+                // ensure reserve is calculated with ceiling
+                reserveToBond += Math.ceilDiv(tokensLeft * steps[i].price, multiFactor);
                 tokensLeft = 0;
                 break;
             }
         }
 
-        if (tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount(); // can never happen
+        if (reserveToBond == 0 || tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount(); // can never happen
 
         royalty = getRoyalty(reserveToBond, bond.royalty);
         reserveAmount = reserveToBond + royalty;
@@ -315,7 +318,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
         if (tokensToBurn > currentSupply) revert MCV2_Bond__ExceedTotalSupply();
 
-        uint256 decimals = t.decimals();
+        uint256 multiFactor = 10**t.decimals();
         uint256 reserveFromBond;
         uint256 tokensLeft = tokensToBurn;
         uint256 i = getCurrentStep(token, currentSupply);
@@ -323,14 +326,15 @@ contract MCV2_Bond is MCV2_Royalty {
             uint256 supplyLeft = i == 0 ? currentSupply : currentSupply - steps[i - 1].rangeTo;
 
             uint256 tokensToProcess = tokensLeft < supplyLeft ? tokensLeft : supplyLeft;
-            reserveFromBond += ((tokensToProcess * steps[i].price) / 10**decimals);
+            reserveFromBond += ((tokensToProcess * steps[i].price) / multiFactor);
 
             tokensLeft -= tokensToProcess;
             currentSupply -= tokensToProcess;
 
             if (i > 0) --i;
         }
-        if (tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount();
+
+        if (tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount(); // can never happen
 
         royalty = getRoyalty(reserveFromBond, bond.royalty);
         refundAmount = reserveFromBond - royalty;

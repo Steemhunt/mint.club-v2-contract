@@ -15,7 +15,7 @@ const BABY_TOKEN = {
     reserveToken: null, // Should be set later
     maxSupply: wei(10000000), // supply: 10M
     stepRanges: [ wei(10000), wei(100000), wei(200000), wei(500000), wei(1000000), wei(2000000), wei(5000000), wei(10000000) ],
-    stepPrices: [ 0n, 2n, 3n, 4n, 5n, 7n, 10n, 15n ]
+    stepPrices: [ wei(0, 9), wei(2, 9), wei(3, 9), wei(4, 9), wei(5, 9), wei(7, 9), wei(10, 9), wei(15, 9) ]
   }
 };
 
@@ -33,7 +33,7 @@ describe('Royalty', function () {
     const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, NFTImplementation.target, beneficiary.address]);
     await Bond.waitForDeployment();
 
-    const BaseToken = await ethers.deployContract('TestToken', [wei(200000000), 'Test Token', 'TEST']); // supply: 200M
+    const BaseToken = await ethers.deployContract('TestToken', [wei(200000000), 'Test Token', 'TEST', 9n]); // supply: 200M
     await BaseToken.waitForDeployment();
 
     return [Bond, BaseToken];

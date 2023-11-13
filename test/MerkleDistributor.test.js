@@ -24,7 +24,7 @@ function getProof(tree, address) {
 
 describe('MerkleDistributor', function () {
   async function deployFixtures() {
-    const Token = await ethers.deployContract('TestToken', [ORIGINAL_BALANCE, 'Test Token', 'TEST']); // supply: 1M
+    const Token = await ethers.deployContract('TestToken', [ORIGINAL_BALANCE, 'Test Token', 'TEST', 18n]); // supply: 1M
     await Token.waitForDeployment();
 
     const MultiToken = await ethers.deployContract('TestMultiToken', [ORIGINAL_BALANCE]);
@@ -434,7 +434,7 @@ describe('MerkleDistributor', function () {
 
   describe('Utility functions', function () {
     beforeEach(async function () {
-      this.Token2 = await ethers.deployContract('TestToken', [ORIGINAL_BALANCE, 'Test Token', 'TEST']);
+      this.Token2 = await ethers.deployContract('TestToken', [ORIGINAL_BALANCE, 'Test Token', 'TEST', 18n]);
       await this.Token2.waitForDeployment();
 
       await Token.transfer(alice.address, 10000);

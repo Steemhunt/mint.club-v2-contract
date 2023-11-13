@@ -22,7 +22,7 @@ const BABY_TOKEN = {
     reserveToken: null, // Should be set later
     maxSupply: wei(10000000), // supply: 10M
     stepRanges: [ wei(10000), wei(100000), wei(200000), wei(500000), wei(1000000), wei(2000000), wei(5000000), wei(10000000) ],
-    stepPrices: [ wei(0), wei(2), wei(3), wei(4), wei(5), wei(7), wei(10), wei(15) ]
+    stepPrices: [ wei(0, 9), wei(2, 9), wei(3, 9), wei(4, 9), wei(5, 9), wei(7, 9), wei(10, 9), wei(15, 9) ]
   }
 };
 
@@ -166,7 +166,7 @@ describe('Bond', function () {
       });
 
       it('should check if the reserve token implements name()', async function () {
-        const r2 = await ethers.deployContract('TestToken', [wei(200000000), '', 'TEST']);
+        const r2 = await ethers.deployContract('TestToken', [wei(200000000), '', 'TEST', 18n]);
         await r2.waitForDeployment();
 
         await expect(
@@ -179,7 +179,7 @@ describe('Bond', function () {
       });
 
       it('should check if the reserve token implements symbol()', async function () {
-        const r2 = await ethers.deployContract('TestToken', [wei(200000000), 'Test Token', '']);
+        const r2 = await ethers.deployContract('TestToken', [wei(200000000), 'Test Token', '', 18n]);
         await r2.waitForDeployment();
 
         await expect(
@@ -301,10 +301,9 @@ describe('Bond', function () {
 
         const Token = await ethers.getContractFactory('MCV2_Token');
         const token = await Token.attach(await Bond.tokens(1));
-        const bond = await Bond.tokenBond(token.target);
 
         expect(await token.symbol()).to.equal('BABY2');
-        expect(bond.maxSupply).to.equal(1000);
+        expect(await Bond.maxSupply(token.target)).to.equal(1000);
       });
     }); // Validations
 
@@ -334,7 +333,7 @@ describe('Bond', function () {
         const test = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty);
         // { royalty: 10, creatorCut: 8, protocolCut: 2, reserveToBond: 1000, reserveRequired: 1010 }
 
-        await BaseToken.transfer(alice.address, wei(9999999, 9));
+        await BaseToken.transfer(alice.address, wei(1010, 9));
         await BaseToken.connect(alice).approve(Bond.target, MAX_INT_256);
         await Bond.connect(alice).mint(this.token.target, tokensToMint, MAX_INT_256);
 
@@ -348,7 +347,7 @@ describe('Bond', function () {
       describe('Mint once', function() {
         beforeEach(async function () {
           // Start with 10000 BaseToken, purchasing BABY tokens with 1000 BaseToken
-          this.initialBaseBalance = wei(1000000); // 1M BASE tokens
+          this.initialBaseBalance = wei(1000000, 9); // 1M BASE tokens
           this.tokensToMint = wei(500);
 
           this.mintTest = calculateMint(this.tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty);
@@ -501,7 +500,7 @@ describe('Bond', function () {
       describe('Burn', function () {
         beforeEach(async function () {
           // Mint 500 BABY tokens with 1010 BASE (fee: 10 BASE)
-          const initialBaseBalance = wei(1010);
+          const initialBaseBalance = wei(1010, 9);
           const tokensToMint = wei(500);
 
           this.mintTest = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty);
@@ -573,7 +572,7 @@ describe('Bond', function () {
     describe('Other Edge Cases', function() {
       describe('Mint: Edge Cases', function() {
         beforeEach(async function () {
-          this.initialBaseBalance = wei(200000000); // 200M
+          this.initialBaseBalance = wei(200000000, 9); // 200M
           await BaseToken.transfer(alice.address, this.initialBaseBalance);
           await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
         });
@@ -604,11 +603,11 @@ describe('Bond', function () {
           ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__SlippageLimitExceeded');
         });
 
-        it('should revert if alice try to burn more than approved', async function () {
+        it('should revert if alice try to mint more than approved', async function () {
           await BaseToken.connect(alice).approve(Bond.target, 0);
 
           await expect(
-            Bond.connect(alice).mint(this.token.target, 100n, MAX_INT_256)
+            Bond.connect(alice).mint(this.token.target, 1n, MAX_INT_256)
           ).to.be.revertedWithCustomError(BaseToken, 'ERC20InsufficientAllowance');
         });
 
@@ -635,7 +634,6 @@ describe('Bond', function () {
           const tokensToMint = wei(100);
           const test = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty);
           await BaseToken.connect(alice).transfer(owner.address, this.initialBaseBalance - test.reserveRequired);
-
           await expect(
             Bond.connect(alice).mint(this.token.target, tokensToMint + 1n, MAX_INT_256)
           ).to.be.revertedWithCustomError(BaseToken, 'ERC20InsufficientBalance');
@@ -644,7 +642,7 @@ describe('Bond', function () {
 
       describe('Burn: Edge Cases', function() {
         beforeEach(async function () {
-          this.initialBaseBalance = wei(200000000); // 200M
+          this.initialBaseBalance = wei(200000000, 9); // 200M
           this.tokensToMint = wei(100);
           await BaseToken.transfer(alice.address, this.initialBaseBalance);
           await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
@@ -822,7 +820,7 @@ describe('Bond', function () {
       expect(addresses).to.deep.equal([]);
     });
 
-    it.only('should return all tokens and their bond parameters', async function () {
+    it('should return all tokens and their bond parameters', async function () {
       expect(await Bond.getList(0, 100)).to.deep.equal([
         [
           this.token0,
@@ -866,7 +864,7 @@ describe('Bond', function () {
       ]);
     });
 
-    it.only('should return detailed bond information', async function () {
+    it('should return detailed bond information', async function () {
       const steps = BABY_TOKEN.bondParams.stepRanges.map((step, i) => [step, BABY_TOKEN.bondParams.stepPrices[i]]);
 
       expect(await Bond.getDetail(this.token0)).to.deep.equal([
