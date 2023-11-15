@@ -769,7 +769,74 @@ describe('Bond', function () {
       expect(await Bond.userTokenRoyaltyBalance(PROTOCOL_BENEFICIARY, BaseToken.target)).to.equal(predicted.protocolCut);
       expect(await Bond.userTokenRoyaltyBalance(owner.address, BaseToken.target)).to.equal(predicted.creatorCut);
     });
-  }); // Rounding errors
+  }); // Edge cases: Rounding errors
+
+  describe('Edge cases: Tax Token', function() {
+    beforeEach(async function () {
+      this.initialBaseBalance = wei(500);
+
+      // This token has 10% tax on transfer
+      this.TaxToken = await ethers.deployContract('TaxToken', [this.initialBaseBalance]);
+      await this.TaxToken.waitForDeployment();
+
+      const TAXED_BABY = {
+        tokenParams: {
+          name: 'Taxed Baby Token',
+          symbol: 'TBABY'
+        },
+        bondParams: {
+          royalty: 0n,
+          reserveToken: this.TaxToken.target,
+          maxSupply: wei(100),
+          stepRanges: [wei(100)],
+          stepPrices: [wei(5)]
+        }
+      };
+
+      await Bond.createToken(Object.values(TAXED_BABY.tokenParams), Object.values(TAXED_BABY.bondParams));
+      const Token = await ethers.getContractFactory('MCV2_Token');
+      this.token = await Token.attach(await Bond.tokens(0));
+
+      await this.TaxToken.transfer(alice.address, this.initialBaseBalance);
+      await this.TaxToken.connect(alice).approve(Bond.target, MAX_INT_256);
+      await this.token.connect(alice).approve(Bond.target, MAX_INT_256);
+
+      this.aliceBalance = await this.TaxToken.balanceOf(alice.address);
+      this.ownerBalance = await this.TaxToken.balanceOf(owner.address);
+    });
+
+    it('should be taxed properly', async function () {
+      // alice: 450, owner: 50 (tax income)
+      expect(this.ownerBalance).to.equal(this.initialBaseBalance / 10n);
+      expect(this.aliceBalance).to.equal(this.initialBaseBalance * 9n / 10n);
+    });
+
+    it('should mint the correct amount after tax', async function () {
+      // Minting 10 TBABY requires 50 TAXT
+      await Bond.connect(alice).mint(this.token.target, wei(10), MAX_INT_256);
+
+      expect(await this.token.balanceOf(alice.address)).to.equal(wei(10));
+      expect(await this.TaxToken.balanceOf(alice.address)).to.equal(this.aliceBalance - wei(50));
+      expect(await this.TaxToken.balanceOf(Bond.target)).to.equal(wei(45)); // after 10% taxed -> undercollateralized!
+      expect(await this.TaxToken.balanceOf(owner.address)).to.equal(this.ownerBalance + wei(5)); // 10% tax to the onwer
+    });
+
+    it('could work on small amount', async function() {
+      await Bond.connect(alice).mint(this.token.target, wei(10), MAX_INT_256); // Bond has 45 TAXT, not 50 (undercollateralized)
+      await Bond.connect(alice).burn(this.token.target, wei(4), 0); // 20 TAXT can be refunded
+
+      expect(await this.token.balanceOf(alice.address)).to.equal(wei(6));
+      expect(await this.TaxToken.balanceOf(alice.address)).to.equal(this.aliceBalance - wei(32)); // -50 + 20 - 2 (tax)
+      expect(await this.TaxToken.balanceOf(Bond.target)).to.equal(wei(25)); // 45 - 20
+    });
+
+    it('cannot refund the full collateral on burn', async function () {
+      await Bond.connect(alice).mint(this.token.target, wei(10), MAX_INT_256);
+
+      await expect(Bond.connect(alice).burn(this.token.target, wei(10), 0)).to.be.
+        revertedWithCustomError(BaseToken, 'ERC20InsufficientBalance');
+    });
+  }); // Edge cases: Tax Token
 
   describe('Utility functions', function () {
     beforeEach(async function () {

@@ -10,18 +10,27 @@ The inherited token creator employs a bonding curve to generate new tokens using
 - MerkleDistributor: [0x8F4C6Bc7B47D9d54b4B698Dc5DE1D087386f4161](https://sepolia.etherscan.io/address/0x8F4C6Bc7B47D9d54b4B698Dc5DE1D087386f4161#code)
 
 ## Design Choices 📐
-Unlike Mint Club V1's bonding curve (`y = x` -> `total supply = token price`), the V2 contract uses a custom increasing price step array for the following reasons:
+
+### Discrete Bonding Curve
+Unlike Mint Club V1's linear bonding curve (`y = x` -> `total supply = token price`), the V2 contract uses a custom increasing price step array for the following reasons:
 1. Utilizing `y = ax^b` bonding curves is challenging to test because we have to use approximation to calculate the power function of `(_baseN / _baseD) ^ (_expN / _expD)` ([Reference: Banchor's Bonding Curve implementation](https://github.com/relevant-community/bonding-curve/blob/master/contracts/Power.sol))
 2. Employing a single bonding curve is hard to customize. Supporting various types of curve functions (e.g., Sigmoid, Logarithm, etc) might be too difficult to implement in Solidity, or even impossible in many cases
 3. Therefore, we decided to use an array of price steps (called `BondStep[] { rangeTo, price }`), that is simple to calculate and fully customizable.
 
-### An example of a price step array:
+#### An example of a price step array:
 ![image](https://github.com/Steemhunt/mint.club-v2-contract/assets/1332279/d61607a2-39cc-433a-8cd2-3bbb627ab2aa)
 
 Parameters:
 - maxSupply: 10,000
 - stepRanges: [ 1000, 1600, 2200, 2800, ..., 10000 ]
 - stepPrices: [ 2, 2.1, 2.3, 2.7, ..., 10 ]
+
+### Custom ERC20 Tokens as Reserve Tokens
+Some ERC20 tokens incorporate tax or rebasing functionalities, which could lead to unforeseen behaviors in our Bond contract. For instance, a taxed token might result in the undercollateralization of the reserve token, preventing the complete refund of minted tokens from the bond contract. A similar scenario could occur with Rebase Tokens, as they are capable of altering the balance within the Bond contract.
+
+Due to the diverse nature of custom cases, it is impractical for our bond contract to address all of them. Therefore, we have chosen not to handle these cases explicitly. It's important to note that any behavior stemming from the custom ERC20 token is not considered a bug, as it is a consequence of the token's inherent code.
+
+We plan to issue warnings on our official front-end for tokens known to potentially disrupt our bond contract. However, **it's crucial for users to conduct their own research and understand the potential implications of selecting a specific reserve token.**
 
 ## Run Tests 🧪
 ```bash
