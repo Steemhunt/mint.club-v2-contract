@@ -3,6 +3,7 @@
 pragma solidity ^0.8.20;
 
 import {ERC1155Initializable} from "./lib/ERC1155Initializable.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 contract MCV2_MultiToken is ERC1155Initializable {
     error MCV2_MultiToken__PermissionDenied();
@@ -58,9 +59,8 @@ contract MCV2_MultiToken is ERC1155Initializable {
     }
 
     // MARK: - Metadata for OpenSea compatibility
-
-    // TODO: https://docs.opensea.io/docs/contract-level-metadata
-    // function contractURI() public view returns (string memory) {
-    //     return "https://mint.club/metadata/${chain}/${symbol}.json";
-    // }
+    // Ref: https://docs.opensea.io/docs/contract-level-metadata
+    function contractURI() external view returns (string memory) {
+        return string(abi.encodePacked("https://mint.club/metadata/", Strings.toString(block.chainid), "/", symbol, ".json"));
+    }
 }

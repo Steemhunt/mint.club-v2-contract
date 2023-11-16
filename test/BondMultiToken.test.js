@@ -109,6 +109,12 @@ describe('BondMultiToken', function () {
       it('should return true for existence check', async function () {
         expect(await Bond.exists(this.token.target)).to.equal(true);
       });
+
+      it('should return the correct contract-level metadata for Opensea', async function () {
+        expect(await this.token.contractURI()).to.equal(
+          `https://mint.club/metadata/31337/${BABY_TOKEN.tokenParams.symbol}.json` // 31337: hardhat chainId
+        );
+      });
     }); // Normal flow
 
     describe('Validations', function () {
