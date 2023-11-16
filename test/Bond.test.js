@@ -81,6 +81,10 @@ describe('Bond', function () {
         expect(await this.token.balanceOf(owner.address)).to.equal(BABY_TOKEN.bondParams.stepRanges[0]);
       });
 
+      it('should return true for exsits() function', async function () {
+        expect(await Bond.exists(this.token.target)).to.equal(true);
+      });
+
       it('should set correct bond parameters', async function() {
         expect(this.bond.creator).to.equal(owner.address);
         expect(this.bond.reserveToken).to.equal(BABY_TOKEN.bondParams.reserveToken);

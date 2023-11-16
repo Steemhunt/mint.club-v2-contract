@@ -12,7 +12,8 @@ const {
   computeCreate2Address,
   calculateMint,
   calculateBurn,
-  calculateRoyalty
+  calculateRoyalty,
+  ZERO_BYTES32
 } = require('./utils/test-utils');
 
 const BABY_TOKEN = {
@@ -78,7 +79,7 @@ describe('BondMultiToken', function () {
 
       it('should mint free range tokens initially to the creator', async function () {
         expect(await this.token.totalSupply()).to.equal(BABY_TOKEN.bondParams.stepRanges[0]);
-        expect(await this.token.balanceOf(owner.address)).to.equal(BABY_TOKEN.bondParams.stepRanges[0]);
+        expect(await this.token.balanceOf(owner.address, 0)).to.equal(BABY_TOKEN.bondParams.stepRanges[0]);
       });
 
       it('should set correct bond parameters', async function() {
@@ -324,7 +325,7 @@ describe('BondMultiToken', function () {
         });
 
         it('should mint correct amount', async function () {
-          expect(await this.token.balanceOf(alice.address)).to.equal(this.tokensToMint);
+          expect(await this.token.balanceOf(alice.address, 0)).to.equal(this.tokensToMint);
         });
 
         it('should transfer BASE tokens to the bond', async function () {
@@ -382,7 +383,7 @@ describe('BondMultiToken', function () {
           });
 
           it('should mint correct amount after royalties', async function () {
-            expect(await this.token.balanceOf(alice.address)).to.equal(this.tokensToMint);
+            expect(await this.token.balanceOf(alice.address, 0)).to.equal(this.tokensToMint);
           });
 
           it('should transfer BASE tokens to the bond', async function () {
@@ -413,7 +414,7 @@ describe('BondMultiToken', function () {
               this.initial = {
                 supply: await this.token.totalSupply(),
                 baseBalance: await BaseToken.balanceOf(alice.address),
-                tokenBalance: await this.token.balanceOf(alice.address),
+                tokenBalance: await this.token.balanceOf(alice.address, 0),
                 bondBalance: await BaseToken.balanceOf(Bond.target),
                 bondReserve: (await Bond.tokenBond(this.token.target)).reserveBalance
               };
@@ -424,7 +425,7 @@ describe('BondMultiToken', function () {
             });
 
             it('should burn all BABY tokens from alice', async function () {
-              expect(await this.token.balanceOf(alice.address)).to.equal(0);
+              expect(await this.token.balanceOf(alice.address, 0)).to.equal(0);
             });
 
             it('should transfer BASE tokens to alice', async function () {
@@ -479,7 +480,7 @@ describe('BondMultiToken', function () {
           this.initial = {
             supply: await this.token.totalSupply(), // 20
             baseBalance: await BaseToken.balanceOf(alice.address), // 0
-            tokenBalance: await this.token.balanceOf(alice.address), // 10
+            tokenBalance: await this.token.balanceOf(alice.address, 0), // 10
             bondBalance: await BaseToken.balanceOf(Bond.target), // 21
             bondReserve: (await Bond.tokenBond(this.token.target)).reserveBalance // 20
           };
@@ -493,7 +494,7 @@ describe('BondMultiToken', function () {
         });
 
         it('should decrease the BABY tokens from Alice', async function () {
-          expect(await this.token.balanceOf(alice.address)).to.equal(this.initial.tokenBalance - this.tokensToBurn);
+          expect(await this.token.balanceOf(alice.address, 0)).to.equal(this.initial.tokenBalance - this.tokensToBurn);
         });
 
         it('should transfer correct amount of BASE tokens to Alice', async function () {
@@ -637,10 +638,9 @@ describe('BondMultiToken', function () {
 
         it('should revert if alice try to burn more than the total supply', async function () {
           // transfer all free minted tokens to alice
-          await this.token.transfer(alice.address, await this.token.balanceOf(owner.address));
-          const amount = await this.token.balanceOf(alice);
-          const totalSupply = await this.token.totalSupply();
-          expect(amount).to.equal(totalSupply);
+          await this.token.safeTransferFrom(owner.address, alice.address, 0, await this.token.balanceOf(owner.address, 0), ZERO_BYTES32);
+
+          const amount = await this.token.balanceOf(alice.address, 0);
 
           await this.token.connect(alice).setApprovalForAll(Bond.target, true);
           await expect(
@@ -701,7 +701,7 @@ describe('BondMultiToken', function () {
       // minting 10 BABY requires 70.7 BASE because it will be floored to 70
       await Bond.connect(alice).mint(this.token.target, 10n, MAX_INT_256);
 
-      expect(await this.token.balanceOf(alice.address)).to.equal(10n);
+      expect(await this.token.balanceOf(alice.address, 0)).to.equal(10n);
       expect(await BaseToken.balanceOf(alice.address)).to.equal(this.initialBaseBalance - 70n);
 
       const bond = await Bond.tokenBond(this.token.target);
@@ -725,7 +725,7 @@ describe('BondMultiToken', function () {
 
       await Bond.connect(alice).mint(this.token.target, tokensToMint, MAX_INT_256);
 
-      expect(await this.token.balanceOf(alice.address)).to.equal(tokensToMint);
+      expect(await this.token.balanceOf(alice.address, 0)).to.equal(tokensToMint);
       expect((await Bond.tokenBond(this.token.target)).reserveBalance).to.equal(predicted.reserveOnBond);
       expect(await BaseToken.balanceOf(alice.address)).to.equal(this.initialBaseBalance - predicted.reserveRequired);
       expect(await BaseToken.balanceOf(Bond.target)).to.equal(predicted.reserveRequired);

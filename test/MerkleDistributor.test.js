@@ -233,7 +233,7 @@ describe('MerkleDistributor', function () {
     }); // Normal cases
   }); // Create distribution: ERC1155
 
-  describe('Set merkle root', function () {
+  describe('Set merkle root: ERC20', function () {
     beforeEach(async function () {
       const leaves = defaultWhiltelist.map((x) => keccak256(x));
       this.tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
@@ -399,7 +399,175 @@ describe('MerkleDistributor', function () {
           );
       });
     }); // Refund
-  }); // Set merkle root
+  }); // Set merkle root: ERC20
+
+  describe('Set merkle root: ERC1155', function () {
+    beforeEach(async function () {
+      const leaves = defaultWhiltelist.map((x) => keccak256(x));
+      this.tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
+
+      await MultiToken.setApprovalForAll(MerkleDistributor.target, true);
+      await MerkleDistributor.createDistribution(
+        MultiToken.target,
+        false,
+        TEST_DATA.amountPerClaim, // wei(100)
+        3n,
+        TEST_DATA.startTime,
+        TEST_DATA.endTime,
+        bufferToHex(this.tree.getRoot()),
+        TEST_DATA.title,
+        '' // No need for ipfsCID in the test
+      );
+      this.distribution = await MerkleDistributor.distributions(0);
+    });
+
+    it('should set merkle root correctly', async function() {
+      expect(this.distribution.merkleRoot).to.equal(bufferToHex(this.tree.getRoot()));
+    });
+
+    it('should have alice in the whitelist', async function() {
+      expect(await MerkleDistributor.isWhitelisted(0, alice.address, getProof(this.tree, alice.address))).to.equal(true);
+    });
+
+    it('should have bob in the whitelist', async function() {
+      expect(await MerkleDistributor.isWhitelisted(0, bob.address, getProof(this.tree, bob.address))).to.equal(true);
+    });
+
+    it('should have carol in the whitelist', async function() {
+      expect(await MerkleDistributor.isWhitelisted(0, carol.address, getProof(this.tree, carol.address))).to.equal(true);
+    });
+
+    it('should NOT have david in the whitelist', async function() {
+      expect(await MerkleDistributor.isWhitelisted(0, david.address, getProof(this.tree, david.address))).to.equal(false);
+    });
+
+    it('should not set any of isClaimed to true', async function() {
+      expect(await MerkleDistributor.isClaimed(0, owner.address)).to.equal(false);
+      expect(await MerkleDistributor.isClaimed(0, alice.address)).to.equal(false);
+      expect(await MerkleDistributor.isClaimed(0, bob.address)).to.equal(false);
+      expect(await MerkleDistributor.isClaimed(0, carol.address)).to.equal(false);
+      expect(await MerkleDistributor.isClaimed(0, david.address)).to.equal(false);
+    });
+
+    describe('Claim', function () {
+      beforeEach(async function () {
+        await MerkleDistributor.connect(carol).claim(0, getProof(this.tree, carol.address));
+      });
+
+      it('should able to claim if merkle proof is valid', async function() {
+        expect(await MultiToken.balanceOf(carol.address, 0)).to.equal(TEST_DATA.amountPerClaim);
+      });
+
+      it('should increase the amount claimed', async function() {
+        expect(await MerkleDistributor.getAmountClaimed(0)).to.equal(TEST_DATA.amountPerClaim);
+      });
+
+      it('should set isClaimed to true', async function() {
+        expect(await MerkleDistributor.isClaimed(0, carol.address)).to.equal(true);
+      });
+
+      it('should not able to claim twice', async function() {
+        await expect(MerkleDistributor.connect(carol).claim(0, getProof(this.tree, carol.address))).
+          to.be.revertedWithCustomError(
+            MerkleDistributor,
+            'MerkleDistributor__AlreadyClaimed'
+          );
+      });
+
+      it('should decrease the remaining amount', async function() {
+        expect(await MerkleDistributor.getAmountLeft(0)).to.equal(TEST_DATA.amountPerClaim * 2n);
+      });
+
+      it('should revert if merkle proof is invalid', async function() {
+        await expect(MerkleDistributor.connect(david).claim(0, getProof(this.tree, david.address))).
+          to.be.revertedWithCustomError(
+            MerkleDistributor,
+            'MerkleDistributor__InvalidProof'
+          );
+      });
+
+      it('should not able to claim before started', async function() {
+        const leaves = defaultWhiltelist.map((x) => keccak256(x));
+        const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
+
+        await MultiToken.setApprovalForAll(MerkleDistributor.target, true);
+        await MerkleDistributor.createDistribution(
+          MultiToken.target,
+          false,
+          TEST_DATA.amountPerClaim,
+          3n,
+          await time.latest() + 9999,
+          TEST_DATA.endTime,
+          bufferToHex(tree.getRoot()),
+          TEST_DATA.title,
+          ''
+        );
+
+        await expect(MerkleDistributor.connect(carol).claim(1, getProof(this.tree, carol.address))).
+          to.be.revertedWithCustomError(
+            MerkleDistributor,
+            'MerkleDistributor__NotStarted'
+          );
+      });
+
+      it('should not able to claim after ended', async function() {
+        await time.increaseTo(TEST_DATA.endTime + 1);
+        await expect(MerkleDistributor.connect(carol).claim(0, getProof(this.tree, carol.address))).
+          to.be.revertedWithCustomError(
+            MerkleDistributor,
+            'MerkleDistributor__Finished'
+          );
+      });
+    }); // Claim
+
+    describe('Refund', function () {
+      it('should revert if not the owner', async function() {
+        await expect(MerkleDistributor.connect(carol).refund(0)).
+          to.be.revertedWithCustomError(
+            MerkleDistributor,
+            'MerkleDistributor__PermissionDenied'
+          );
+      });
+
+      it('should be able to refund the whole amount if not claimed', async function() {
+        await time.increaseTo(TEST_DATA.endTime + 1);
+        await MerkleDistributor.refund(0);
+        expect(await MultiToken.balanceOf(MerkleDistributor.target, 0)).to.equal(0);
+        expect(await MultiToken.balanceOf(owner.address, 0)).to.equal(ORIGINAL_BALANCE);
+      });
+
+      it('should be able to refund the remaining amount', async function() {
+        await MerkleDistributor.connect(carol).claim(0, getProof(this.tree, carol.address));
+        await time.increaseTo(TEST_DATA.endTime + 1);
+        await MerkleDistributor.refund(0);
+        expect(await MultiToken.balanceOf(MerkleDistributor.target, 0)).to.equal(0);
+        expect(await MultiToken.balanceOf(carol.address, 0)).to.equal(TEST_DATA.amountPerClaim);
+        expect(await MultiToken.balanceOf(owner.address, 0)).to.equal(ORIGINAL_BALANCE - TEST_DATA.amountPerClaim);
+      });
+
+      it('should revert if all claimed', async function() {
+        await MerkleDistributor.connect(alice).claim(0, getProof(this.tree, alice.address));
+        await MerkleDistributor.connect(carol).claim(0, getProof(this.tree, carol.address));
+        await MerkleDistributor.connect(bob).claim(0, getProof(this.tree, bob.address));
+        await time.increaseTo(TEST_DATA.endTime + 1);
+        await expect(MerkleDistributor.refund(0)).
+          to.be.revertedWithCustomError(
+            MerkleDistributor,
+            'MerkleDistributor__NothingToRefund'
+          );
+      });
+
+      it('should revert if already refunded', async function() {
+        await time.increaseTo(TEST_DATA.endTime + 1);
+        await MerkleDistributor.refund(0);
+        await expect(MerkleDistributor.refund(0)).
+          to.be.revertedWithCustomError(
+            MerkleDistributor,
+            'MerkleDistributor__AlreadyRefunded'
+          );
+      });
+    }); // Refund
+  }); // Set merkle root: ERC1155
 
   describe('Edge cases', function () {
     beforeEach(async function () {
