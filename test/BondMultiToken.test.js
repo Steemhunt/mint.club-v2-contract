@@ -17,7 +17,7 @@ const {
 } = require('./utils/test-utils');
 
 const BABY_TOKEN = {
-  tokenParams: { name: 'Baby Token', symbol: 'BABY', uri: 'https://api.hunt.town/token-info.json' },
+  tokenParams: { name: 'Baby Token', symbol: 'BABY', uri: 'https://api.hunt.town/token-metadata/buildings/0.json' },
   bondParams: {
     royalty: 500n, // 5%
     reserveToken: null, // Should be set later

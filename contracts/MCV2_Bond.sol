@@ -58,7 +58,14 @@ contract MCV2_Bond is MCV2_Royalty {
         uint128 price; // multiplied by 10**18 for decimals
     }
 
-    mapping (address => Bond) public tokenBond; // Token => Bond
+    // Optional on-chain metadata for the token
+    struct MetaData {
+        string logo;
+        string website;
+    }
+
+    mapping (address => Bond) public tokenBond;
+    mapping (address => MetaData) public tokenMetaData;
     address[] public tokens; // Array of all created tokens
 
     event TokenCreated(address indexed token, string name, string symbol);
@@ -66,6 +73,7 @@ contract MCV2_Bond is MCV2_Royalty {
     event Mint(address indexed token, address indexed user, uint256 amountMinted, address indexed reserveToken, uint256 reserveAmount);
     event Burn(address indexed token, address indexed user, uint256 amountBurned, address indexed reserveToken, uint256 refundAmount);
     event BondCreatorUpdated(address indexed token, address indexed creator);
+    event TokenMetaDataUpdated(address indexed token, string logo, string website);
 
     // MARK: - Constructor
 
@@ -219,14 +227,31 @@ contract MCV2_Bond is MCV2_Royalty {
         return token;
     }
 
-    function updateBondCreator(address token, address creator) external _checkBondExists(token) {
+    // MARK: - Creator only functions
+
+    // Creator receives the royalty.
+    // Transferring the creator to the null address means no one can claim the royalty; this means it will be permanently locked in the bond contract.
+    function updateBondCreator(address token, address creator) external {
         Bond storage bond = tokenBond[token];
-        if (bond.creator != _msgSender()) revert MCV2_Bond__PermissionDenied();
+        if (bond.creator != _msgSender()) revert MCV2_Bond__PermissionDenied(); // This will also check the existence of the bond
 
         bond.creator = creator;
 
         emit BondCreatorUpdated(token, creator);
     }
+
+    function updateTokenMetaData(address token, string calldata logo, string calldata website) external {
+        Bond storage bond = tokenBond[token];
+        if (bond.creator != _msgSender()) revert MCV2_Bond__PermissionDenied(); // This will also check the existence of the bond
+
+        MetaData storage metaData = tokenMetaData[token];
+        metaData.logo = logo;
+        metaData.website = website;
+
+        emit TokenMetaDataUpdated(token, logo, website);
+    }
+
+    // MARK: - Mint
 
     function getCurrentStep(address token, uint256 currentSupply) internal view returns (uint256) {
         Bond storage bond = tokenBond[token];
@@ -237,8 +262,6 @@ contract MCV2_Bond is MCV2_Royalty {
         }
         revert MCV2_Bond__InvalidCurrentSupply(); // can never happen
     }
-
-    // MARK: - Mint
 
     function getReserveForToken(address token, uint256 tokensToMint) public view _checkBondExists(token)
         returns (uint256 reserveAmount, uint256 royalty)
@@ -395,6 +418,8 @@ contract MCV2_Bond is MCV2_Royalty {
         uint8 decimals;
         string symbol;
         string name;
+        string logo;
+        string website;
         uint128 currentSupply;
         uint128 maxSupply;
         uint128 currentPrice;
@@ -407,6 +432,7 @@ contract MCV2_Bond is MCV2_Royalty {
     function _getBondInfo(address token) private view returns(BondInfo memory info) {
         MCV2_ICommonToken t = MCV2_ICommonToken(token);
         Bond memory bond = tokenBond[token];
+        MetaData memory metaData = tokenMetaData[token];
         IERC20Metadata r = IERC20Metadata(bond.reserveToken);
 
         info = BondInfo({
@@ -414,6 +440,8 @@ contract MCV2_Bond is MCV2_Royalty {
             decimals: t.decimals(),
             symbol: t.symbol(),
             name: t.name(),
+            logo: metaData.logo,
+            website: metaData.website,
             currentSupply: uint128(t.totalSupply()),
             maxSupply: maxSupply(token),
             currentPrice: currentPrice(token),
@@ -505,5 +533,9 @@ contract MCV2_Bond is MCV2_Royalty {
                 }
             }
         }
+    }
+
+    function version() external pure returns (string memory) {
+        return "0.1.120";
     }
 }

@@ -1,6 +1,6 @@
 {
   "name": "mint-club-v2",
-  "version": "0.0.1",
+  "version": "0.1.120",
   "description": "Mint Club V2",
   "main": "index.js",
   "scripts": {

@@ -321,8 +321,13 @@ describe('Bond', function () {
         expect(bond.creator).to.equal(bob.address);
       });
 
-      it('should reject if the msg.sender is not current creator', async function () {
+      it('should revert if the msg.sender is not current creator', async function () {
         await expect(Bond.connect(owner).updateBondCreator(this.token.target, bob.address))
+          .to.be.revertedWithCustomError(Bond, 'MCV2_Bond__PermissionDenied');
+      });
+
+      it('should revert if the token does not exist in the bond', async function () {
+        await expect(Bond.connect(owner).updateBondCreator(NULL_ADDRESS, bob.address))
           .to.be.revertedWithCustomError(Bond, 'MCV2_Bond__PermissionDenied');
       });
 
@@ -344,6 +349,34 @@ describe('Bond', function () {
         const fees = await Bond.getRoyaltyInfo(bob.address, BaseToken.target);
         expect(fees[0]).to.equal(test.creatorCut);
         expect(fees[1]).to.equal(0n);
+      });
+    });
+
+    describe('Update token metadata', function () {
+      beforeEach(async function () {
+        await Bond.updateTokenMetaData(this.token.target, 'https://hunt.town/favicon-32x32.png', 'https://hunt.town');
+      });
+
+      it('should update the token metadata', async function () {
+        const metaData = await Bond.tokenMetaData(this.token.target);
+        expect(metaData.logo).to.equal('https://hunt.town/favicon-32x32.png');
+        expect(metaData.website).to.equal('https://hunt.town');
+      });
+
+      it('should revert if the msg.sender is not current creator', async function () {
+        await expect(Bond.connect(alice).updateTokenMetaData(this.token.target, '', ''))
+          .to.be.revertedWithCustomError(Bond, 'MCV2_Bond__PermissionDenied');
+      });
+
+      it('should revert if the token does not exist in the bond', async function () {
+        await expect(Bond.updateTokenMetaData(NULL_ADDRESS, '', ''))
+          .to.be.revertedWithCustomError(Bond, 'MCV2_Bond__PermissionDenied');
+      });
+
+      it('should emit TokenMetaDataUpdated event', async function () {
+        await expect(Bond.updateTokenMetaData(this.token.target, 'ab', 'cd'))
+          .emit(Bond, 'TokenMetaDataUpdated')
+          .withArgs(this.token.target, 'ab', 'cd');
       });
     });
 
@@ -864,6 +897,8 @@ describe('Bond', function () {
       this.token0 = await Bond.tokens(0);
       this.token1 = await Bond.tokens(1);
       this.token2 = await Bond.tokens(2);
+
+      await Bond.connect(alice).updateTokenMetaData(this.token0, 'https://hunt.town/favicon-32x32.png', 'https://hunt.town');
     });
 
     it('should return [0] for ReserveToken = BaseToken', async function () {
@@ -900,6 +935,8 @@ describe('Bond', function () {
           18n,
           'BABY',
           BABY_TOKEN.tokenParams.name,
+          'https://hunt.town/favicon-32x32.png',
+          'https://hunt.town',
           this.freeMint,
           BABY_TOKEN.bondParams.maxSupply,
           wei(2, 9),
@@ -914,6 +951,8 @@ describe('Bond', function () {
           18n,
           'BABY2',
           BABY_TOKEN.tokenParams.name,
+          '',
+          '',
           this.freeMint,
           BABY_TOKEN.bondParams.maxSupply,
           wei(2, 9),
@@ -928,6 +967,8 @@ describe('Bond', function () {
           18n,
           'BABY3',
           BABY_TOKEN.tokenParams.name,
+          '',
+          '',
           this.freeMint,
           BABY_TOKEN.bondParams.maxSupply,
           wei(2, 9),
@@ -951,6 +992,8 @@ describe('Bond', function () {
           18n,
           'BABY',
           BABY_TOKEN.tokenParams.name,
+          'https://hunt.town/favicon-32x32.png',
+          'https://hunt.town',
           this.freeMint,
           BABY_TOKEN.bondParams.maxSupply,
           wei(2, 9),
