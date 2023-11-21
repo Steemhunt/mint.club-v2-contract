@@ -59,5 +59,6 @@ main()
 /* Deploy script
 
 npx hardhat compile && npx hardhat run --network sepolia scripts/deploy.js
+npx hardhat compile && npx hardhat run --network base scripts/deploy.js
 
 */

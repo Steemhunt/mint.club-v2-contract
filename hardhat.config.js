@@ -18,6 +18,11 @@ module.exports = {
       chainId: 11155111,
       accounts: [process.env.TEST_PRIVATE_KEY]
     },
+    base: {
+      url: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_BASE_API_KEY}`,
+      chainId: 8453,
+      accounts: [process.env.TEST_PRIVATE_KEY]
+    }
   },
   gasReporter: {
     enabled: true,
@@ -28,7 +33,8 @@ module.exports = {
   etherscan: {
     // network list: npx hardhat verify --list-networks
     apiKey: {
-      sepolia: process.env.ETHERSCAN_API_KEY
+      sepolia: process.env.ETHERSCAN_API_KEY,
+      base: process.env.BASESCAN_API_KEY
     }
   }
 };
