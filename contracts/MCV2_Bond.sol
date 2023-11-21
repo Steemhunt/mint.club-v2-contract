@@ -375,8 +375,13 @@ contract MCV2_Bond is MCV2_Royalty {
         return tokenBond[token].steps;
     }
 
-    function currentPrice(address token) external view _checkBondExists(token) returns (uint256) {
-        uint256 i = getCurrentStep(token, MCV2_ICommonToken(token).totalSupply());
+    function currentPrice(address token) public view returns (uint128) {
+        uint256 currentSupply = MCV2_ICommonToken(token).totalSupply();
+        if (currentSupply < maxSupply(token)) {
+            ++currentSupply; // Ensure currentSupply is in the next range
+        }
+
+        uint256 i = getCurrentStep(token, currentSupply);
 
         return tokenBond[token].steps[i].price;
     }
@@ -392,6 +397,7 @@ contract MCV2_Bond is MCV2_Royalty {
         string name;
         uint128 currentSupply;
         uint128 maxSupply;
+        uint128 currentPrice;
         address reserveToken;
         uint8 reserveDecimals;
         string reserveSymbol;
@@ -408,12 +414,13 @@ contract MCV2_Bond is MCV2_Royalty {
             decimals: t.decimals(),
             symbol: t.symbol(),
             name: t.name(),
+            currentSupply: uint128(t.totalSupply()),
+            maxSupply: maxSupply(token),
+            currentPrice: currentPrice(token),
             reserveToken: bond.reserveToken,
             reserveDecimals: r.decimals(),
             reserveSymbol: r.symbol(),
             reserveName: r.name(),
-            currentSupply: uint128(t.totalSupply()),
-            maxSupply: maxSupply(token),
             reserveBalance: bond.reserveBalance
         });
     }

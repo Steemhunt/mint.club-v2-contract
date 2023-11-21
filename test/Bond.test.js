@@ -892,6 +892,8 @@ describe('Bond', function () {
     });
 
     it('should return all tokens and their bond parameters', async function () {
+      // stepRanges: [ wei(10000), wei(100000), wei(200000), wei(500000), wei(1000000), wei(2000000), wei(5000000), wei(10000000) ],
+      // stepPrices: [ wei(0, 9), wei(2, 9), wei(3, 9), wei(4, 9), wei(5, 9), wei(7, 9), wei(10, 9), wei(15, 9) ]
       expect(await Bond.getList(0, 100)).to.deep.equal([
         [
           this.token0,
@@ -900,6 +902,7 @@ describe('Bond', function () {
           BABY_TOKEN.tokenParams.name,
           this.freeMint,
           BABY_TOKEN.bondParams.maxSupply,
+          wei(2, 9),
           BaseToken.target,
           9n,
           'TEST',
@@ -913,6 +916,7 @@ describe('Bond', function () {
           BABY_TOKEN.tokenParams.name,
           this.freeMint,
           BABY_TOKEN.bondParams.maxSupply,
+          wei(2, 9),
           this.BaseToken2.target,
           18n,
           'TEST',
@@ -926,6 +930,7 @@ describe('Bond', function () {
           BABY_TOKEN.tokenParams.name,
           this.freeMint,
           BABY_TOKEN.bondParams.maxSupply,
+          wei(2, 9),
           this.BaseToken2.target,
           18n,
           'TEST',
@@ -948,6 +953,7 @@ describe('Bond', function () {
           BABY_TOKEN.tokenParams.name,
           this.freeMint,
           BABY_TOKEN.bondParams.maxSupply,
+          wei(2, 9),
           BaseToken.target,
           9n,
           'TEST',
