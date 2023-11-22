@@ -23,7 +23,7 @@
     "dotenv": "^16.3.1",
     "hardhat": "^2.18.2",
     "keccak256": "^1.0.6",
-    "merkletreejs": "^0.3.10",
+    "merkletreejs": "^0.3.11",
     "solidity-coverage": "^0.8.5",
     "web3": "^4.2.0"
   }
