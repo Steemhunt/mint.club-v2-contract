@@ -17,7 +17,7 @@ async function main() {
   console.log(` -> MCV2_MultiToken contract deployed at ${NFTImplementation.target}`);
 
   const bond = await hre.ethers.deployContract('MCV2_Bond', [
-    tokenImplementation.target, NFTImplementation, PROTOCOL_BENEFIARY
+    tokenImplementation.target, NFTImplementation.target, PROTOCOL_BENEFIARY
   ]);
   await bond.waitForDeployment();
   console.log(` -> MCV2_Bond contract deployed at ${bond.target}`);

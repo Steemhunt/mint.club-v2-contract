@@ -47,6 +47,7 @@ contract MCV2_Bond is MCV2_Royalty {
     struct Bond {
         address creator;
         uint16 royalty; // immutable - range: [0, 5000] - 0.00% ~ 50.00%
+        uint40 createdAt; // immutable
         address reserveToken; // immutable
         uint256 reserveBalance;
         BondStep[] steps; // immutable
@@ -154,6 +155,7 @@ contract MCV2_Bond is MCV2_Royalty {
         Bond storage bond = tokenBond[token];
         bond.creator = _msgSender();
         bond.royalty = bp.royalty;
+        bond.createdAt = uint40(block.timestamp);
         bond.reserveToken = bp.reserveToken;
 
         for (uint256 i = 0; i < bp.stepRanges.length; ++i) {
@@ -420,6 +422,7 @@ contract MCV2_Bond is MCV2_Royalty {
         string name;
         string logo;
         string website;
+        uint40 createdAt;
         uint128 currentSupply;
         uint128 maxSupply;
         uint128 currentPrice;
@@ -442,6 +445,7 @@ contract MCV2_Bond is MCV2_Royalty {
             name: t.name(),
             logo: metaData.logo,
             website: metaData.website,
+            createdAt: bond.createdAt,
             currentSupply: uint128(t.totalSupply()),
             maxSupply: maxSupply(token),
             currentPrice: currentPrice(token),

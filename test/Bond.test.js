@@ -91,6 +91,10 @@ describe('Bond', function () {
         expect(await Bond.maxSupply(this.token.target)).to.equal(BABY_TOKEN.bondParams.maxSupply);
       });
 
+      it('should set the correct createdAt timestamp', async function() {
+        expect((await this.creationTx.getBlock()).timestamp).to.equal(this.bond.createdAt);
+      });
+
       it('should set correct bond steps', async function() {
         const steps = await Bond.getSteps(this.token.target);
         for(let i = 0; i < steps.length; i++) {
@@ -890,9 +894,9 @@ describe('Bond', function () {
       BABY_TOKEN3.tokenParams.symbol = 'BABY3';
       BABY_TOKEN3.bondParams.reserveToken = this.BaseToken2.target;
 
-      await Bond.connect(alice).createToken(...Object.values(BABY_TOKEN));
-      await Bond.connect(alice).createToken(...Object.values(BABY_TOKEN2));
-      await Bond.connect(bob).createToken(...Object.values(BABY_TOKEN3));
+      this.tx0 = await Bond.connect(alice).createToken(...Object.values(BABY_TOKEN));
+      this.tx1 = await Bond.connect(alice).createToken(...Object.values(BABY_TOKEN2));
+      this.tx2 = await Bond.connect(bob).createToken(...Object.values(BABY_TOKEN3));
 
       this.token0 = await Bond.tokens(0);
       this.token1 = await Bond.tokens(1);
@@ -937,6 +941,7 @@ describe('Bond', function () {
           BABY_TOKEN.tokenParams.name,
           'https://hunt.town/favicon-32x32.png',
           'https://hunt.town',
+          (await this.tx0.getBlock()).timestamp,
           this.freeMint,
           BABY_TOKEN.bondParams.maxSupply,
           wei(2, 9),
@@ -953,6 +958,7 @@ describe('Bond', function () {
           BABY_TOKEN.tokenParams.name,
           '',
           '',
+          (await this.tx1.getBlock()).timestamp,
           this.freeMint,
           BABY_TOKEN.bondParams.maxSupply,
           wei(2, 9),
@@ -969,6 +975,7 @@ describe('Bond', function () {
           BABY_TOKEN.tokenParams.name,
           '',
           '',
+          (await this.tx2.getBlock()).timestamp,
           this.freeMint,
           BABY_TOKEN.bondParams.maxSupply,
           wei(2, 9),
@@ -994,6 +1001,7 @@ describe('Bond', function () {
           BABY_TOKEN.tokenParams.name,
           'https://hunt.town/favicon-32x32.png',
           'https://hunt.town',
+          (await this.tx0.getBlock()).timestamp,
           this.freeMint,
           BABY_TOKEN.bondParams.maxSupply,
           wei(2, 9),
