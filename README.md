@@ -5,7 +5,7 @@ The inherited token creator employs a bonding curve to generate new tokens using
 ### Ethereum Sepolia Testnet
 - MCV2_Token: [0xAbd0087147958a164BCb41e7aD8Ee4a4af57b4a2](https://sepolia.etherscan.io/address/0xAbd0087147958a164BCb41e7aD8Ee4a4af57b4a2#code)
 - MCV2_MultiToken: [0xCFe883f228822214fC82868Cd5d4Cf6Df72699b2](https://sepolia.etherscan.io/address/0xCFe883f228822214fC82868Cd5d4Cf6Df72699b2#code)
-- MCV2_Bond: [0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad](https://sepolia.etherscan.io/address/0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad#code)
+- MCV2_Bond: [0xFf43FB21145c76AbC0304b243B7E4ddFa98D4B77](https://sepolia.etherscan.io/address/0xFf43FB21145c76AbC0304b243B7E4ddFa98D4B77#code)
 - Locker: [0xD77AeD25FC2CE8F425c9a0d65c823EdA32531d1d](https://sepolia.etherscan.io/address/0xD77AeD25FC2CE8F425c9a0d65c823EdA32531d1d#code)
 - MerkleDistributor: [0x94792B59D2f1a9051Af2c27482FfB095eE4ba084](https://sepolia.etherscan.io/address/0x94792B59D2f1a9051Af2c27482FfB095eE4ba084#code)
 

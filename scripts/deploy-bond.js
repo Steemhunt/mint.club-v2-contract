@@ -9,8 +9,8 @@ async function main() {
   console.log(`Deploy from account: ${deployer}`);
 
   // Reuse existing implementations
-  const tokenImplementation = '0x37F540de37afE8bDf6C722d87CB019F30e5E406a';
-  const NFTImplementation = '0xbba7de9897F8bB07D5070994efE44B8c203a02A8';
+  const tokenImplementation = '0xAbd0087147958a164BCb41e7aD8Ee4a4af57b4a2';
+  const NFTImplementation = '0xCFe883f228822214fC82868Cd5d4Cf6Df72699b2';
 
   const bond = await hre.ethers.deployContract('MCV2_Bond', [
     tokenImplementation, NFTImplementation, PROTOCOL_BENEFIARY
@@ -38,6 +38,7 @@ main()
 
 /* Deploy script
 
+npx hardhat compile && npx hardhat run --network sepolia scripts/deploy-bond.js
 npx hardhat compile && npx hardhat run --network base scripts/deploy-bond.js
 
 */
