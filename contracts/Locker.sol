@@ -78,6 +78,10 @@ contract Locker {
 
     // MARK: - Utility functions
 
+    function lockUpCount() external view returns (uint256) {
+        return lockUps.length;
+    }
+
     // Get lockupIds by token address in the range where start <= id < stop
     function getLockUpIdsByToken(address token, uint256 start, uint256 stop) external view returns (uint256[] memory ids) {
         unchecked {

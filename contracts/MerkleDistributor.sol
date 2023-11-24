@@ -40,7 +40,7 @@ contract MerkleDistributor {
 
         bytes32 merkleRoot; // 256 bits
         string title;
-        string ipfsCID; // NOTE: Could save more gas with: https://github.com/saurfang/ipfs-multihash-on-solidity
+        string ipfsCID; // To store all WL addresses to create the Merkle Proof
 
         mapping(address => bool) isClaimed;
     }
@@ -176,6 +176,10 @@ contract MerkleDistributor {
         Distribution storage distribution = distributions[distributionId];
 
         return distribution.amountPerClaim * distribution.claimedCount;
+    }
+
+    function distributionCount() external view returns (uint256) {
+        return distributions.length;
     }
 
     // Get DistributionIds by token address in the range where start <= id < stop
