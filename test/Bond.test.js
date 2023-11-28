@@ -935,6 +935,7 @@ describe('Bond', function () {
       // stepPrices: [ wei(0, 9), wei(2, 9), wei(3, 9), wei(4, 9), wei(5, 9), wei(7, 9), wei(10, 9), wei(15, 9) ]
       expect(await Bond.getList(0, 100)).to.deep.equal([
         [
+          alice.address,
           this.token0,
           18n,
           'BABY',
@@ -952,6 +953,7 @@ describe('Bond', function () {
           0n
         ],
         [
+          alice.address,
           this.token1,
           18n,
           'BABY2',
@@ -969,6 +971,7 @@ describe('Bond', function () {
           0n
         ],
         [
+          bob.address,
           this.token2,
           18n,
           'BABY3',
@@ -992,9 +995,9 @@ describe('Bond', function () {
       const steps = BABY_TOKEN.bondParams.stepRanges.map((step, i) => [step, BABY_TOKEN.bondParams.stepPrices[i]]);
 
       expect(await Bond.getDetail(this.token0)).to.deep.equal([
-        alice.address,
         BABY_TOKEN.bondParams.royalty,
         [
+          alice.address,
           this.token0,
           18n,
           'BABY',

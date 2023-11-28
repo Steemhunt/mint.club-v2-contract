@@ -416,6 +416,7 @@ contract MCV2_Bond is MCV2_Royalty {
     }
 
     struct BondInfo {
+        address creator;
         address token;
         uint8 decimals;
         string symbol;
@@ -439,6 +440,7 @@ contract MCV2_Bond is MCV2_Royalty {
         IERC20Metadata r = IERC20Metadata(bond.reserveToken);
 
         info = BondInfo({
+            creator: bond.creator,
             token: token,
             decimals: t.decimals(),
             symbol: t.symbol(),
@@ -476,7 +478,6 @@ contract MCV2_Bond is MCV2_Royalty {
     }
 
     struct BondDetail {
-        address creator;
         uint16 royalty;
         BondInfo info;
         BondStep[] steps;
@@ -484,7 +485,6 @@ contract MCV2_Bond is MCV2_Royalty {
     function getDetail(address token) external view returns(BondDetail memory detail) {
         Bond memory bond = tokenBond[token];
         detail = BondDetail({
-            creator: bond.creator,
             royalty: bond.royalty,
             info: _getBondInfo(token),
             steps: bond.steps
