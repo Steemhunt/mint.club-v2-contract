@@ -14,8 +14,8 @@ contract MCV1_Wrapper {
     error MCV1_Wrapper__SlippageLimitExceeded();
 
     address private constant BENEFICIARY = address(0x82CA6d313BffE56E9096b16633dfD414148D66b1);
-    IMintClubBond private constant BOND = IMintClubBond(0x8BBac0C7583Cc146244a18863E708bFFbbF19975);
-    address private constant MINT_CONTRACT = address(0x1f3Af095CDa17d63cad238358837321e95FC5915);
+    IMintClubBond public constant BOND = IMintClubBond(0x8BBac0C7583Cc146244a18863E708bFFbbF19975);
+    address public constant MINT_CONTRACT = address(0x1f3Af095CDa17d63cad238358837321e95FC5915);
 
     modifier _checkBondExists(address token) {
         if(BOND.maxSupply(token) <= 0) revert MCV1_Wrapper__TokenNotFound();
@@ -51,6 +51,10 @@ contract MCV1_Wrapper {
     }
 
     // MARK: - Utility functions
+
+    function tokenCount() external view returns(uint256) {
+        return BOND.tokenCount();
+    }
 
     struct BondInfo {
         // address creator;
