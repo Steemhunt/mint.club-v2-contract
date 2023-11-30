@@ -57,21 +57,21 @@ contract MCV1_Wrapper {
     }
 
     struct BondInfo {
-        // address creator;
+        // address creator; // off-chain data
         address token;
-        uint8 decimals;
+        // uint8 decimals; // always 18
         string symbol;
         string name;
-        // string logo;
-        // string website;
-        // uint40 createdAt;
+        // string logo; // off-chain data
+        // string website; // off-chain data
+        // uint40 createdAt; // off-chain data
         uint256 currentSupply;
         uint256 maxSupply;
         uint256 currentPrice;
-        address reserveToken;
-        uint8 reserveDecimals;
-        string reserveSymbol;
-        string reserveName;
+        // address reserveToken; // Always MINT_CONTRACT
+        // uint8 reserveDecimals; // Always 18
+        // string reserveSymbol; // Always "MINT"
+        // string reserveName; // Always "Mint.club"
         uint256 reserveBalance;
     }
     function _getBondInfo(address token) private view returns(BondInfo memory info) {
@@ -83,16 +83,11 @@ contract MCV1_Wrapper {
 
         info = BondInfo({
             token: token,
-            decimals: 18, // MCV1 only supports ERC20 tokens with 18 decimals
             symbol: t.symbol(),
             name: t.name(),
             currentSupply: totalSupply,
             maxSupply: BOND.maxSupply(token),
             currentPrice: totalSupply,
-            reserveToken: MINT_CONTRACT,
-            reserveDecimals: 18, // Always MINT
-            reserveSymbol: 'MINT',
-            reserveName: 'Mint.club',
             reserveBalance: BOND.reserveBalance(token)
         });
     }
