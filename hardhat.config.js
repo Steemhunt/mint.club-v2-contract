@@ -22,6 +22,11 @@ module.exports = {
       url: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_BASE_API_KEY}`,
       chainId: 8453,
       accounts: [process.env.TEST_PRIVATE_KEY]
+    },
+    bsc: {
+      url: 'https://bsc-dataseed.bnbchain.org',
+      chainId: 56,
+      accounts: [process.env.TEST_PRIVATE_KEY]
     }
   },
   gasReporter: {
@@ -34,7 +39,8 @@ module.exports = {
     // network list: npx hardhat verify --list-networks
     apiKey: {
       sepolia: process.env.ETHERSCAN_API_KEY,
-      base: process.env.BASESCAN_API_KEY
+      base: process.env.BASESCAN_API_KEY,
+      bsc: process.env.BSCSCAN_API_KEY
     }
   }
 };

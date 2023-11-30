@@ -8,9 +8,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {MCV2_Royalty} from "./MCV2_Royalty.sol";
-import {MCV2_Token} from "./MCV2_Token.sol";
-import {MCV2_MultiToken} from "./MCV2_MultiToken.sol";
-import {MCV2_ICommonToken} from "./MCV2_ICommonToken.sol";
+import {MCV2_Token} from "./MCV2_Token.sol"; // TODO: Create interface
+import {MCV2_MultiToken} from "./MCV2_MultiToken.sol"; // TODO: Create interface
+import {MCV2_ICommonToken} from "./lib/MCV2_ICommonToken.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
