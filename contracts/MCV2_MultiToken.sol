@@ -18,7 +18,7 @@ contract MCV2_MultiToken is ERC1155Initializable {
     uint256 public totalSupply;
 
     bool private _initialized; // false by default
-    address private _bond; // Bonding curve contract should have its minting permission
+    address public bond; // Bonding curve contract should have its minting permission
 
     function init(string calldata name_, string calldata symbol_, string calldata uri_) external {
         require(_initialized == false, "CONTRACT_ALREADY_INITIALIZED");
@@ -28,11 +28,11 @@ contract MCV2_MultiToken is ERC1155Initializable {
         symbol = symbol_;
 
         _setURI(uri_);
-        _bond = _msgSender();
+        bond = _msgSender();
     }
 
     modifier onlyBond() {
-        if (_bond != _msgSender()) revert MCV2_MultiToken__PermissionDenied();
+        if (bond != _msgSender()) revert MCV2_MultiToken__PermissionDenied();
         _;
     }
 
@@ -49,7 +49,7 @@ contract MCV2_MultiToken is ERC1155Initializable {
      */
     function burnByBond(address account, uint256 amount) public onlyBond {
         if (amount > totalSupply) revert MCV2_MultiToken__BurnAmountExceedsTotalSupply();
-        if(!isApprovedForAll(account, _bond)) revert MCV2_MultiToken__NotApproved(); // `msg.sender` is always be `_bond`
+        if(!isApprovedForAll(account, bond)) revert MCV2_MultiToken__NotApproved(); // `msg.sender` is always be `_bond`
 
         unchecked {
             totalSupply -= amount;

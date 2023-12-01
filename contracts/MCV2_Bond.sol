@@ -69,8 +69,8 @@ contract MCV2_Bond is MCV2_Royalty {
     mapping (address => MetaData) public tokenMetaData;
     address[] public tokens; // Array of all created tokens
 
-    event TokenCreated(address indexed token, string name, string symbol);
-    event MultiTokenCreated(address indexed token, string name, string symbol, string uri);
+    event TokenCreated(address indexed token, string name, string symbol, address indexed reserveToken);
+    event MultiTokenCreated(address indexed token, string name, string symbol, string uri, address indexed reserveToken);
     event Mint(address indexed token, address indexed user, uint256 amountMinted, address indexed reserveToken, uint256 reserveAmount);
     event Burn(address indexed token, address indexed user, uint256 amountBurned, address indexed reserveToken, uint256 refundAmount);
     event BondCreatorUpdated(address indexed token, address indexed creator);
@@ -198,7 +198,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
         _setBond(token, bp);
 
-        emit TokenCreated(token, tp.name, tp.symbol);
+        emit TokenCreated(token, tp.name, tp.symbol, bp.reserveToken);
 
         // Send free tokens to the creator if a free minting range exists
         if (bp.stepPrices[0] == 0) {
@@ -219,7 +219,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
         _setBond(token, bp);
 
-        emit MultiTokenCreated(token, tp.name, tp.symbol, tp.uri);
+        emit MultiTokenCreated(token, tp.name, tp.symbol, tp.uri, bp.reserveToken);
 
         // Send free tokens to the creator if a free minting range exists
         if (bp.stepPrices[0] == 0) {

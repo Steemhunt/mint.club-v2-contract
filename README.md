@@ -10,7 +10,7 @@ The inherited token creator employs a bonding curve to generate new tokens using
 - MerkleDistributor: [0x94792B59D2f1a9051Af2c27482FfB095eE4ba084](https://sepolia.etherscan.io/address/0x94792B59D2f1a9051Af2c27482FfB095eE4ba084#code)
 
 ### V1 contract wrapper:
-- MCV1_Wrapper: [0xC14d558AfFE9457E620338E7f2166Ae29E884463](https://bscscan.com/address/0xC14d558AfFE9457E620338E7f2166Ae29E884463#code)
+- MCV1_Wrapper: [0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89](https://bscscan.com/address/0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89#code)
 
 ## Design Choices 📐
 

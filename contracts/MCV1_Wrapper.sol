@@ -56,6 +56,10 @@ contract MCV1_Wrapper {
         return BOND.tokenCount();
     }
 
+    function tokens(uint256 index) external view returns(address) {
+        return BOND.tokens(index);
+    }
+
     struct BondInfo {
         // address creator; // off-chain data
         address token;

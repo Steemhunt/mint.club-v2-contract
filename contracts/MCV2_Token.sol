@@ -8,7 +8,7 @@ contract MCV2_Token is ERC20Initializable {
     error MCV2_Token__PermissionDenied();
 
     bool private _initialized; // false by default
-    address private _bond; // Bonding curve contract should have its minting permission
+    address public bond; // Bonding curve contract should have its minting permission
 
     function init(string calldata name_, string calldata symbol_) external {
         require(_initialized == false, "CONTRACT_ALREADY_INITIALIZED");
@@ -16,11 +16,11 @@ contract MCV2_Token is ERC20Initializable {
 
         _name = name_;
         _symbol = symbol_;
-        _bond = _msgSender();
+        bond = _msgSender();
     }
 
     modifier onlyBond() {
-        if (_bond != _msgSender()) revert MCV2_Token__PermissionDenied();
+        if (bond != _msgSender()) revert MCV2_Token__PermissionDenied();
         _;
     }
 
@@ -35,7 +35,7 @@ contract MCV2_Token is ERC20Initializable {
      * Users can simply send tokens to the token contract address for the same burning effect without changing the totalSupply.
      */
     function burnByBond(address account, uint256 amount) public onlyBond {
-        _spendAllowance(account, _bond, amount); // `msg.sender` is always be `_bond`
+        _spendAllowance(account, bond, amount); // `msg.sender` is always be `bond`
         _burn(account, amount);
     }
 }
