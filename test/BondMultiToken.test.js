@@ -99,7 +99,7 @@ describe('BondMultiToken', function () {
       it('should emit MultiTokenCreated event', async function () {
         await expect(this.creationTx)
           .emit(Bond, 'MultiTokenCreated')
-          .withArgs(this.token.target, BABY_TOKEN.tokenParams.name, BABY_TOKEN.tokenParams.symbol, BABY_TOKEN.tokenParams.uri);
+          .withArgs(this.token.target, BABY_TOKEN.tokenParams.name, BABY_TOKEN.tokenParams.symbol, BABY_TOKEN.tokenParams.uri, BABY_TOKEN.bondParams.reserveToken);
       });
 
       it('should return tokenCount = 1', async function () {

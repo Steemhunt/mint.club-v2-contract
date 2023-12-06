@@ -106,7 +106,7 @@ describe('Bond', function () {
       it('should emit TokenCreated event', async function () {
         await expect(this.creationTx)
           .emit(Bond, 'TokenCreated')
-          .withArgs(this.token.target, BABY_TOKEN.tokenParams.name, BABY_TOKEN.tokenParams.symbol);
+          .withArgs(this.token.target, BABY_TOKEN.tokenParams.name, BABY_TOKEN.tokenParams.symbol, BABY_TOKEN.bondParams.reserveToken);
       });
 
       it('should return tokenCount = 1', async function () {
