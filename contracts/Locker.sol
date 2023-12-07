@@ -37,7 +37,7 @@ contract Locker is ReentrancyGuard {
     function createLockUp(address token, bool isERC20, uint256 amount, uint40 unlockTime, address receiver, string calldata title) external nonReentrant {
         if (token == address(0)) revert LockUp__InvalidParams('token');
         if (amount == 0) revert LockUp__InvalidParams('amount');
-        if (unlockTime <= block.timestamp) revert LockUp__InvalidParams('unlockTime');
+        if (unlockTime <= block.number) revert LockUp__InvalidParams('unlockTime'); // Use block.number for time-based conditions
 
         // Deposit total amount of tokens to this contract
         if (isERC20) {
@@ -61,10 +61,10 @@ contract Locker is ReentrancyGuard {
         emit LockedUp(lockUps.length - 1, token, isERC20, receiver, amount, unlockTime);
     }
 
-   function unlock(uint256 lockUpId) external onlyReceiver(lockUpId) nonReentrant {
+    function unlock(uint256 lockUpId) external onlyReceiver(lockUpId) nonReentrant {
         LockUp storage lockUp = lockUps[lockUpId];
         if (lockUp.unlocked) revert LockUp__AlreadyClaimed();
-        if (lockUp.unlockTime > block.timestamp) revert LockUp__NotYetUnlocked();
+        if (lockUp.unlockTime > block.number) revert LockUp__NotYetUnlocked(); // Use block.number for time-based conditions
 
         lockUp.unlocked = true;
 
@@ -76,6 +76,7 @@ contract Locker is ReentrancyGuard {
 
         emit Unlocked(lockUpId, lockUp.token, lockUp.isERC20, lockUp.receiver, lockUp.amount);
     }
+
 
     // MARK: - Utility functions
 
