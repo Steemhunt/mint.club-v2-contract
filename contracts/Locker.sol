@@ -30,6 +30,7 @@ contract Locker is ReentrancyGuard {
     LockUp[] public lockUps;
 
     modifier onlyReceiver(uint256 lockUpId) {
+        require(lockUpId < lockUps.length, "LockUp__InvalidLockUpId"); // Check if lock-up ID is within the valid range
         if (msg.sender != lockUps[lockUpId].receiver) revert LockUp__PermissionDenied();
         _;
     }
