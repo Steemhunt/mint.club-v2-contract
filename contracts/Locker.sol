@@ -4,8 +4,9 @@ pragma solidity ^0.8.20;
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract Locker {
+contract Locker is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     error LockUp__InvalidParams(string param);
@@ -33,7 +34,7 @@ contract Locker {
         _;
     }
 
-    function createLockUp(address token, bool isERC20, uint256 amount, uint40 unlockTime, address receiver, string calldata title) external {
+    function createLockUp(address token, bool isERC20, uint256 amount, uint40 unlockTime, address receiver, string calldata title) external nonReentrant {
         if (token == address(0)) revert LockUp__InvalidParams('token');
         if (amount == 0) revert LockUp__InvalidParams('amount');
         if (unlockTime <= block.timestamp) revert LockUp__InvalidParams('unlockTime');
@@ -60,7 +61,7 @@ contract Locker {
         emit LockedUp(lockUps.length - 1, token, isERC20, receiver, amount, unlockTime);
     }
 
-    function unlock(uint256 lockUpId) external onlyReceiver(lockUpId) {
+   function unlock(uint256 lockUpId) external onlyReceiver(lockUpId) nonReentrant {
         LockUp storage lockUp = lockUps[lockUpId];
         if (lockUp.unlocked) revert LockUp__AlreadyClaimed();
         if (lockUp.unlockTime > block.timestamp) revert LockUp__NotYetUnlocked();
