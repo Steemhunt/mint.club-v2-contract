@@ -32,7 +32,7 @@ contract MCV2_Bond is MCV2_Royalty {
     error MCV2_Bond__InvalidCurrentSupply();
     error MCV2_Bond__PermissionDenied();
 
-    uint256 private constant MAX_STEPS = 1000;
+    uint256 private MAX_STEPS = 1000;
 
     /**
      *  ERC20 Token implementation contract
@@ -535,6 +535,10 @@ contract MCV2_Bond is MCV2_Royalty {
                 }
             }
         }
+    }
+
+    function setMaxSteps(uint256 maxSteps) external onlyOwner {
+        MAX_STEPS = maxSteps;
     }
 
     function version() external pure returns (string memory) {
