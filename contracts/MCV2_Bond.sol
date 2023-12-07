@@ -318,7 +318,7 @@ contract MCV2_Bond is MCV2_Royalty {
         reserveToken.safeTransferFrom(user, address(this), reserveAmount);
 
         // Update reserve & fee balances
-        bond.reserveBalance += (reserveAmount - royalty).toUint128();
+        bond.reserveBalance += reserveAmount - royalty;
         addRoyalty(bond.creator, bond.reserveToken, royalty);
 
         // Mint reward tokens to the user
@@ -376,7 +376,7 @@ contract MCV2_Bond is MCV2_Royalty {
         MCV2_ICommonToken(token).burnByBond(user, tokensToBurn);
 
         // Update reserve & fee balances
-        bond.reserveBalance -= (refundAmount + royalty).toUint128();
+        bond.reserveBalance -= refundAmount + royalty;
         addRoyalty(bond.creator, bond.reserveToken, royalty);
 
         // Transfer reserve tokens to the user
