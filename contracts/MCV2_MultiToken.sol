@@ -39,7 +39,7 @@ contract MCV2_MultiToken is ERC1155Initializable {
     /* @dev Mint tokens by bonding curve contract
      * Minting should also provide liquidity to the bonding curve contract
      */
-    function mintByBond(address to, uint256 amount) public onlyBond {
+    function mintByBond(address to, uint256 amount) external onlyBond {
         totalSupply += amount;
         _mint(to, 0, amount, "");
     }
@@ -47,7 +47,7 @@ contract MCV2_MultiToken is ERC1155Initializable {
     /* @dev Direct burn function call is disabled because it affects the bonding curve.
      * Users can simply send tokens to the token contract address for the same burning effect without changing the totalSupply.
      */
-    function burnByBond(address account, uint256 amount) public onlyBond {
+    function burnByBond(address account, uint256 amount) external onlyBond {
         if (amount > totalSupply) revert MCV2_MultiToken__BurnAmountExceedsTotalSupply();
         if(!isApprovedForAll(account, bond)) revert MCV2_MultiToken__NotApproved(); // `msg.sender` is always be `_bond`
 
