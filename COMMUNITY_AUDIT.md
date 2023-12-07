@@ -3,7 +3,7 @@ Mint Club is excited to announce a community-based security audit with a bounty 
 
 ## Instructions
 1. **Review the Code:** Clone or fork this [Mint Club V2 contract repository](https://github.com/Steemhunt/mint.club-v2-contract) and thoroughly review the code.
-2. **Submit Your Findings:** If you identify any issues or areas for improvement, create a GitHub issue or pull request (PR) with your suggested fixes and test codes. Be sure to provide a summary of any vulnerabilities or enhancements you've found.
+2. **Submit Your Findings:** If you identify any issues or areas for improvement, create a GitHub issue or pull request (PR) with your suggested fixes and test codes. Be sure to provide a summary of any vulnerabilities or enhancements you've found (Please use English only, for everyone's understanding).
 3. **Collaborate and Provide Feedback:** Engage with the community by commenting on and providing feedback to other contributors' submissions. These interactions will also contribute to your participation.
 
 All contributions submitted by **22st December 2023** will be considered for the bounty.
