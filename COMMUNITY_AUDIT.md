@@ -8,7 +8,7 @@ Mint Club is excited to announce a community-based security audit with a bounty 
 
 All contributions submitted by **22st December 2023** will be considered for the bounty.
 
-## Bounty Details :moneybag:
+## Bounty Details 💰
 The total bounty amount will be allocated based on the number of participants:
 - **1 - 15 Developers:** $10,000 USDT
 - **16 - 30 Developers:** $20,000 USDT
@@ -16,7 +16,7 @@ The total bounty amount will be allocated based on the number of participants:
 
 The bounty will be distributed on **26nd December 2023**. Distribution will be proportional to the contributions made by each participant.
 
-## Tips :woman_tipping_hand_tone2:
+## Tips 💁🏼‍♀️
 - **Expand the Bounty Pool:** Remember, the more contributors we have, the larger the total bounty pool becomes. Spread the word and invite your fellow Solidity devs to join in!
 - **Provide Your Wallet Address:** Ensure to include your Ethereum wallet address in your first PR or issue submission. This is necessary for receiving your bounty.
 
