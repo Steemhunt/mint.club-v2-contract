@@ -46,6 +46,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
     struct Bond {
         address creator;
+        address pendingCreator;
         uint16 royalty; // immutable - range: [0, 5000] - 0.00% ~ 50.00%
         uint40 createdAt; // immutable
         address reserveToken; // immutable
@@ -73,6 +74,7 @@ contract MCV2_Bond is MCV2_Royalty {
     event MultiTokenCreated(address indexed token, string name, string symbol, string uri, address indexed reserveToken);
     event Mint(address indexed token, address indexed user, uint256 amountMinted, address indexed reserveToken, uint256 reserveAmount);
     event Burn(address indexed token, address indexed user, uint256 amountBurned, address indexed reserveToken, uint256 refundAmount);
+    event BondCreatorTransferStarted(address indexed token, address indexed originalCreator, address indexed newCreator);
     event BondCreatorUpdated(address indexed token, address indexed creator);
     event TokenMetaDataUpdated(address indexed token, string logo, string website);
 
@@ -232,12 +234,22 @@ contract MCV2_Bond is MCV2_Royalty {
     // MARK: - Creator only functions
 
     // Creator receives the royalty.
-    // Transferring the creator to the null address means no one can claim the royalty; this means it will be permanently locked in the bond contract.
-    function updateBondCreator(address token, address creator) external {
+    // Start transferring the creator to the null address means no one can claim the royalty; this means it will be permanently locked in the bond contract.
+    function transferBondCreator(address token, address creator) external {
         Bond storage bond = tokenBond[token];
         if (bond.creator != _msgSender()) revert MCV2_Bond__PermissionDenied(); // This will also check the existence of the bond
 
+        bond.pendingCreator = creator;
+
+        emit BondCreatorTransferStarted(token, bond.creator, creator);
+    }
+
+    function acceptBondCreator(address token) external {
+        Bond storage bond = tokenBond[token];
+        if (bond.pendingCreator != _msgSender()) revert MCV2_Bond__PermissionDenied();
+
         bond.creator = creator;
+        bond.pendingCreator = address(0);
 
         emit BondCreatorUpdated(token, creator);
     }
