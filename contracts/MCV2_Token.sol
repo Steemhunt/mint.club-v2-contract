@@ -27,14 +27,14 @@ contract MCV2_Token is ERC20Initializable {
     /* @dev Mint tokens by bonding curve contract
      * Minting should also provide liquidity to the bonding curve contract
      */
-    function mintByBond(address to, uint256 amount) public onlyBond {
+    function mintByBond(address to, uint256 amount) external onlyBond {
         _mint(to, amount);
     }
 
     /* @dev Direct burn function call is disabled because it affects the bonding curve.
      * Users can simply send tokens to the token contract address for the same burning effect without changing the totalSupply.
      */
-    function burnByBond(address account, uint256 amount) public onlyBond {
+    function burnByBond(address account, uint256 amount) external onlyBond {
         _spendAllowance(account, bond, amount); // `msg.sender` is always be `bond`
         _burn(account, amount);
     }
