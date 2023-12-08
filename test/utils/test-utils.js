@@ -6,8 +6,23 @@ exports.ZERO_BYTES32 = '0x000000000000000000000000000000000000000000000000000000
 
 exports.PROTOCOL_BENEFICIARY = '0x00000B655d573662B9921e14eDA96DBC9311fDe6'; // a random address for testing
 exports.MAX_ROYALTY_RANGE = 5000n; // 50%
-exports.MAX_STEPS = 1000;
 const PROTOCOL_CUT = 2000n; // 20% of the royalty
+
+exports.getMaxSteps = function(network) {
+  // 1,000 steps reqruies about 15M gas
+  const MAX_STEPS = {
+    ethereum: 1000, // 30M max
+    base: 1000,  // 30M max
+    sepolia: 1000, // 30M max
+
+    // TODO: add more networks
+  };
+  if (!MAX_STEPS[network]) {
+    throw new Error(`MAX_STEPS is not defined for ${network}`);
+  }
+
+  return MAX_STEPS[network];
+};
 
 exports.wei = function(num, decimals = 18) {
   return BigInt(num) * 10n**BigInt(decimals);

@@ -1,5 +1,6 @@
 require('dotenv').config();
 const hre = require('hardhat');
+const { getMaxSteps } = require('./utils/test-utils');
 
 const PROTOCOL_BENEFIARY = process.env.PROTOCOL_BENEFIARY;
 
@@ -12,8 +13,9 @@ async function main() {
   const tokenImplementation = '0x37F540de37afE8bDf6C722d87CB019F30e5E406a'; // base
   const NFTImplementation = '0xbba7de9897F8bB07D5070994efE44B8c203a02A8'; // base
 
+  const MAX_STEPS = getMaxSteps(hre.network.name);
   const bond = await hre.ethers.deployContract('MCV2_Bond', [
-    tokenImplementation, NFTImplementation, PROTOCOL_BENEFIARY
+    tokenImplementation, NFTImplementation, PROTOCOL_BENEFIARY, MAX_STEPS[hre.network.name]
   ]);
   await bond.waitForDeployment();
   console.log(` -> MCV2_Bond contract deployed at ${bond.target}`);

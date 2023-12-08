@@ -32,15 +32,15 @@ contract MCV2_Bond is MCV2_Royalty {
     error MCV2_Bond__InvalidCurrentSupply();
     error MCV2_Bond__PermissionDenied();
 
-    uint256 private constant MAX_STEPS = 1000;
+    uint256 private immutable MAX_STEPS;
 
     /**
      *  ERC20 Token implementation contract
      *  We use "EIP-1167: Minimal Proxy Contract" in order to save gas cost for each token deployment
      *  REF: https://github.com/optionality/clone-factory
      */
-    address private immutable tokenImplementation;
-    address private immutable multiTokenImplementation;
+    address private immutable TOKEN_IMPLEMENTATION;
+    address private immutable MULTI_TOKEN_IMPLEMENTATION;
 
     struct Bond {
         address creator;
@@ -77,12 +77,14 @@ contract MCV2_Bond is MCV2_Royalty {
     // MARK: - Constructor
 
     constructor(
-        address tokenImplementation_,
-        address multiTokenImplementation_,
-        address protocolBeneficiary_
+        address tokenImplementation,
+        address multiTokenImplementation,
+        address protocolBeneficiary_,
+        uint256 maxSteps
     ) MCV2_Royalty(protocolBeneficiary_, msg.sender) {
-        tokenImplementation = tokenImplementation_;
-        multiTokenImplementation = multiTokenImplementation_;
+        TOKEN_IMPLEMENTATION = tokenImplementation;
+        MULTI_TOKEN_IMPLEMENTATION = multiTokenImplementation;
+        MAX_STEPS = maxSteps;
     }
 
     modifier _checkBondExists(address token) {
@@ -189,7 +191,7 @@ contract MCV2_Bond is MCV2_Royalty {
         _validateTokenParams(tp);
         _validateBondParams(bp);
 
-        address token = _clone(tokenImplementation, tp.symbol);
+        address token = _clone(TOKEN_IMPLEMENTATION, tp.symbol);
         MCV2_Token newToken = MCV2_Token(token);
         newToken.init(tp.name, tp.symbol);
         tokens.push(token);
@@ -210,7 +212,7 @@ contract MCV2_Bond is MCV2_Royalty {
         _validateMultiTokenParams(tp);
         _validateBondParams(bp);
 
-        address token = _clone(multiTokenImplementation, tp.symbol);
+        address token = _clone(MULTI_TOKEN_IMPLEMENTATION, tp.symbol);
         MCV2_MultiToken newToken = MCV2_MultiToken(token);
         newToken.init(tp.name, tp.symbol, tp.uri);
         tokens.push(token);

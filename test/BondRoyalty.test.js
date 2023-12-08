@@ -5,8 +5,10 @@ const {
   wei,
   calculateMint,
   calculateBurn,
+  getMaxSteps,
 } = require('./utils/test-utils');
 
+const MAX_STEPS = getMaxSteps('ethereum');
 
 const BABY_TOKEN = {
   tokenParams: { name: 'Baby Token', symbol: 'BABY' },
@@ -30,7 +32,7 @@ describe('Royalty', function () {
     const NFTImplementation = await ethers.deployContract('MCV2_MultiToken');
     await NFTImplementation.waitForDeployment();
 
-    const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, NFTImplementation.target, beneficiary.address]);
+    const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, NFTImplementation.target, beneficiary.address, MAX_STEPS]);
     await Bond.waitForDeployment();
 
     const BaseToken = await ethers.deployContract('TestToken', [wei(200000000), 'Test Token', 'TEST', 9n]); // supply: 200M
