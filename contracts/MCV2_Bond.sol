@@ -462,12 +462,12 @@ contract MCV2_Bond is MCV2_Royalty {
         Bond storage bond = tokenBond[token];
         address user = _msgSender();
 
-        // Burn tokens from the user
-        MCV2_ICommonToken(token).burnByBond(user, tokensToBurn);
-
         // Update reserve & fee balances
         bond.reserveBalance -= refundAmount + royalty;
         addRoyalty(bond.creator, bond.reserveToken, royalty);
+
+        // Burn tokens from the user
+        MCV2_ICommonToken(token).burnByBond(user, tokensToBurn);
 
         // Transfer reserve tokens to the user
         IERC20 reserveToken = IERC20(bond.reserveToken);
