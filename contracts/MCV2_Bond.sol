@@ -270,9 +270,9 @@ contract MCV2_Bond is MCV2_Royalty {
     {
         if (tokensToMint == 0) revert MCV2_Bond__InvalidTokenAmount();
 
-        Bond storage bond = tokenBond[token];
+        Bond memory bond = tokenBond[token];
         // Create an array and variable to mention that this can be modified.
-        BondStep[] storage steps = bond.steps;
+        BondStep[] memory steps = bond.steps;
 
         MCV2_ICommonToken t = MCV2_ICommonToken(token);
         uint256 currentSupply = t.totalSupply();
@@ -334,9 +334,9 @@ contract MCV2_Bond is MCV2_Royalty {
     {
         if (tokensToBurn == 0) revert MCV2_Bond__InvalidTokenAmount();
 
-        Bond storage bond = tokenBond[token];
+        Bond memory bond = tokenBond[token];
         // Store bond.steps in memory to minimize sloads
-        BondStep[] storage steps = bond.steps;
+        BondStep[] memory steps = bond.steps;
 
         MCV2_ICommonToken t = MCV2_ICommonToken(token);
         uint256 currentSupply = t.totalSupply();

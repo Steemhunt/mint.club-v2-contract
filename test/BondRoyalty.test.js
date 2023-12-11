@@ -147,7 +147,7 @@ describe('Royalty', function () {
     }); // Burn royalty
   }); // Mint royalty
 
-  describe.only('Give up royalty', function () {
+  describe('Give up royalty', function () {
     beforeEach(async function () {
       const tokensToMint = wei(500);
       this.buyTest = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty);
