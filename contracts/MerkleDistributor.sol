@@ -73,6 +73,9 @@ contract MerkleDistributor {
      * @param merkleRoot The Merkle root of the distribution (optional).
      * @param title The title of the distribution (optional).
      * @param ipfsCID The IPFS CID of the distribution (optional).
+     *
+     * @notice If the Merkle root is not provided, there will be no verification on claims,
+     * anyone can claim all tokens with multiple accounts.
      */
     function createDistribution(
         address token,
