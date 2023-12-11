@@ -26,6 +26,7 @@ abstract contract MCV2_Royalty is Ownable {
     mapping(address => mapping(address => uint256)) public userTokenRoyaltyBalance;
     mapping(address => mapping(address => uint256)) public userTokenRoyaltyClaimed; // INFO
 
+    event ProtocolBeneficiaryUpdated(address protocolBeneficiary);
     event RoyaltyClaimed(address indexed user, address reserveToken, uint256 amount);
 
     /**
@@ -43,6 +44,8 @@ abstract contract MCV2_Royalty is Ownable {
      */
     function updateProtocolBeneficiary(address protocolBeneficiary_) public onlyOwner {
         protocolBeneficiary = protocolBeneficiary_;
+
+        emit ProtocolBeneficiaryUpdated(protocolBeneficiary_);
     }
 
     // MARK: - Internal utility functions
