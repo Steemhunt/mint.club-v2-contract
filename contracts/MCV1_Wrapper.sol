@@ -50,22 +50,6 @@ contract MCV1_Wrapper {
     }
 
     /**
-     * @dev Mint tokens by providing the token address, the number of tokens to mint, and the maximum reserve amount allowed.
-     * @param token The address of the token.
-     * @param tokensToMint The number of tokens to mint.
-     * @param maxReserveAmount The maximum reserve amount allowed.
-     */
-    // TODO: WIP
-    // function mint(address token, uint256 tokensToMint, uint256 maxReserveAmount) external {
-    //     (uint256 reserveAmount, uint256 royalty) = getReserveForToken(token, tokensToMint);
-    //     uint256 reserveRequired = reserveAmount + royalty;
-
-    //     if (maxReserveAmount < reserveRequired) revert MCV1_Wrapper__SlippageLimitExceeded();
-
-    //     BOND.buy(token, reserveRequired, tokensToMint, BENEFICIARY);
-    // }
-
-    /**
      * @dev Get the refund amount and royalty for a given token and the number of tokens to burn.
      * @param token The address of the token.
      * @param tokensToBurn The number of tokens to burn.
@@ -76,17 +60,6 @@ contract MCV1_Wrapper {
         returns (uint256 refundAmount, uint256 royalty) {
         (refundAmount, royalty) = BOND.getBurnRefund(token, tokensToBurn);
     }
-
-    /**
-     * @dev Burn tokens by providing the token address, the number of tokens to burn, and the minimum refund amount required.
-     * @param token The address of the token.
-     * @param tokensToBurn The number of tokens to burn.
-     * @param minRefund The minimum refund amount required.
-     */
-    // TODO: WIP
-    // function burn(address token, uint256 tokensToBurn, uint256 minRefund) external {
-    //     BOND.sell(token, tokensToBurn, minRefund, BENEFICIARY);
-    // }
 
     // MARK: - Utility functions
 
