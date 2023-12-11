@@ -16,6 +16,7 @@ abstract contract MCV2_Royalty is Ownable {
     uint256 private constant PROTOCOL_CUT = 2000;
     uint256 internal constant MAX_ROYALTY_RANGE = 5000; // The max is set at 50% to offer flexibility in tokenomics
 
+    address public constant BURN_ADDRESS = address(0x000000000000000000000000000000000000dEaD);
     address public protocolBeneficiary;
 
     // User => ReserveToken => Royalty Balance
@@ -58,6 +59,21 @@ abstract contract MCV2_Royalty is Ownable {
         IERC20(reserveToken).safeTransfer(msgSender, amount);
 
         emit RoyaltyClaimed(msgSender, reserveToken, amount);
+    }
+
+    // @notice: If a creator transfers the ownership to the BURN_ADDRESS, that means the creator
+    // wants to give up the royalties and burn their profit share. Instead of keeping them in the bond contract permanently,
+    // let anyone call this function to burn the royalties and send them to the BURN_ADDRESS.
+    function burnRoyalties(address reserveToken) external {
+        uint256 amount = userTokenRoyaltyBalance[BURN_ADDRESS][reserveToken];
+        if (amount == 0) revert MCV2_Royalty__NothingToClaim();
+
+        userTokenRoyaltyBalance[BURN_ADDRESS][reserveToken] = 0;
+        userTokenRoyaltyClaimed[BURN_ADDRESS][reserveToken] += amount; // INFO
+
+        IERC20(reserveToken).safeTransfer(BURN_ADDRESS, amount);
+
+        emit RoyaltyClaimed(BURN_ADDRESS, reserveToken, amount);
     }
 
     // MARK: - Utility view functions

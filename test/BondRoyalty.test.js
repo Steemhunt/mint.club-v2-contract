@@ -2,6 +2,7 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { expect } = require('chai');
 const {
   MAX_INT_256,
+  DEAD_ADDRESS,
   wei,
   calculateMint,
   calculateBurn,
@@ -23,7 +24,7 @@ const BABY_TOKEN = {
 
 describe('Royalty', function () {
   let Bond, BaseToken;
-  let owner, alice, bob, beneficiary;
+  let owner, alice, bob, carol, beneficiary;
 
   async function deployFixtures() {
     const TokenImplementation = await ethers.deployContract('MCV2_Token');
@@ -42,7 +43,7 @@ describe('Royalty', function () {
   }
 
   beforeEach(async function () {
-    [owner, alice, bob, beneficiary] = await ethers.getSigners();
+    [owner, alice, bob, carol, beneficiary] = await ethers.getSigners();
     [Bond, BaseToken] = await loadFixture(deployFixtures);
     BABY_TOKEN.bondParams.reserveToken = BaseToken.target; // set BaseToken address
 
@@ -145,4 +146,34 @@ describe('Royalty', function () {
       }); // Claim
     }); // Burn royalty
   }); // Mint royalty
+
+  describe.only('Give up royalty', function () {
+    beforeEach(async function () {
+      const tokensToMint = wei(500);
+      this.buyTest = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty);
+      // { royalty: 100, creatorCut: 80, protocolCut: 20, reserveToBond: 1000, reserveRequired: 1100 }
+
+      await BaseToken.transfer(bob.address, this.buyTest.reserveRequired);
+      await BaseToken.connect(bob).approve(Bond.target, MAX_INT_256);
+
+      await Bond.connect(alice).updateBondCreator(this.token.target, DEAD_ADDRESS);
+      await Bond.connect(bob).mint(this.token.target, tokensToMint, MAX_INT_256);
+    });
+
+    it('should add the creator royalty to dead address', async function () {
+      const royalties = await Bond.getRoyaltyInfo(DEAD_ADDRESS, BaseToken.target);
+      expect(royalties[0]).to.equal(this.buyTest.creatorCut);
+      expect(royalties[1]).to.equal(0n); // nothing cliamed yet
+    });
+
+    it('should allow anyone to transfer the creator royalty to dead address', async function () {
+      const royaltyToClaim = this.buyTest.creatorCut;
+      await Bond.connect(carol).burnRoyalties(BaseToken.target);
+
+      const royalties = await Bond.getRoyaltyInfo(DEAD_ADDRESS, BaseToken.target);
+      expect(royalties[0]).to.equal(0n);
+      expect(royalties[1]).to.equal(royaltyToClaim);
+      expect(await BaseToken.balanceOf(DEAD_ADDRESS)).to.equal(royaltyToClaim);
+    });
+  }); // Give up royalty
 }); // Royalty
