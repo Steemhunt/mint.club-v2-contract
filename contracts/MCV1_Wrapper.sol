@@ -71,7 +71,7 @@ contract MCV1_Wrapper {
      * @return refundAmount The refund amount for burning the tokens.
      * @return royalty The royalty amount for burning the tokens.
      */
-    function getRefundForTokens(address token, uint256 tokensToBurn) public view _checkBondExists(token)
+    function getRefundForTokens(address token, uint256 tokensToBurn) external view _checkBondExists(token)
         returns (uint256 refundAmount, uint256 royalty) {
         (refundAmount, royalty) = BOND.getBurnRefund(token, tokensToBurn);
     }
