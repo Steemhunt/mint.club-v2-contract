@@ -29,7 +29,6 @@ contract MCV2_Bond is MCV2_Royalty {
     error MCV2_Bond__SlippageLimitExceeded();
     error MCV2_Bond__InvalidTokenAmount();
     error MCV2_Bond__ExceedTotalSupply();
-    error MCV2_Bond__InvalidRefundAmount();
     error MCV2_Bond__InvalidCurrentSupply();
     error MCV2_Bond__PermissionDenied();
     error MCV2_Bond__InvalidCreatorAddress();

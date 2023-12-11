@@ -14,7 +14,6 @@ abstract contract MCV2_Royalty is Ownable {
     using SafeERC20 for IERC20;
 
     error MCV2_Royalty__NothingToClaim();
-    error MCV2_Royalty__TokenTransferFailed();
 
     uint256 private constant RATIO_BASE = 10000; // 100.00%
     uint256 private constant PROTOCOL_CUT = 2000;

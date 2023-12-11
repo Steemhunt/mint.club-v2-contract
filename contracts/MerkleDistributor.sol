@@ -23,7 +23,6 @@ contract MerkleDistributor {
     error MerkleDistributor__AlreadyClaimed();
     error MerkleDistributor__InvalidProof();
     error MerkleDistributor__InvalidParams(string param);
-    error MerkleDistributor__NoRefundDuringClaim();
     error MerkleDistributor__NothingToRefund();
 
     // Events
