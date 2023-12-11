@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-pragma solidity ^0.8.20;
+pragma solidity =0.8.20;
 
 import {IMintClubBond} from "./lib/IMintClubBond.sol";
 import {MCV2_ICommonToken} from "./lib/MCV2_ICommonToken.sol";
