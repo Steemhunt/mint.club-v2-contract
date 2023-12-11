@@ -31,6 +31,7 @@ contract MCV2_Bond is MCV2_Royalty {
     error MCV2_Bond__InvalidRefundAmount();
     error MCV2_Bond__InvalidCurrentSupply();
     error MCV2_Bond__PermissionDenied();
+    error MCV2_Bond__InvalidCreatorAddress();
 
     uint256 private immutable MAX_STEPS;
 
@@ -232,11 +233,13 @@ contract MCV2_Bond is MCV2_Royalty {
     // MARK: - Creator only functions
 
     // Creator receives the royalty.
-    // Transferring the creator to the null address means no one can claim the royalty; this means it will be permanently locked in the bond contract.
+    // Transferring the creator to the DEAD address means no one can claim the royalty; this means it will be permanently locked in the bond contract.
     function updateBondCreator(address token, address creator) external {
         Bond storage bond = tokenBond[token];
         if (bond.creator != _msgSender()) revert MCV2_Bond__PermissionDenied(); // This will also check the existence of the bond
 
+        // null address is not allowed, use dEaD address instead
+        if (creator == address(0)) revert MCV2_Bond__InvalidCreatorAddress();
         bond.creator = creator;
 
         emit BondCreatorUpdated(token, creator);
