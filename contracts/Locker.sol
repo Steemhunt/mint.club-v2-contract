@@ -5,9 +5,16 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
+/**
+ * @title Locker
+ * @dev A contract for locking up ERC20 and ERC1155 tokens for a specified period of time.
+ */
 contract Locker {
     using SafeERC20 for IERC20;
 
+    /**
+     * @dev Error messages.
+     */
     error LockUp__InvalidParams(string param);
     error LockUp__PermissionDenied();
     error LockUp__AlreadyClaimed();
@@ -16,14 +23,15 @@ contract Locker {
     event LockedUp(uint256 indexed lockUpId, address indexed token, bool isERC20, address indexed receiver, uint256 amount, uint40 unlockTime);
     event Unlocked(uint256 indexed lockUpId, address indexed token, bool isERC20, address indexed receiver, uint256 amount);
 
-    struct LockUp { // 3 slots
-        address token; // 160 bits
+
+    struct LockUp {
+        address token;
         bool isERC20;
-        uint40 unlockTime; // supports up to year 36,825
+        uint40 unlockTime;
         bool unlocked; // 160 + 8 + 40 + 8 = 216 bits
         uint256 amount;
         address receiver;
-        string title; // optional
+        string title;
     }
 
     LockUp[] public lockUps;
@@ -33,7 +41,17 @@ contract Locker {
         _;
     }
 
+    /**
+     * @dev Creates a new lock-up.
+     * @param token The address of the token being locked up.
+     * @param isERC20 A boolean indicating whether the token is an ERC20 token.
+     * @param amount The amount of tokens being locked up.
+     * @param unlockTime The timestamp when the tokens can be unlocked.
+     * @param receiver The address of the receiver of the locked tokens.
+     * @param title The optional title of the lock-up.
+     */
     function createLockUp(address token, bool isERC20, uint256 amount, uint40 unlockTime, address receiver, string calldata title) external {
+        // Parameter validations
         if (token == address(0)) revert LockUp__InvalidParams('token');
         if (amount == 0) revert LockUp__InvalidParams('amount');
         if (unlockTime <= block.timestamp) revert LockUp__InvalidParams('unlockTime');
@@ -61,6 +79,10 @@ contract Locker {
         emit LockedUp(lockUps.length - 1, token, isERC20, receiver, amount, unlockTime);
     }
 
+    /**
+     * @dev Unlocks the tokens of a lock-up.
+     * @param lockUpId The ID of the lock-up.
+     */
     function unlock(uint256 lockUpId) external onlyReceiver(lockUpId) {
         LockUp storage lockUp = lockUps[lockUpId];
         if (lockUp.unlocked) revert LockUp__AlreadyClaimed();
@@ -79,11 +101,21 @@ contract Locker {
 
     // MARK: - Utility functions
 
+    /**
+     * @dev Returns the length of lockUps array.
+     * @return The number of lock-ups.
+     */
     function lockUpCount() external view returns (uint256) {
         return lockUps.length;
     }
 
-    // Get lockupIds by token address in the range where start <= id < stop
+    /**
+     * @dev Returns an array of lock-up IDs for a given token address within a specified range.
+     * @param token The address of the token.
+     * @param start The starting index of the range.
+     * @param stop The ending index of the range.
+     * @return ids An array of lock-up IDs.
+     */
     function getLockUpIdsByToken(address token, uint256 start, uint256 stop) external view returns (uint256[] memory ids) {
         unchecked {
             uint256 lockUpsLength = lockUps.length;
@@ -107,7 +139,13 @@ contract Locker {
         }
     }
 
-    // Get lockupIds by token address in the range where start <= id < stop
+    /**
+     * @dev Returns an array of lock-up IDs for a given receiver address within a specified range.
+     * @param receiver The address of the receiver.
+     * @param start The starting index of the range.
+     * @param stop The ending index of the range.
+     * @return ids An array of lock-up IDs.
+     */
     function getLockUpIdsByReceiver(address receiver, uint256 start, uint256 stop) external view returns (uint256[] memory ids) {
         unchecked {
             uint256 lockUpsLength = lockUps.length;

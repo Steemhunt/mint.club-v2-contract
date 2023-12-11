@@ -6,22 +6,39 @@ import {IMintClubBond} from "./lib/IMintClubBond.sol";
 import {MCV2_ICommonToken} from "./lib/MCV2_ICommonToken.sol";
 
 /**
-* @title A wrapper contract for the MintClub V1 Bond contract to provide a common interface for V2 front-end.
-*/
-
+ * @title A wrapper contract for the MintClub V1 Bond contract to provide a common interface for V2 front-end.
+ */
 contract MCV1_Wrapper {
+    /**
+     * @dev Error thrown when the token is not found in the MintClub V1 Bond contract.
+     */
     error MCV1_Wrapper__TokenNotFound();
+
+    /**
+     * @dev Error thrown when the slippage limit is exceeded during the minting process.
+     */
     error MCV1_Wrapper__SlippageLimitExceeded();
 
     address private constant BENEFICIARY = address(0x82CA6d313BffE56E9096b16633dfD414148D66b1);
     IMintClubBond public constant BOND = IMintClubBond(0x8BBac0C7583Cc146244a18863E708bFFbbF19975);
     address public constant MINT_CONTRACT = address(0x1f3Af095CDa17d63cad238358837321e95FC5915);
 
+    /**
+     * @dev Modifier to check if the bond exists for a given token.
+     * @param token The address of the token.
+     */
     modifier _checkBondExists(address token) {
         if(BOND.maxSupply(token) <= 0) revert MCV1_Wrapper__TokenNotFound();
         _;
     }
 
+    /**
+     * @dev Get the reserve amount and royalty for a given token and the number of tokens to mint.
+     * @param token The address of the token.
+     * @param tokensToMint The number of tokens to mint.
+     * @return reserveAmount The reserve amount required for minting the tokens.
+     * @return royalty The royalty amount for minting the tokens.
+     */
     function getReserveForToken(address token, uint256 tokensToMint) public view _checkBondExists(token)
         returns (uint256 reserveAmount, uint256 royalty) {
 
@@ -32,6 +49,12 @@ contract MCV1_Wrapper {
         royalty = reserveAmount * 3 / 1000; // Buy tax of V1 is 0.3%
     }
 
+    /**
+     * @dev Mint tokens by providing the token address, the number of tokens to mint, and the maximum reserve amount allowed.
+     * @param token The address of the token.
+     * @param tokensToMint The number of tokens to mint.
+     * @param maxReserveAmount The maximum reserve amount allowed.
+     */
     function mint(address token, uint256 tokensToMint, uint256 maxReserveAmount) external {
         (uint256 reserveAmount, uint256 royalty) = getReserveForToken(token, tokensToMint);
         uint256 reserveRequired = reserveAmount + royalty;
@@ -41,21 +64,43 @@ contract MCV1_Wrapper {
         BOND.buy(token, reserveRequired, tokensToMint, BENEFICIARY);
     }
 
+    /**
+     * @dev Get the refund amount and royalty for a given token and the number of tokens to burn.
+     * @param token The address of the token.
+     * @param tokensToBurn The number of tokens to burn.
+     * @return refundAmount The refund amount for burning the tokens.
+     * @return royalty The royalty amount for burning the tokens.
+     */
     function getRefundForTokens(address token, uint256 tokensToBurn) public view _checkBondExists(token)
         returns (uint256 refundAmount, uint256 royalty) {
         (refundAmount, royalty) = BOND.getBurnRefund(token, tokensToBurn);
     }
 
+    /**
+     * @dev Burn tokens by providing the token address, the number of tokens to burn, and the minimum refund amount required.
+     * @param token The address of the token.
+     * @param tokensToBurn The number of tokens to burn.
+     * @param minRefund The minimum refund amount required.
+     */
     function burn(address token, uint256 tokensToBurn, uint256 minRefund) external {
         BOND.sell(token, tokensToBurn, minRefund, BENEFICIARY);
     }
 
     // MARK: - Utility functions
 
+    /**
+     * @dev Get the total number of tokens in the MintClub V1 Bond contract.
+     * @return The total number of tokens.
+     */
     function tokenCount() external view returns(uint256) {
         return BOND.tokenCount();
     }
 
+    /**
+     * @dev Get the token address at the specified index in the MintClub V1 Bond contract.
+     * @param index The index of the token.
+     * @return The address of the token.
+     */
     function tokens(uint256 index) external view returns(address) {
         return BOND.tokens(index);
     }
@@ -78,12 +123,15 @@ contract MCV1_Wrapper {
         // string reserveName; // Always "Mint.club"
         uint256 reserveBalance;
     }
+
+    /**
+     * @dev Get the bond information for a given token.
+     * @param token The address of the token.
+     * @return info The bond information.
+     */
     function _getBondInfo(address token) private view returns(BondInfo memory info) {
         MCV2_ICommonToken t = MCV2_ICommonToken(token);
         uint256 totalSupply = t.totalSupply();
-        // Bond memory bond = tokenBond[token];
-        // MetaData memory metaData = tokenMetaData[token];
-        // IERC20Metadata r = IERC20Metadata(bond.reserveToken);
 
         info = BondInfo({
             token: token,
@@ -96,7 +144,12 @@ contract MCV1_Wrapper {
         });
     }
 
-    // Get all tokens and their bond parameters in the range where start <= id < stop
+    /**
+     * @dev Get the list of bond information for tokens in the specified range.
+     * @param start The start index of the tokens.
+     * @param stop The stop index of the tokens.
+     * @return info The list of bond information.
+     */
     function getList(uint256 start, uint256 stop) external view returns(BondInfo[] memory info) {
         unchecked {
             uint256 tokensLength = BOND.tokenCount();
@@ -115,12 +168,16 @@ contract MCV1_Wrapper {
     }
 
     struct BondDetail {
-        // uint16 royalty; // V1 has different buy and sell royalties
         uint16 buyRoyalty;
         uint16 sellRoyalty;
         BondInfo info;
-        // BondStep[] steps;
     }
+
+    /**
+     * @dev Get the bond detail for a given token.
+     * @param token The address of the token.
+     * @return detail The bond detail.
+     */
     function getDetail(address token) external view returns(BondDetail memory detail) {
         detail = BondDetail({
             buyRoyalty: 30, // 0.3%

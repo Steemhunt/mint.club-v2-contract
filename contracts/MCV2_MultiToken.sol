@@ -5,6 +5,10 @@ pragma solidity ^0.8.20;
 import {ERC1155Initializable} from "./lib/ERC1155Initializable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
+/**
+ * @title MCV2_MultiToken
+ * @dev A multi-token contract that implements the ERC1155 standard.
+ */
 contract MCV2_MultiToken is ERC1155Initializable {
     error MCV2_MultiToken__PermissionDenied();
     error MCV2_MultiToken__BurnAmountExceedsTotalSupply();
@@ -20,6 +24,12 @@ contract MCV2_MultiToken is ERC1155Initializable {
     bool private _initialized; // false by default
     address public bond; // Bonding curve contract should have its minting permission
 
+    /**
+     * @dev Initializes the contract with the provided name, symbol, and URI.
+     * @param name_ The name of the multi-token contract.
+     * @param symbol_ The symbol of the multi-token contract.
+     * @param uri_ The base URI for token metadata.
+     */
     function init(string calldata name_, string calldata symbol_, string calldata uri_) external {
         require(_initialized == false, "CONTRACT_ALREADY_INITIALIZED");
         _initialized = true;
@@ -36,16 +46,22 @@ contract MCV2_MultiToken is ERC1155Initializable {
         _;
     }
 
-    /* @dev Mint tokens by bonding curve contract
-     * Minting should also provide liquidity to the bonding curve contract
+    /**
+     * @dev Mints tokens by the bonding curve contract.
+     * Minting should also provide liquidity to the bonding curve contract.
+     * @param to The address to which the tokens will be minted.
+     * @param amount The amount of tokens to mint.
      */
     function mintByBond(address to, uint256 amount) external onlyBond {
         totalSupply += amount;
         _mint(to, 0, amount, "");
     }
 
-    /* @dev Direct burn function call is disabled because it affects the bonding curve.
+    /**
+     * @dev Burns tokens by the bonding curve contract.
      * Users can simply send tokens to the token contract address for the same burning effect without changing the totalSupply.
+     * @param account The address from which the tokens will be burned.
+     * @param amount The amount of tokens to burn.
      */
     function burnByBond(address account, uint256 amount) external onlyBond {
         if (amount > totalSupply) revert MCV2_MultiToken__BurnAmountExceedsTotalSupply();
@@ -58,8 +74,10 @@ contract MCV2_MultiToken is ERC1155Initializable {
         _burn(account, 0, amount);
     }
 
-    // MARK: - Metadata for OpenSea compatibility
-    // Ref: https://docs.opensea.io/docs/contract-level-metadata
+    /**
+     * @dev Returns the contract URI for OpenSea compatibility.
+     * @return The contract URI.
+     */
     function contractURI() external view returns (string memory) {
         return string(abi.encodePacked("https://mint.club/metadata/", Strings.toString(block.chainid), "/", symbol, ".json"));
     }

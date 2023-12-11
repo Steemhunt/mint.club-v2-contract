@@ -6,9 +6,14 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
+/**
+ * @title MerkleDistributor
+ * @dev A contract for distributing tokens to multiple addresses using a Merkle tree.
+ */
 contract MerkleDistributor {
     using SafeERC20 for IERC20;
 
+    // Error messages
     error MerkleDistributor__PermissionDenied();
     error MerkleDistributor__NotStarted();
     error MerkleDistributor__Finished();
@@ -21,10 +26,12 @@ contract MerkleDistributor {
     error MerkleDistributor__NoRefundDuringClaim();
     error MerkleDistributor__NothingToRefund();
 
+    // Events
     event Created(uint256 indexed distributionId, address indexed token, bool isERC20, uint40 startTime);
     event Refunded(uint256 indexed distributionId, uint256 amount);
     event Claimed(uint256 indexed distributionId, address account);
 
+    // Struct to store distribution details
     struct Distribution {
         address token;
         bool isERC20;
@@ -47,11 +54,27 @@ contract MerkleDistributor {
 
     Distribution[] public distributions;
 
+    /**
+     * @dev Modifier to check if the caller is the owner of the distribution.
+     * @param distributionId The ID of the distribution.
+     */
     modifier onlyOwner(uint256 distributionId) {
         if (msg.sender != distributions[distributionId].owner) revert MerkleDistributor__PermissionDenied();
         _;
     }
 
+    /**
+     * @dev Creates a new token distribution.
+     * @param token The address of the token to be distributed.
+     * @param isERC20 Flag indicating if the token is an ERC20 token.
+     * @param amountPerClaim The amount of tokens to be distributed per claim.
+     * @param walletCount The number of wallets to distribute tokens to.
+     * @param startTime The start time of the distribution.
+     * @param endTime The end time of the distribution.
+     * @param merkleRoot The Merkle root of the distribution (optional).
+     * @param title The title of the distribution (optional).
+     * @param ipfsCID The IPFS CID of the distribution (optional).
+     */
     function createDistribution(
         address token,
         bool isERC20,
@@ -59,9 +82,9 @@ contract MerkleDistributor {
         uint24 walletCount,
         uint40 startTime,
         uint40 endTime,
-        bytes32 merkleRoot, // optional
-        string calldata title, // optional
-        string calldata ipfsCID // optional
+        bytes32 merkleRoot,
+        string calldata title,
+        string calldata ipfsCID
     ) external {
         if (token == address(0)) revert MerkleDistributor__InvalidParams('token');
         if (amountPerClaim == 0) revert MerkleDistributor__InvalidParams('amountPerClaim');
@@ -98,6 +121,11 @@ contract MerkleDistributor {
         emit Created(distributions.length - 1, token, isERC20, startTime);
     }
 
+    /**
+     * @dev Allows a user to claim tokens from a specific distribution using a merkle proof.
+     * @param distributionId The ID of the distribution.
+     * @param merkleProof The merkle proof for the user's claim.
+     */
     function claim(uint256 distributionId, bytes32[] calldata merkleProof) external {
         Distribution storage distribution = distributions[distributionId];
 
@@ -128,7 +156,11 @@ contract MerkleDistributor {
         emit Claimed(distributionId, msg.sender);
     }
 
-    // The owner can refund the remaining tokens whenever they want, even during the distribution
+    /**
+     * @dev Allows the owner to refund the remaining tokens from a specific distribution.
+     * @param distributionId The ID of the distribution to refund.
+     * @notice The owner can refund the remaining tokens whenever they want, even during the distribution.
+     */
     function refund(uint256 distributionId) external onlyOwner(distributionId) {
         Distribution storage distribution = distributions[distributionId];
 
@@ -138,6 +170,8 @@ contract MerkleDistributor {
         if (amountLeft == 0) revert MerkleDistributor__NothingToRefund();
 
         distribution.refunded = true;
+
+        // Transfer the remaining tokens back to the owner
         if (distribution.isERC20) {
             IERC20(distribution.token).safeTransfer(distribution.owner, amountLeft);
         } else {
@@ -150,10 +184,22 @@ contract MerkleDistributor {
 
     // MARK: - Utility functions
 
+    /**
+     * @dev Checks if a distribution is whitelist-only.
+     * @param distributionId The ID of the distribution.
+     * @return A boolean indicating whether the distribution is whitelist-only.
+     */
     function isWhitelistOnly(uint256 distributionId) external view returns (bool) {
         return distributions[distributionId].merkleRoot != bytes32(0);
     }
 
+    /**
+     * @dev Checks if an address is whitelisted for a specific distribution.
+     * @param distributionId The ID of the distribution.
+     * @param wallet The address to check.
+     * @param merkleProof The Merkle proof for the address.
+     * @return A boolean indicating whether the address is whitelisted.
+     */
     function isWhitelisted(uint256 distributionId, address wallet, bytes32[] calldata merkleProof) external view returns (bool) {
         return MerkleProof.verify(
             merkleProof,
@@ -162,27 +208,53 @@ contract MerkleDistributor {
         );
     }
 
+    /**
+     * @dev Checks if a specific wallet address has claimed the tokens for a given distribution ID.
+     * @param distributionId The ID of the distribution.
+     * @param wallet The wallet address to check.
+     * @return A boolean indicating whether the wallet address has claimed the tokens or not.
+     */
     function isClaimed(uint256 distributionId, address wallet) external view returns (bool) {
         return distributions[distributionId].isClaimed[wallet];
     }
 
+    /**
+     * @dev Returns the amount of tokens left to be claimed for a specific distribution.
+     * @param distributionId The ID of the distribution.
+     * @return The amount of tokens left to be claimed.
+     */
     function getAmountLeft(uint256 distributionId) public view returns (uint256) {
         Distribution storage distribution = distributions[distributionId];
 
         return distribution.amountPerClaim * (distribution.walletCount - distribution.claimedCount);
     }
 
+    /**
+     * @dev Returns the total amount claimed for a specific distribution.
+     * @param distributionId The ID of the distribution.
+     * @return The total amount claimed for the distribution.
+     */
     function getAmountClaimed(uint256 distributionId) external view returns (uint256) {
         Distribution storage distribution = distributions[distributionId];
 
         return distribution.amountPerClaim * distribution.claimedCount;
     }
 
+    /**
+     * @dev Returns the number of distributions in the MerkleDistributor contract.
+     * @return The number of distributions.
+     */
     function distributionCount() external view returns (uint256) {
         return distributions.length;
     }
 
-    // Get DistributionIds by token address in the range where start <= id < stop
+    /**
+     * @dev Retrieves the distribution IDs for a given token address within a specified range.
+     * @param token The address of the token.
+     * @param start The starting index of the range (inclusive).
+     * @param stop The ending index of the range (exclusive).
+     * @return ids An array of distribution IDs within the specified range.
+     */
     function getDistributionIdsByToken(address token, uint256 start, uint256 stop) external view returns (uint256[] memory ids) {
         unchecked {
             uint256 distributionsLength = distributions.length;
@@ -206,7 +278,13 @@ contract MerkleDistributor {
         }
     }
 
-    // Get DistributionIds by owner address in the range where start <= id < stop
+    /**
+     * @dev Retrieves the distribution IDs owned by a specific address within a given range.
+     * @param owner The address of the owner.
+     * @param start The starting index of the range (inclusive).
+     * @param stop The ending index of the range (exclusive).
+     * @return ids An array of distribution IDs owned by the specified address within the given range.
+     */
     function getDistributionIdsByOwner(address owner, uint256 start, uint256 stop) external view returns (uint256[] memory ids) {
         unchecked {
             uint256 distributionsLength = distributions.length;
