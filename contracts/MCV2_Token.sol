@@ -9,6 +9,7 @@ import {ERC20Initializable} from "./lib/ERC20Initializable.sol";
  * @dev A token contract that implements a bonding curve and allows minting and burning of tokens.
  */
 contract MCV2_Token is ERC20Initializable {
+    error MCV2_Token__AlreadyInitialized();
     error MCV2_Token__PermissionDenied();
 
     bool private _initialized; // false by default
@@ -20,7 +21,7 @@ contract MCV2_Token is ERC20Initializable {
      * @param symbol_ The symbol of the token.
      */
     function init(string calldata name_, string calldata symbol_) external {
-        require(_initialized == false, "CONTRACT_ALREADY_INITIALIZED");
+        if(_initialized) revert MCV2_Token__AlreadyInitialized();
         _initialized = true;
 
         _name = name_;

@@ -10,6 +10,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
  * @dev A multi-token contract that implements the ERC1155 standard.
  */
 contract MCV2_MultiToken is ERC1155Initializable {
+    error MCV2_MultiToken__AlreadyInitialized();
     error MCV2_MultiToken__PermissionDenied();
     error MCV2_MultiToken__BurnAmountExceedsTotalSupply();
     error MCV2_MultiToken__NotApproved();
@@ -31,7 +32,7 @@ contract MCV2_MultiToken is ERC1155Initializable {
      * @param uri_ The base URI for token metadata.
      */
     function init(string calldata name_, string calldata symbol_, string calldata uri_) external {
-        require(_initialized == false, "CONTRACT_ALREADY_INITIALIZED");
+        if(_initialized) revert MCV2_MultiToken__AlreadyInitialized();
         _initialized = true;
 
         name = name_;
