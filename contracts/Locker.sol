@@ -37,6 +37,7 @@ contract Locker {
         if (token == address(0)) revert LockUp__InvalidParams('token');
         if (amount == 0) revert LockUp__InvalidParams('amount');
         if (unlockTime <= block.timestamp) revert LockUp__InvalidParams('unlockTime');
+        if (receiver == address(0)) revert LockUp__InvalidParams('receiver');
 
         // Deposit total amount of tokens to this contract
         if (isERC20) {
