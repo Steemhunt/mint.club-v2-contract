@@ -362,6 +362,8 @@ contract MCV2_Bond is MCV2_Royalty {
             supplyLeft = steps[i].rangeTo - currentSupply;
 
             if (supplyLeft < tokensLeft) {
+                if(supplyLeft == 0) continue;
+
                 // ensure reserve is calculated with ceiling
                 reserveToBond += Math.ceilDiv(supplyLeft * steps[i].price, multiFactor);
                 currentSupply += supplyLeft;
@@ -469,7 +471,7 @@ contract MCV2_Bond is MCV2_Royalty {
         MCV2_ICommonToken(token).burnByBond(user, tokensToBurn);
 
         // Update reserve & fee balances
-        bond.reserveBalance -= refundAmount + royalty;
+        bond.reserveBalance -= (refundAmount + royalty);
         _addRoyalty(bond.creator, bond.reserveToken, royalty);
 
         // Transfer reserve tokens to the user
