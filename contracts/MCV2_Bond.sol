@@ -88,8 +88,9 @@ contract MCV2_Bond is MCV2_Royalty {
         address tokenImplementation,
         address multiTokenImplementation,
         address protocolBeneficiary_,
+        uint256 creationFee_,
         uint256 maxSteps
-    ) MCV2_Royalty(protocolBeneficiary_, msg.sender) {
+    ) MCV2_Royalty(protocolBeneficiary_, creationFee_, msg.sender) {
         TOKEN_IMPLEMENTATION = tokenImplementation;
         MULTI_TOKEN_IMPLEMENTATION = multiTokenImplementation;
         MAX_STEPS = maxSteps;
@@ -228,9 +229,10 @@ contract MCV2_Bond is MCV2_Royalty {
      * @param bp The bond parameters.
      * @return The address of the newly created token.
      */
-    function createToken(TokenParams calldata tp, BondParams calldata bp) external returns (address) {
+    function createToken(TokenParams calldata tp, BondParams calldata bp) external payable returns (address) {
         _validateTokenParams(tp);
         _validateBondParams(bp);
+        _collectCreationFee(msg.value);
 
         address token = _clone(TOKEN_IMPLEMENTATION, tp.symbol);
         MCV2_Token newToken = MCV2_Token(token);
@@ -255,9 +257,10 @@ contract MCV2_Bond is MCV2_Royalty {
      * @param bp The bond parameters.
      * @return The address of the newly created multi-token.
      */
-    function createMultiToken(MultiTokenParams calldata tp, BondParams calldata bp) external returns (address) {
+    function createMultiToken(MultiTokenParams calldata tp, BondParams calldata bp) external payable returns (address) {
         _validateMultiTokenParams(tp);
         _validateBondParams(bp);
+        _collectCreationFee(msg.value);
 
         address token = _clone(MULTI_TOKEN_IMPLEMENTATION, tp.symbol);
         MCV2_MultiToken newToken = MCV2_MultiToken(token);
@@ -373,7 +376,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
         if (reserveToBond == 0 || tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount(); // can never happen
 
-        royalty = getRoyalty(reserveToBond, bond.royalty);
+        royalty = _getRoyalty(reserveToBond, bond.royalty);
         reserveAmount = reserveToBond + royalty;
     }
 
@@ -396,7 +399,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
         // Update reserve & fee balances
         bond.reserveBalance += reserveAmount - royalty;
-        addRoyalty(bond.creator, bond.reserveToken, royalty);
+        _addRoyalty(bond.creator, bond.reserveToken, royalty);
 
         // Mint reward tokens to the user
         MCV2_ICommonToken(token).mintByBond(user, tokensToMint);
@@ -445,7 +448,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
         if (tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount(); // can never happen
 
-        royalty = getRoyalty(reserveFromBond, bond.royalty);
+        royalty = _getRoyalty(reserveFromBond, bond.royalty);
         refundAmount = reserveFromBond - royalty;
     }
 
@@ -467,7 +470,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
         // Update reserve & fee balances
         bond.reserveBalance -= refundAmount + royalty;
-        addRoyalty(bond.creator, bond.reserveToken, royalty);
+        _addRoyalty(bond.creator, bond.reserveToken, royalty);
 
         // Transfer reserve tokens to the user
         IERC20 reserveToken = IERC20(bond.reserveToken);

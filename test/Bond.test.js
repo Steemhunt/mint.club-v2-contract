@@ -5,6 +5,7 @@ const {
   MAX_INT_256,
   NULL_ADDRESS,
   PROTOCOL_BENEFICIARY,
+  CREATION_FEE,
   MAX_ROYALTY_RANGE,
   getMaxSteps,
   wei,
@@ -36,7 +37,7 @@ describe('Bond', function () {
     const NFTImplementation = await ethers.deployContract('MCV2_MultiToken');
     await NFTImplementation.waitForDeployment();
 
-    const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, NFTImplementation.target, PROTOCOL_BENEFICIARY, MAX_STEPS]);
+    const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, NFTImplementation.target, PROTOCOL_BENEFICIARY, 0n, MAX_STEPS]);
     await Bond.waitForDeployment();
 
     const BaseToken = await ethers.deployContract('TestToken', [wei(200000000, 9), 'Test Token', 'TEST', 9n]); // supply: 200M

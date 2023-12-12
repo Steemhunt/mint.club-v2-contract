@@ -14,6 +14,8 @@ abstract contract MCV2_Royalty is Ownable {
     using SafeERC20 for IERC20;
 
     error MCV2_Royalty__NothingToClaim();
+    error MCV2_Royalty__InvalidCreationFee();
+    error MCV2_Royalty__CreationFeeTransactionFailed();
 
     uint256 private constant RATIO_BASE = 10000; // 100.00%
     uint256 private constant PROTOCOL_CUT = 2000;
@@ -21,12 +23,14 @@ abstract contract MCV2_Royalty is Ownable {
 
     address public constant BURN_ADDRESS = address(0x000000000000000000000000000000000000dEaD);
     address public protocolBeneficiary;
+    uint256 public creationFee;
 
     // User => ReserveToken => Royalty Balance
     mapping(address => mapping(address => uint256)) public userTokenRoyaltyBalance;
     mapping(address => mapping(address => uint256)) public userTokenRoyaltyClaimed; // INFO
 
     event ProtocolBeneficiaryUpdated(address protocolBeneficiary);
+    event CreationFeeUpdated(uint256 amount);
     event RoyaltyClaimed(address indexed user, address reserveToken, uint256 amount);
 
     /**
@@ -34,8 +38,9 @@ abstract contract MCV2_Royalty is Ownable {
      * @param protocolBeneficiary_ The address of the protocol beneficiary.
      * @param msgSender The address of the contract deployer.
      */
-    constructor(address protocolBeneficiary_, address msgSender) Ownable(msgSender) {
-        updateProtocolBeneficiary(protocolBeneficiary_);
+    constructor(address protocolBeneficiary_, uint256 creationFee_, address msgSender) Ownable(msgSender) {
+        protocolBeneficiary = protocolBeneficiary_;
+        creationFee = creationFee_;
     }
 
     /**
@@ -48,6 +53,12 @@ abstract contract MCV2_Royalty is Ownable {
         emit ProtocolBeneficiaryUpdated(protocolBeneficiary_);
     }
 
+    function updateCreationFee(uint256 amount) external onlyOwner {
+        creationFee = amount;
+
+        emit CreationFeeUpdated(amount);
+    }
+
     // MARK: - Internal utility functions
 
     /**
@@ -56,7 +67,7 @@ abstract contract MCV2_Royalty is Ownable {
      * @param royaltyRatio The royalty ratio.
      * @return The calculated royalty amount.
      */
-    function getRoyalty(uint256 reserveAmount, uint16 royaltyRatio) internal pure returns (uint256) {
+    function _getRoyalty(uint256 reserveAmount, uint16 royaltyRatio) internal pure returns (uint256) {
         return reserveAmount * royaltyRatio / RATIO_BASE;
     }
 
@@ -66,10 +77,22 @@ abstract contract MCV2_Royalty is Ownable {
      * @param reserveToken The address of the reserve token.
      * @param royaltyAmount The royalty amount to be added.
      */
-    function addRoyalty(address beneficiary, address reserveToken, uint256 royaltyAmount) internal {
+    function _addRoyalty(address beneficiary, address reserveToken, uint256 royaltyAmount) internal {
         uint256 protocolCut = royaltyAmount * PROTOCOL_CUT / RATIO_BASE;
         userTokenRoyaltyBalance[beneficiary][reserveToken] += royaltyAmount - protocolCut;
         userTokenRoyaltyBalance[protocolBeneficiary][reserveToken] += protocolCut;
+    }
+
+    /**
+     * @dev Collects the creation fee and send them to the protocol beneficiary.
+     * @param amount The amount paid for the creation fee
+     */
+    function _collectCreationFee(uint256 amount) internal {
+        if (amount != creationFee) revert MCV2_Royalty__InvalidCreationFee();
+        if (creationFee == 0) return;
+
+        (bool success, ) = protocolBeneficiary.call{value: amount}("");
+        if (!success) revert MCV2_Royalty__CreationFeeTransactionFailed();
     }
 
     // MARK: - External functions

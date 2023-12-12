@@ -7,6 +7,7 @@ const {
   calculateMint,
   calculateBurn,
   getMaxSteps,
+  modifiedValues,
 } = require('./utils/test-utils');
 
 const MAX_STEPS = getMaxSteps('ethereum');
@@ -33,7 +34,7 @@ describe('Royalty', function () {
     const NFTImplementation = await ethers.deployContract('MCV2_MultiToken');
     await NFTImplementation.waitForDeployment();
 
-    const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, NFTImplementation.target, beneficiary.address, MAX_STEPS]);
+    const Bond = await ethers.deployContract('MCV2_Bond', [TokenImplementation.target, NFTImplementation.target, beneficiary.address, 0n, MAX_STEPS]);
     await Bond.waitForDeployment();
 
     const BaseToken = await ethers.deployContract('TestToken', [wei(200000000), 'Test Token', 'TEST', 9n]); // supply: 200M
@@ -68,6 +69,54 @@ describe('Royalty', function () {
         revertedWithCustomError(Bond, 'OwnableUnauthorizedAccount');
     });
   });
+
+  describe('Update creation fee by deployer', function () {
+    it('should have correct creation fee', async function () {
+      expect((await Bond.creationFee())).to.equal(0n);
+    });
+
+    it('should emit CreationFeeUpdated event', async function () {
+      await expect(Bond.connect(owner).updateCreationFee(wei(3))).to.emit(Bond, 'CreationFeeUpdated').withArgs(wei(3));
+    });
+
+    it('should be able to update creation fee by the deployer', async function () {
+      await Bond.connect(owner).updateCreationFee(wei(3));
+      expect((await Bond.creationFee())).to.equal(wei(3));
+    });
+
+    it('should not be able to update creation fee by non-owner', async function () {
+      await expect(Bond.connect(alice).updateCreationFee(wei(3))).to.be.
+        revertedWithCustomError(Bond, 'OwnableUnauthorizedAccount');
+    });
+
+    describe('With creation fee', function() {
+      beforeEach(async function () {
+        this.creationFee = wei(2, 15); // 0.002 ETH
+        await Bond.connect(owner).updateCreationFee(this.creationFee);
+      });
+
+      it('should collect creation fee if exists', async function () {
+        const balanceBefore = await ethers.provider.getBalance(beneficiary.address);
+        await Bond.connect(alice).createToken(
+          modifiedValues(BABY_TOKEN.tokenParams, { symbol: 'TEST_FEE' }),
+          Object.values(BABY_TOKEN.bondParams),
+          { value: this.creationFee }
+        );
+        const balanceAfter = await ethers.provider.getBalance(beneficiary.address);
+
+        expect(balanceAfter).to.equal(balanceBefore + this.creationFee);
+      });
+
+      it('should revert if creation fee sent is invalid', async function () {
+        await expect(Bond.connect(alice).createToken(
+          modifiedValues(BABY_TOKEN.tokenParams, { symbol: 'TEST_FEE' }),
+          Object.values(BABY_TOKEN.bondParams),
+          { value: this.creationFee - 1n }
+        )).to.be.
+          revertedWithCustomError(Bond, 'MCV2_Royalty__InvalidCreationFee');
+      });
+    }); // With creation fee
+  }); // Update creation fee by deployer
 
   describe('Mint royalty', function () {
     beforeEach(async function () {
