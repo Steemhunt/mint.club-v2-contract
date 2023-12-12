@@ -91,7 +91,7 @@ abstract contract MCV2_Royalty is Ownable {
         if (amount != creationFee) revert MCV2_Royalty__InvalidCreationFee();
         if (creationFee == 0) return;
 
-        (bool success, ) = protocolBeneficiary.call{value: amount}("");
+        (bool success, ) = payable(protocolBeneficiary).call{value: amount}("");
         if (!success) revert MCV2_Royalty__CreationFeeTransactionFailed();
     }
 
