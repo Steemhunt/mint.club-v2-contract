@@ -189,16 +189,18 @@ contract MCV2_Bond is MCV2_Royalty {
         bond.reserveToken = bp.reserveToken;
 
         for (uint256 i = 0; i < bp.stepRanges.length; ++i) {
-            if (bp.stepRanges[i] == 0) revert MCV2_Bond__InvalidStepParams('STEP_CANNOT_BE_ZERO');
+            uint128 _stepRange = bp.stepRanges[i];
+
+            if (_stepRange == 0) revert MCV2_Bond__InvalidStepParams('STEP_CANNOT_BE_ZERO');
 
             // Ranges and prices must be strictly increasing
             if (i > 0) {
-                if (bp.stepRanges[i] <= bp.stepRanges[i - 1]) revert MCV2_Bond__InvalidStepParams('DECREASING_RANGE');
+                if (_stepRange <= bp.stepRanges[i - 1]) revert MCV2_Bond__InvalidStepParams('DECREASING_RANGE');
                 if (bp.stepPrices[i] <= bp.stepPrices[i - 1]) revert MCV2_Bond__InvalidStepParams('DECREASING_PRICE');
             }
 
             bond.steps.push(BondStep({
-                rangeTo: bp.stepRanges[i],
+                rangeTo: _stepRange,
                 price: bp.stepPrices[i]
             }));
         }
