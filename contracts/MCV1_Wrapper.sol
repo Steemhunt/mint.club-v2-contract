@@ -9,15 +9,9 @@ import {MCV2_ICommonToken} from "./lib/MCV2_ICommonToken.sol";
  * @title A wrapper contract for the MintClub V1 Bond contract to provide a common interface for V2 front-end.
  */
 contract MCV1_Wrapper {
-    /**
-     * @dev Error thrown when the token is not found in the MintClub V1 Bond contract.
-     */
     error MCV1_Wrapper__TokenNotFound();
-
-    /**
-     * @dev Error thrown when the slippage limit is exceeded during the minting process.
-     */
     error MCV1_Wrapper__SlippageLimitExceeded();
+    error MCV1_Wrapper__InvalidPaginationParameters();
 
     address private constant BENEFICIARY = address(0x82CA6d313BffE56E9096b16633dfD414148D66b1);
     IMintClubBond public constant BOND = IMintClubBond(0x8BBac0C7583Cc146244a18863E708bFFbbF19975);
@@ -126,6 +120,8 @@ contract MCV1_Wrapper {
      * @return info The list of bond information.
      */
     function getList(uint256 start, uint256 stop) external view returns(BondInfo[] memory info) {
+        if (start <= stop || stop - start > 1000) revert MCV1_Wrapper__InvalidPaginationParameters();
+
         unchecked {
             uint256 tokensLength = BOND.tokenCount();
             if (stop > tokensLength) {

@@ -12,13 +12,11 @@ import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 contract Locker {
     using SafeERC20 for IERC20;
 
-    /**
-     * @dev Error messages.
-     */
     error LockUp__InvalidParams(string param);
     error LockUp__PermissionDenied();
     error LockUp__AlreadyClaimed();
     error LockUp__NotYetUnlocked();
+    error LockUp__InvalidPaginationParameters();
 
     event LockedUp(uint256 indexed lockUpId, address indexed token, bool isERC20, address indexed receiver, uint256 amount, uint40 unlockTime);
     event Unlocked(uint256 indexed lockUpId, address indexed token, bool isERC20, address indexed receiver, uint256 amount);
@@ -117,6 +115,8 @@ contract Locker {
      * @return ids An array of lock-up IDs.
      */
     function getLockUpIdsByToken(address token, uint256 start, uint256 stop) external view returns (uint256[] memory ids) {
+        if (start <= stop || stop - start > 10000) revert LockUp__InvalidPaginationParameters();
+
         unchecked {
             uint256 lockUpsLength = lockUps.length;
             if (stop > lockUpsLength) {
@@ -147,6 +147,8 @@ contract Locker {
      * @return ids An array of lock-up IDs.
      */
     function getLockUpIdsByReceiver(address receiver, uint256 start, uint256 stop) external view returns (uint256[] memory ids) {
+        if (start <= stop || stop - start > 10000) revert LockUp__InvalidPaginationParameters();
+
         unchecked {
             uint256 lockUpsLength = lockUps.length;
             if (stop > lockUpsLength) {

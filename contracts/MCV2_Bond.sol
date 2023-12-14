@@ -32,6 +32,7 @@ contract MCV2_Bond is MCV2_Royalty {
     error MCV2_Bond__InvalidCurrentSupply();
     error MCV2_Bond__PermissionDenied();
     error MCV2_Bond__InvalidCreatorAddress();
+    error MCV2_BOND__InvalidPaginationParameters();
 
     uint256 private immutable MAX_STEPS;
 
@@ -584,6 +585,8 @@ contract MCV2_Bond is MCV2_Royalty {
      * @return info An array of BondInfo structs containing the bond parameters for each token in the range.
      */
     function getList(uint256 start, uint256 stop) external view returns(BondInfo[] memory info) {
+        if (start <= stop || stop - start > 1000) revert MCV2_BOND__InvalidPaginationParameters();
+
         unchecked {
             uint256 tokensLength = tokens.length;
             if (stop > tokensLength) {
@@ -627,6 +630,8 @@ contract MCV2_Bond is MCV2_Royalty {
      * @return addresses An array of addresses representing the filtered tokens
      */
     function getTokensByReserveToken(address reserveToken, uint256 start, uint256 stop) external view returns (address[] memory addresses) {
+        if (start <= stop || stop - start > 10000) revert MCV2_BOND__InvalidPaginationParameters();
+
         unchecked {
             uint256 tokensLength = tokens.length;
             if (stop > tokensLength) {
@@ -657,6 +662,8 @@ contract MCV2_Bond is MCV2_Royalty {
      * @return addresses An array of token addresses filtered by creator address
      */
     function getTokensByCreator(address creator, uint256 start, uint256 stop) external view returns (address[] memory addresses) {
+        if (start <= stop || stop - start > 10000) revert MCV2_BOND__InvalidPaginationParameters();
+
         unchecked {
             uint256 tokensLength = tokens.length;
             if (stop > tokensLength) {

@@ -13,7 +13,6 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 contract MerkleDistributor {
     using SafeERC20 for IERC20;
 
-    // Error messages
     error MerkleDistributor__PermissionDenied();
     error MerkleDistributor__NotStarted();
     error MerkleDistributor__Finished();
@@ -24,6 +23,7 @@ contract MerkleDistributor {
     error MerkleDistributor__InvalidProof();
     error MerkleDistributor__InvalidParams(string param);
     error MerkleDistributor__NothingToRefund();
+    error MerkleDistributor__InvalidPaginationParameters();
 
     // Events
     event Created(uint256 indexed distributionId, address indexed token, bool isERC20, uint40 startTime);
@@ -258,6 +258,8 @@ contract MerkleDistributor {
      * @return ids An array of distribution IDs within the specified range.
      */
     function getDistributionIdsByToken(address token, uint256 start, uint256 stop) external view returns (uint256[] memory ids) {
+        if (start <= stop || stop - start > 10000) revert MerkleDistributor__InvalidPaginationParameters();
+
         unchecked {
             uint256 distributionsLength = distributions.length;
             if (stop > distributionsLength) {
@@ -288,6 +290,8 @@ contract MerkleDistributor {
      * @return ids An array of distribution IDs owned by the specified address within the given range.
      */
     function getDistributionIdsByOwner(address owner, uint256 start, uint256 stop) external view returns (uint256[] memory ids) {
+        if (start <= stop || stop - start > 10000) revert MerkleDistributor__InvalidPaginationParameters();
+
         unchecked {
             uint256 distributionsLength = distributions.length;
             if (stop > distributionsLength) {
