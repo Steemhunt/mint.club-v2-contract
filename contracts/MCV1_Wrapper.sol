@@ -120,7 +120,7 @@ contract MCV1_Wrapper {
      * @return info The list of bond information.
      */
     function getList(uint256 start, uint256 stop) external view returns(BondInfo[] memory info) {
-        if (start <= stop || stop - start > 1000) revert MCV1_Wrapper__InvalidPaginationParameters();
+        if (start >= stop || stop - start > 1000) revert MCV1_Wrapper__InvalidPaginationParameters();
 
         unchecked {
             uint256 tokensLength = BOND.tokenCount();

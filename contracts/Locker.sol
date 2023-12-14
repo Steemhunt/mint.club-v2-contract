@@ -115,7 +115,7 @@ contract Locker {
      * @return ids An array of lock-up IDs.
      */
     function getLockUpIdsByToken(address token, uint256 start, uint256 stop) external view returns (uint256[] memory ids) {
-        if (start <= stop || stop - start > 10000) revert LockUp__InvalidPaginationParameters();
+        if (start >= stop || stop - start > 10000) revert LockUp__InvalidPaginationParameters();
 
         unchecked {
             uint256 lockUpsLength = lockUps.length;
@@ -147,7 +147,7 @@ contract Locker {
      * @return ids An array of lock-up IDs.
      */
     function getLockUpIdsByReceiver(address receiver, uint256 start, uint256 stop) external view returns (uint256[] memory ids) {
-        if (start <= stop || stop - start > 10000) revert LockUp__InvalidPaginationParameters();
+        if (start >= stop || stop - start > 10000) revert LockUp__InvalidPaginationParameters();
 
         unchecked {
             uint256 lockUpsLength = lockUps.length;

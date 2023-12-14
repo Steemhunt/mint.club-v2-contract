@@ -258,7 +258,7 @@ contract MerkleDistributor {
      * @return ids An array of distribution IDs within the specified range.
      */
     function getDistributionIdsByToken(address token, uint256 start, uint256 stop) external view returns (uint256[] memory ids) {
-        if (start <= stop || stop - start > 10000) revert MerkleDistributor__InvalidPaginationParameters();
+        if (start >= stop || stop - start > 10000) revert MerkleDistributor__InvalidPaginationParameters();
 
         unchecked {
             uint256 distributionsLength = distributions.length;
@@ -290,7 +290,7 @@ contract MerkleDistributor {
      * @return ids An array of distribution IDs owned by the specified address within the given range.
      */
     function getDistributionIdsByOwner(address owner, uint256 start, uint256 stop) external view returns (uint256[] memory ids) {
-        if (start <= stop || stop - start > 10000) revert MerkleDistributor__InvalidPaginationParameters();
+        if (start >= stop || stop - start > 10000) revert MerkleDistributor__InvalidPaginationParameters();
 
         unchecked {
             uint256 distributionsLength = distributions.length;
