@@ -815,6 +815,9 @@ describe('Bond', function () {
     });
   }); // Edge cases: Rounding errors
 
+  // Stated on: https://github.com/Steemhunt/mint.club-v2-contract?tab=readme-ov-file#custom-erc20-tokens-as-reserve-tokens
+  // ERC20 tokens with custom implementations such as rebasing or tax features will NOT work properly with Mint Club,
+  // and there's no way we can prevent them completely. We give warnings to the creator but let the code run as it is written.
   describe('Edge cases: Tax Token', function() {
     beforeEach(async function () {
       this.initialBaseBalance = wei(500);
