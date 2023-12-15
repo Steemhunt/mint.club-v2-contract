@@ -76,7 +76,7 @@ describe('MerkleDistributor', function () {
         expect(this.distribution.claimedCount).to.equal(0);
         expect(this.distribution.startTime).to.equal(TEST_DATA.startTime);
         expect(this.distribution.endTime).to.equal(TEST_DATA.endTime);
-        expect(this.distribution.refunded).to.equal(false);
+        expect(this.distribution.refundedAt).to.equal(0);
         expect(this.distribution.owner).to.equal(owner.address);
         expect(this.distribution.merkleRoot).to.equal(ZERO_BYTES32);
         expect(this.distribution.title).to.equal(TEST_DATA.title);
@@ -196,7 +196,7 @@ describe('MerkleDistributor', function () {
         expect(this.distribution.claimedCount).to.equal(0);
         expect(this.distribution.startTime).to.equal(TEST_DATA.startTime);
         expect(this.distribution.endTime).to.equal(TEST_DATA.endTime);
-        expect(this.distribution.refunded).to.equal(false);
+        expect(this.distribution.refundedAt).to.equal(0);
         expect(this.distribution.owner).to.equal(owner.address);
         expect(this.distribution.merkleRoot).to.equal(ZERO_BYTES32);
         expect(this.distribution.title).to.equal(TEST_DATA.title);
@@ -362,15 +362,18 @@ describe('MerkleDistributor', function () {
       });
 
       it('should be able to refund the whole amount if not claimed', async function() {
-        await time.increaseTo(TEST_DATA.endTime + 1);
         await MerkleDistributor.refund(0);
         expect(await Token.balanceOf(MerkleDistributor.target)).to.equal(0);
         expect(await Token.balanceOf(owner.address)).to.equal(ORIGINAL_BALANCE);
       });
 
+      it('should update refundedAt timestamp', async function() {
+        await MerkleDistributor.refund(0);
+        expect((await MerkleDistributor.distributions(0)).refundedAt).to.equal(await time.latest());
+      });
+
       it('should be able to refund the remaining amount', async function() {
         await MerkleDistributor.connect(carol).claim(0, getProof(this.tree, carol.address));
-        await time.increaseTo(TEST_DATA.endTime + 1);
         await MerkleDistributor.refund(0);
         expect(await Token.balanceOf(MerkleDistributor.target)).to.equal(0);
         expect(await Token.balanceOf(carol.address)).to.equal(TEST_DATA.amountPerClaim);
@@ -381,7 +384,6 @@ describe('MerkleDistributor', function () {
         await MerkleDistributor.connect(alice).claim(0, getProof(this.tree, alice.address));
         await MerkleDistributor.connect(carol).claim(0, getProof(this.tree, carol.address));
         await MerkleDistributor.connect(bob).claim(0, getProof(this.tree, bob.address));
-        await time.increaseTo(TEST_DATA.endTime + 1);
         await expect(MerkleDistributor.refund(0)).
           to.be.revertedWithCustomError(
             MerkleDistributor,
@@ -390,7 +392,6 @@ describe('MerkleDistributor', function () {
       });
 
       it('should revert if already refunded', async function() {
-        await time.increaseTo(TEST_DATA.endTime + 1);
         await MerkleDistributor.refund(0);
         await expect(MerkleDistributor.refund(0)).
           to.be.revertedWithCustomError(
@@ -530,15 +531,18 @@ describe('MerkleDistributor', function () {
       });
 
       it('should be able to refund the whole amount if not claimed', async function() {
-        await time.increaseTo(TEST_DATA.endTime + 1);
         await MerkleDistributor.refund(0);
         expect(await MultiToken.balanceOf(MerkleDistributor.target, 0)).to.equal(0);
         expect(await MultiToken.balanceOf(owner.address, 0)).to.equal(ORIGINAL_BALANCE);
       });
 
+      it('should update refundedAt timestamp', async function() {
+        await MerkleDistributor.refund(0);
+        expect((await MerkleDistributor.distributions(0)).refundedAt).to.equal(await time.latest());
+      });
+
       it('should be able to refund the remaining amount', async function() {
         await MerkleDistributor.connect(carol).claim(0, getProof(this.tree, carol.address));
-        await time.increaseTo(TEST_DATA.endTime + 1);
         await MerkleDistributor.refund(0);
         expect(await MultiToken.balanceOf(MerkleDistributor.target, 0)).to.equal(0);
         expect(await MultiToken.balanceOf(carol.address, 0)).to.equal(TEST_DATA.amountPerClaim);
@@ -549,7 +553,6 @@ describe('MerkleDistributor', function () {
         await MerkleDistributor.connect(alice).claim(0, getProof(this.tree, alice.address));
         await MerkleDistributor.connect(carol).claim(0, getProof(this.tree, carol.address));
         await MerkleDistributor.connect(bob).claim(0, getProof(this.tree, bob.address));
-        await time.increaseTo(TEST_DATA.endTime + 1);
         await expect(MerkleDistributor.refund(0)).
           to.be.revertedWithCustomError(
             MerkleDistributor,
@@ -558,7 +561,6 @@ describe('MerkleDistributor', function () {
       });
 
       it('should revert if already refunded', async function() {
-        await time.increaseTo(TEST_DATA.endTime + 1);
         await MerkleDistributor.refund(0);
         await expect(MerkleDistributor.refund(0)).
           to.be.revertedWithCustomError(

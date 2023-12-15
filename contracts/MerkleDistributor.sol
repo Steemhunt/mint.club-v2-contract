@@ -43,7 +43,7 @@ contract MerkleDistributor {
         uint40 endTime; // 128 + 40 + 40 = 208 bits
 
         address owner;
-        bool refunded; // 160 + 8 = 168 bits
+        uint40 refundedAt; // 160 + 40 = 200 bits
 
         bytes32 merkleRoot; // 256 bits
         string title;
@@ -116,7 +116,7 @@ contract MerkleDistributor {
         distribution.endTime = endTime;
 
         distribution.owner = msg.sender;
-        // distribution.refunded = false;
+        // distribution.refundedAt = 0;
         distribution.merkleRoot = merkleRoot; // optional
         distribution.title = title; // optional
         distribution.ipfsCID = ipfsCID; // optional
@@ -134,7 +134,7 @@ contract MerkleDistributor {
 
         if (distribution.startTime > block.timestamp) revert MerkleDistributor__NotStarted();
         if (distribution.endTime < block.timestamp) revert MerkleDistributor__Finished();
-        if (distribution.refunded) revert MerkleDistributor__Refunded();
+        if (distribution.refundedAt > 0) revert MerkleDistributor__Refunded();
         if (distribution.isClaimed[msg.sender]) revert MerkleDistributor__AlreadyClaimed();
         if (distribution.claimedCount >= distribution.walletCount) revert MerkleDistributor__NoClaimableTokensLeft();
 
@@ -173,12 +173,12 @@ contract MerkleDistributor {
     function refund(uint256 distributionId) external onlyOwner(distributionId) {
         Distribution storage distribution = distributions[distributionId];
 
-        if (distribution.refunded) revert MerkleDistributor__AlreadyRefunded();
+        if (distribution.refundedAt > 0) revert MerkleDistributor__AlreadyRefunded();
 
         uint256 amountLeft = getAmountLeft(distributionId);
         if (amountLeft == 0) revert MerkleDistributor__NothingToRefund();
 
-        distribution.refunded = true;
+        distribution.refundedAt = uint40(block.timestamp);
 
         // Transfer the remaining tokens back to the owner
         if (distribution.isERC20) {

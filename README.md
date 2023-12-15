@@ -7,7 +7,7 @@ The inherited token creator employs a bonding curve to generate new tokens using
 - MCV2_MultiToken: [0xCFe883f228822214fC82868Cd5d4Cf6Df72699b2](https://sepolia.etherscan.io/address/0xCFe883f228822214fC82868Cd5d4Cf6Df72699b2#code)
 - MCV2_Bond: [0x81d60F3d5dB8586E09d20a96fAFB8437A79D8d94](https://sepolia.etherscan.io/address/0x81d60F3d5dB8586E09d20a96fAFB8437A79D8d94#code)
 - Locker: [0xD77AeD25FC2CE8F425c9a0d65c823EdA32531d1d](https://sepolia.etherscan.io/address/0xD77AeD25FC2CE8F425c9a0d65c823EdA32531d1d#code)
-- MerkleDistributor: [0x94792B59D2f1a9051Af2c27482FfB095eE4ba084](https://sepolia.etherscan.io/address/0x94792B59D2f1a9051Af2c27482FfB095eE4ba084#code)
+- MerkleDistributor: [0x2c386c3711eF9548d43b6A332e8AAce60AF04Fc5](https://sepolia.etherscan.io/address/0x2c386c3711eF9548d43b6A332e8AAce60AF04Fc5#code)
 
 ### V1 Contract Wrapper (BSC Mainnet):
 - MCV1_Wrapper: [0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89](https://bscscan.com/address/0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89#code)

@@ -35,6 +35,9 @@ module.exports = {
     gasPrice: 15,
     coinmarketcap: null // process.env.COIN_MARKET_CAP_API
   },
+  sourcify: {
+    enabled: true
+  },
   etherscan: {
     // network list: npx hardhat verify --list-networks
     apiKey: {
