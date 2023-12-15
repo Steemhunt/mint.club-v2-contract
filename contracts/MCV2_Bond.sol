@@ -681,7 +681,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
             uint256 j = 0;
             for (uint256 i = start; i < stop; ++i) {
-                if (tokenBond[tokens[i]].creator == creator){
+                if (tokenBond[tokens[i]].creator == creator) {
                     addresses[j++] = tokens[i];
                     if (j == count) break;
                 }
