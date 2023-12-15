@@ -20,6 +20,7 @@ contract MerkleDistributor {
     error MerkleDistributor__AlreadyRefunded();
     error MerkleDistributor__NoClaimableTokensLeft();
     error MerkleDistributor__AlreadyClaimed();
+    error MerkleDistributor__InvalidCaller();
     error MerkleDistributor__InvalidProof();
     error MerkleDistributor__InvalidParams(string param);
     error MerkleDistributor__NothingToRefund();
@@ -137,12 +138,18 @@ contract MerkleDistributor {
         if (distribution.isClaimed[msg.sender]) revert MerkleDistributor__AlreadyClaimed();
         if (distribution.claimedCount >= distribution.walletCount) revert MerkleDistributor__NoClaimableTokensLeft();
 
-        // Verify the merkle proof
-        if (distribution.merkleRoot != bytes32(0) && !MerkleProof.verify(
-            merkleProof,
-            distribution.merkleRoot,
-            keccak256(abi.encodePacked(msg.sender))
-        )) revert MerkleDistributor__InvalidProof();
+        if (distribution.merkleRoot == bytes32(0)) { // Public airdrop
+            // NOTE: Block contracts from claiming tokens to prevent abuse during a public airdrop.
+            // This won't completely eliminate bot claiming but will make it more challenging.
+            // Caveat: ERC4337-based wallets will also be unable to claim; however, they can use an EOA to do so.
+            if(tx.origin != msg.sender) revert MerkleDistributor__InvalidCaller();
+        } else { // Whitelist only
+            if (!MerkleProof.verify(
+                merkleProof,
+                distribution.merkleRoot,
+                keccak256(abi.encodePacked(msg.sender))
+            )) revert MerkleDistributor__InvalidProof();
+        }
 
         // Mark it claimed and send the token
         distribution.isClaimed[msg.sender] = true;
