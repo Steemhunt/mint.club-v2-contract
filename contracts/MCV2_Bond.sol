@@ -191,18 +191,19 @@ contract MCV2_Bond is MCV2_Royalty {
 
         for (uint256 i = 0; i < bp.stepRanges.length; ++i) {
             uint128 _stepRange = bp.stepRanges[i];
+            uint128 _stepPrice = bp.stepPrices[i];
 
             if (_stepRange == 0) revert MCV2_Bond__InvalidStepParams('STEP_CANNOT_BE_ZERO');
 
             // Ranges and prices must be strictly increasing
             if (i > 0) {
                 if (_stepRange <= bp.stepRanges[i - 1]) revert MCV2_Bond__InvalidStepParams('DECREASING_RANGE');
-                if (bp.stepPrices[i] <= bp.stepPrices[i - 1]) revert MCV2_Bond__InvalidStepParams('DECREASING_PRICE');
+                if (_stepPrice <= bp.stepPrices[i - 1]) revert MCV2_Bond__InvalidStepParams('DECREASING_PRICE');
             }
 
             bond.steps.push(BondStep({
                 rangeTo: _stepRange,
-                price: bp.stepPrices[i]
+                price: _stepPrice
             }));
         }
     }
@@ -357,7 +358,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
         if (newSupply > maxSupply(token)) revert MCV2_Bond__ExceedMaxSupply();
 
-        uint256 multiFactor = 10**t.decimals();
+        uint256 multiFactor = 10**t.decimals(); // 1 or 18
         uint256 tokensLeft = tokensToMint;
         uint256 reserveToBond = 0;
         uint256 supplyLeft;

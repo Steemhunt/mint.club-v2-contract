@@ -33,7 +33,7 @@ module.exports = {
     enabled: true,
     currency: 'USD',
     gasPrice: 15,
-    coinmarketcap: process.env.COIN_MARKET_CAP_API
+    coinmarketcap: null // process.env.COIN_MARKET_CAP_API
   },
   etherscan: {
     // network list: npx hardhat verify --list-networks

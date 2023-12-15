@@ -76,6 +76,13 @@ contract MCV2_MultiToken is ERC1155Initializable {
     }
 
     /**
+     * @dev Added to support a common interface with ERC20
+     */
+    function decimals() public pure returns (uint8) {
+        return 0;
+    }
+
+    /**
      * @dev Returns the contract URI for OpenSea compatibility.
      * @return The contract URI.
      */
