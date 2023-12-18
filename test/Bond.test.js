@@ -281,6 +281,16 @@ describe('Bond', function () {
         .withArgs('DECREASING_PRICE');
       });
 
+      it('should revert if any of the step ranges * prices are lower than the multiFactor', async function () {
+        await expect(
+          Bond.createToken(
+            this.newTokenParams,
+            modifiedValues(BABY_TOKEN.bondParams, { stepRanges: [1n, BABY_TOKEN.bondParams.maxSupply], stepPrices: [1n, 2n] })
+          )
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepParams')
+        .withArgs('STEP_RANG_OR_PRICE_TOO_SMALL');
+      });
+
       it('should revert if token symbol already exists', async function () {
         await expect(Bond.createToken(BABY_TOKEN.tokenParams, BABY_TOKEN.bondParams))
           .to.be.revertedWithCustomError(Bond, 'MCV2_Bond__TokenSymbolAlreadyExists');
@@ -303,9 +313,9 @@ describe('Bond', function () {
         await Bond.createToken(
           this.newTokenParams,
           modifiedValues(BABY_TOKEN.bondParams, {
-            maxSupply: MAX_STEPS,
-            stepRanges: [...Array(1001).keys()].splice(1),
-            stepPrices: [...Array(1001).keys()].splice(1)
+            maxSupply: wei(MAX_STEPS),
+            stepRanges: [...Array(1001).keys()].splice(1).map(v => wei(v)),
+            stepPrices: [...Array(1001).keys()].splice(1).map(v => wei(v))
           })
         );
 
@@ -313,7 +323,7 @@ describe('Bond', function () {
         const token = await Token.attach(await Bond.tokens(1));
 
         expect(await token.symbol()).to.equal('BABY2');
-        expect(await Bond.maxSupply(token.target)).to.equal(1000);
+        expect(await Bond.maxSupply(token.target)).to.equal(wei(MAX_STEPS));
       });
     }); // Validations
 
