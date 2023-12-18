@@ -5,7 +5,6 @@ const {
   MAX_INT_256,
   NULL_ADDRESS,
   PROTOCOL_BENEFICIARY,
-  CREATION_FEE,
   MAX_ROYALTY_RANGE,
   getMaxSteps,
   wei,
@@ -266,7 +265,7 @@ describe('Bond', function () {
         await expect(
           Bond.createToken(
             this.newTokenParams,
-            modifiedValues(BABY_TOKEN.bondParams, { stepRanges: [2, 1, BABY_TOKEN.bondParams.maxSupply], stepPrices: [1, 2, 3] })
+            modifiedValues(BABY_TOKEN.bondParams, { stepRanges: [wei(2), wei(1), BABY_TOKEN.bondParams.maxSupply], stepPrices: [1, 2, 3] })
           )
         ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepParams')
         .withArgs('DECREASING_RANGE');
@@ -276,7 +275,7 @@ describe('Bond', function () {
         await expect(
           Bond.createToken(
             this.newTokenParams,
-            modifiedValues(BABY_TOKEN.bondParams, { stepRanges: [1, 2, BABY_TOKEN.bondParams.maxSupply], stepPrices: [1, 3, 2] })
+            modifiedValues(BABY_TOKEN.bondParams, { stepRanges: [wei(1), wei(2), BABY_TOKEN.bondParams.maxSupply], stepPrices: [1, 3, 2] })
           )
         ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepParams')
         .withArgs('DECREASING_PRICE');
@@ -290,7 +289,7 @@ describe('Bond', function () {
       it('should not mint any tokens if the first step price is not zero', async function () {
         await Bond.createToken(
           this.newTokenParams,
-          modifiedValues(BABY_TOKEN.bondParams, { stepRanges: [1, 2, BABY_TOKEN.bondParams.maxSupply], stepPrices: [1, 2, 3] })
+          modifiedValues(BABY_TOKEN.bondParams, { stepRanges: [wei(1), wei(2), BABY_TOKEN.bondParams.maxSupply], stepPrices: [1, 2, 3] })
         );
 
         const Token = await ethers.getContractFactory('MCV2_Token');
@@ -814,6 +813,61 @@ describe('Bond', function () {
       expect(await Bond.userTokenRoyaltyBalance(owner.address, BaseToken.target)).to.equal(predicted.creatorCut);
     });
   }); // Edge cases: Rounding errors
+
+  describe('Edge cases: Buy & Sell differences', function() {
+    beforeEach(async function () {
+      const EXTREME_BABY = {
+        tokenParams: {
+          name: 'Baby Token',
+          symbol: 'BABY'
+        },
+        bondParams: {
+          royalty: 100n, // 1%
+          reserveToken: BaseToken.target,
+          maxSupply: wei(12, 8),
+          stepRanges: [wei(11, 8), wei(12, 8)],
+          stepPrices: [wei(1, 9), wei(2, 9)]
+        }
+        // step 1 => 1.1e9 * 1e9 = 1.1e18 -> reserveToBond = Math.ceildev(1.1e18, 1e18) = 2
+        // step 2 => (1.2 - 1.1)e9 * 2e9 = 0.1e18 -> reserveToBond = Math.ceildev(0.1e18, 1e18) = 1
+      };
+
+      await Bond.createToken(Object.values(EXTREME_BABY.tokenParams), Object.values(EXTREME_BABY.bondParams));
+      const Token = await ethers.getContractFactory('MCV2_Token');
+      this.token = await Token.attach(await Bond.tokens(0));
+
+      this.initialBaseBalance = 3n;
+      await BaseToken.transfer(alice.address, this.initialBaseBalance);
+      await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
+
+      await Bond.connect(alice).mint(this.token.target, wei(12, 8), MAX_INT_256);
+    });
+
+    it('does require 3 * 1e-9 BASE tokens to mint', async function () {
+      expect(await this.token.balanceOf(alice.address)).to.equal(wei(12, 8));
+      expect(await BaseToken.balanceOf(alice.address)).to.equal(0);
+
+      const bond = await Bond.tokenBond(this.token.target);
+      expect(bond.reserveBalance).to.equal(3n);
+
+      // No royalties are collected
+      expect(await Bond.userTokenRoyaltyBalance(owner.address, BaseToken.target)).to.equal(0n);
+      expect(await Bond.userTokenRoyaltyBalance(PROTOCOL_BENEFICIARY, BaseToken.target)).to.equal(0n);
+    });
+
+    it('will only refund 1 * 1e-9 BASE tokens on burn', async function () {
+      await this.token.connect(alice).approve(Bond.target, wei(12, 8));
+      await Bond.connect(alice).burn(this.token.target, wei(12, 8), 0);
+
+      // step 2 => (1.2 - 1.1)e9 * 2e9 = 0.1e18 -> reserveToRefund = 0.1e18 / 1e18 = 0
+      // step 1 => 1.1e9 * 1e9 = 1.1e18 -> reserveToRefund = 1.1e18 / 1e18 = 1
+      expect(await BaseToken.balanceOf(alice.address)).to.equal(1n);
+
+      // 2 * 1e-9 BASE tokens will be permanently locked on the contract
+      const bond = await Bond.tokenBond(this.token.target);
+      expect(bond.reserveBalance).to.equal(2n);
+    });
+  }); // Edge cases: Buy & Sell differences
 
   // Stated on: https://github.com/Steemhunt/mint.club-v2-contract?tab=readme-ov-file#custom-erc20-tokens-as-reserve-tokens
   // ERC20 tokens with custom implementations such as rebasing or tax features will NOT work properly with Mint Club,

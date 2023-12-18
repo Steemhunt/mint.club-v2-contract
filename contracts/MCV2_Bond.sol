@@ -189,21 +189,28 @@ contract MCV2_Bond is MCV2_Royalty {
         bond.createdAt = uint40(block.timestamp);
         bond.reserveToken = bp.reserveToken;
 
-        for (uint256 i = 0; i < bp.stepRanges.length; ++i) {
-            uint128 _stepRange = bp.stepRanges[i];
-            uint128 _stepPrice = bp.stepPrices[i];
+        uint256 multiFactor = 10**IERC20Metadata(token).decimals();
 
-            if (_stepRange == 0) revert MCV2_Bond__InvalidStepParams('STEP_CANNOT_BE_ZERO');
+        for (uint256 i = 0; i < bp.stepRanges.length; ++i) {
+            uint256 stepRange = bp.stepRanges[i];
+            uint256 stepPrice = bp.stepPrices[i];
+
+            if (stepRange == 0) {
+                revert MCV2_Bond__InvalidStepParams('STEP_CANNOT_BE_ZERO');
+            } else if (stepPrice > 0 && stepRange * stepPrice < multiFactor) {
+                // To minimize rounding errors, the product of the range and price must be at least multiFactor (1e18 for ERC20, 1 for ERC1155).
+                revert MCV2_Bond__InvalidStepParams('STEP_RANG_OR_PRICE_TOO_SMALL');
+            }
 
             // Ranges and prices must be strictly increasing
             if (i > 0) {
-                if (_stepRange <= bp.stepRanges[i - 1]) revert MCV2_Bond__InvalidStepParams('DECREASING_RANGE');
-                if (_stepPrice <= bp.stepPrices[i - 1]) revert MCV2_Bond__InvalidStepParams('DECREASING_PRICE');
+                if (stepRange <= bp.stepRanges[i - 1]) revert MCV2_Bond__InvalidStepParams('DECREASING_RANGE');
+                if (stepPrice <= bp.stepPrices[i - 1]) revert MCV2_Bond__InvalidStepParams('DECREASING_PRICE');
             }
 
             bond.steps.push(BondStep({
-                rangeTo: _stepRange,
-                price: _stepPrice
+                rangeTo: uint128(stepRange),
+                price: uint128(stepPrice)
             }));
         }
     }
@@ -363,18 +370,19 @@ contract MCV2_Bond is MCV2_Royalty {
         uint256 reserveToBond = 0;
         uint256 supplyLeft;
         for (uint256 i = getCurrentStep(token, currentSupply); i < steps.length; ++i) {
-            supplyLeft = steps[i].rangeTo - currentSupply;
+            BondStep memory step = steps[i];
+            supplyLeft = step.rangeTo - currentSupply;
 
             if (supplyLeft < tokensLeft) {
                 if(supplyLeft == 0) continue;
 
                 // ensure reserve is calculated with ceiling
-                reserveToBond += Math.ceilDiv(supplyLeft * steps[i].price, multiFactor);
+                reserveToBond += Math.ceilDiv(supplyLeft * step.price, multiFactor);
                 currentSupply += supplyLeft;
                 tokensLeft -= supplyLeft;
             } else {
                 // ensure reserve is calculated with ceiling
-                reserveToBond += Math.ceilDiv(tokensLeft * steps[i].price, multiFactor);
+                reserveToBond += Math.ceilDiv(tokensLeft * step.price, multiFactor);
                 tokensLeft = 0;
                 break;
             }
