@@ -34,6 +34,9 @@ contract MCV2_Bond is MCV2_Royalty {
     error MCV2_Bond__InvalidCreatorAddress();
     error MCV2_BOND__InvalidPaginationParameters();
 
+    uint256 private constant MIN_UINT8_LENGTH = 31; // uint8 = 32 bits
+    uint256 private constant MIN_STRING_LENGTH = 95; // empty string = 64 bits, 1 character = 96 bits
+
     uint256 private immutable MAX_STEPS;
 
     /**
@@ -165,9 +168,9 @@ contract MCV2_Bond is MCV2_Royalty {
         // Check if the reserveToken is compatible with IERC20Metadata
         address r = bp.reserveToken;
         if (r == address(0)) revert MCV2_Bond__InvalidTokenCreationParams('reserveToken');
-        if(!_checkMethodExists(r, "decimals()", 31)) revert MCV2_Bond__InvalidReserveToken('decimals');
-        if(!_checkMethodExists(r, "name()", 64)) revert MCV2_Bond__InvalidReserveToken('name');
-        if(!_checkMethodExists(r, "symbol()", 64)) revert MCV2_Bond__InvalidReserveToken('symbol');
+        if(!_checkMethodExists(r, "decimals()", MIN_UINT8_LENGTH)) revert MCV2_Bond__InvalidReserveToken('decimals');
+        if(!_checkMethodExists(r, "name()", MIN_STRING_LENGTH)) revert MCV2_Bond__InvalidReserveToken('name');
+        if(!_checkMethodExists(r, "symbol()", MIN_STRING_LENGTH)) revert MCV2_Bond__InvalidReserveToken('symbol');
 
         if (bp.maxSupply == 0) revert MCV2_Bond__InvalidTokenCreationParams('maxSupply');
         if (bp.stepRanges.length == 0 || bp.stepRanges.length > MAX_STEPS) revert MCV2_Bond__InvalidStepParams('INVALID_STEP_LENGTH');
