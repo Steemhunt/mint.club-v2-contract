@@ -1,3 +1,5 @@
+![image](https://github.com/web3isthefuture/mint.club-v2-contract/assets/100509364/5973c665-6b3e-4631-ad4f-c171bc0334bb)
+
 # Mint Club V2
 The inherited token creator employs a bonding curve to generate new tokens using base tokens as collateral
 
