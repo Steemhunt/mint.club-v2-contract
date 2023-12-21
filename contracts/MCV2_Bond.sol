@@ -75,8 +75,8 @@ contract MCV2_Bond is MCV2_Royalty {
 
     event TokenCreated(address indexed token, string name, string symbol, address indexed reserveToken);
     event MultiTokenCreated(address indexed token, string name, string symbol, string uri, address indexed reserveToken);
-    event Mint(address indexed token, address indexed user, uint256 amountMinted, address indexed reserveToken, uint256 reserveAmount);
-    event Burn(address indexed token, address indexed user, uint256 amountBurned, address indexed reserveToken, uint256 refundAmount);
+    event Mint(address indexed token, address indexed user, address receiver, uint256 amountMinted, address indexed reserveToken, uint256 reserveAmount);
+    event Burn(address indexed token, address indexed user, address receiver, uint256 amountBurned, address indexed reserveToken, uint256 refundAmount);
     event BondCreatorUpdated(address indexed token, address indexed creator);
     event TokenMetaDataUpdated(address indexed token, string logo, string website);
 
@@ -406,8 +406,9 @@ contract MCV2_Bond is MCV2_Royalty {
      * @param token The address of the token to mint.
      * @param tokensToMint The amount of tokens to mint.
      * @param maxReserveAmount The maximum reserve amount allowed for the minting operation.
+     * @param receiver The address to receive the minted tokens.
      */
-    function mint(address token, uint256 tokensToMint, uint256 maxReserveAmount) external {
+    function mint(address token, uint256 tokensToMint, uint256 maxReserveAmount, address receiver) external {
         (uint256 reserveAmount, uint256 royalty) = getReserveForToken(token, tokensToMint);
         if (reserveAmount > maxReserveAmount) revert MCV2_Bond__SlippageLimitExceeded();
 
@@ -422,10 +423,10 @@ contract MCV2_Bond is MCV2_Royalty {
         bond.reserveBalance += reserveAmount - royalty;
         _addRoyalty(bond.creator, bond.reserveToken, royalty);
 
-        // Mint reward tokens to the user
-        MCV2_ICommonToken(token).mintByBond(user, tokensToMint);
+        // Mint reward tokens to the receiver
+        MCV2_ICommonToken(token).mintByBond(receiver, tokensToMint);
 
-        emit Mint(token, user, tokensToMint, bond.reserveToken, reserveAmount);
+        emit Mint(token, user, receiver, tokensToMint, bond.reserveToken, reserveAmount);
     }
 
     // MARK: - Burn
@@ -478,8 +479,9 @@ contract MCV2_Bond is MCV2_Royalty {
      * @param token The address of the token to burn.
      * @param tokensToBurn The amount of tokens to burn.
      * @param minRefund The minimum refund amount required.
+     * @param receiver The address to receive the refund.
      */
-    function burn(address token, uint256 tokensToBurn, uint256 minRefund) external {
+    function burn(address token, uint256 tokensToBurn, uint256 minRefund, address receiver) external {
         (uint256 refundAmount, uint256 royalty) = getRefundForTokens(token, tokensToBurn);
         if (refundAmount < minRefund) revert MCV2_Bond__SlippageLimitExceeded();
 
@@ -493,11 +495,11 @@ contract MCV2_Bond is MCV2_Royalty {
         bond.reserveBalance -= (refundAmount + royalty);
         _addRoyalty(bond.creator, bond.reserveToken, royalty);
 
-        // Transfer reserve tokens to the user
+        // Transfer reserve tokens to the receiver
         IERC20 reserveToken = IERC20(bond.reserveToken);
-        reserveToken.safeTransfer(user, refundAmount);
+        reserveToken.safeTransfer(receiver, refundAmount);
 
-        emit Burn(token, user, tokensToBurn, bond.reserveToken, refundAmount);
+        emit Burn(token, user, receiver, tokensToBurn, bond.reserveToken, refundAmount);
     }
 
     // MARK: - Utility functions
