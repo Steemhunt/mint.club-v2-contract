@@ -1,5 +1,18 @@
 # Mint Club V2
-The inherited token creator employs a bonding curve to generate new tokens using base tokens as collateral
+## Overview
+Mint Club is a bonding curve-based token (ERC20, ERC1155) creation and trading protocol. Users can create an asset with a custom bonding curve on top of any existing ERC20 token as collateral. By using a bonding curve, the new asset is immediately tradable without the need for liquidity creation on DEXs or CEXs.
+
+## Key features
+1. Token Creation (ERC20 or ERC1155)
+2. Buy (= Mint) and Sell (= Burn)
+3. Airdrop tool for any ERC20 or ERC1155 created on Mint Club V2
+4. Lock-up tool for any ERC20 or ERC1155 created on Mint Club V2
+
+## Gloals and Objectives
+Mint Club aims to provide no-code, yet flexible, token creation tools for web3 creators who want to build their token economy. One of the biggest hurdles in building token economics is providing liquidity in the early stages, but this issue is eliminated with the Mint Club protocol.
+
+## Docs
+https://docs.mint.club (V2 documentaion is in progress)
 
 ## Contract addresses 📜
 ### Ethereum Sepolia Testnet
