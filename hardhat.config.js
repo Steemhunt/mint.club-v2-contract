@@ -6,9 +6,6 @@ module.exports = {
   solidity: {
     compilers: [
       {
-        version: "0.4.18", // For WETH mock contract
-      },
-      {
         version: '0.8.20',
         settings: {
           optimizer: {
@@ -17,6 +14,9 @@ module.exports = {
           }
         }
       },
+      {
+        version: "0.4.18", // For WETH mock contract
+      }
     ]
   },
   networks: {
