@@ -14,16 +14,17 @@ abstract contract MCV2_Royalty is Ownable {
     using SafeERC20 for IERC20;
 
     error MCV2_Royalty__NothingToClaim();
+    error MCV2_Royalty__InvalidParams();
     error MCV2_Royalty__InvalidCreationFee();
     error MCV2_Royalty__CreationFeeTransactionFailed();
 
     uint256 private constant RATIO_BASE = 10000; // 100.00%
     uint256 private constant PROTOCOL_CUT = 2000;
-    uint256 internal constant MAX_ROYALTY_RANGE = 5000; // The max is set at 50% to offer flexibility in tokenomics
-
     address public constant BURN_ADDRESS = address(0x000000000000000000000000000000000000dEaD);
+
     address public protocolBeneficiary;
     uint256 public creationFee;
+    uint256 public maxRoyaltyRange = 5000;
 
     // User => ReserveToken => Royalty Balance
     mapping(address => mapping(address => uint256)) public userTokenRoyaltyBalance;
@@ -31,6 +32,7 @@ abstract contract MCV2_Royalty is Ownable {
 
     event ProtocolBeneficiaryUpdated(address protocolBeneficiary);
     event CreationFeeUpdated(uint256 amount);
+    event RoyaltyRangeUpdated(uint256 ratio);
     event RoyaltyClaimed(address indexed user, address reserveToken, uint256 amount);
 
     /**
@@ -43,11 +45,15 @@ abstract contract MCV2_Royalty is Ownable {
         creationFee = creationFee_;
     }
 
+    // MARK: - Admin functions
+
     /**
      * @dev Updates the protocol beneficiary address.
      * @param protocolBeneficiary_ The new address of the protocol beneficiary.
      */
     function updateProtocolBeneficiary(address protocolBeneficiary_) public onlyOwner {
+        if (protocolBeneficiary == address(0)) revert MCV2_Royalty__InvalidParams();
+
         protocolBeneficiary = protocolBeneficiary_;
 
         emit ProtocolBeneficiaryUpdated(protocolBeneficiary_);
@@ -57,6 +63,14 @@ abstract contract MCV2_Royalty is Ownable {
         creationFee = amount;
 
         emit CreationFeeUpdated(amount);
+    }
+
+    function updateMaxRoyaltyRange(uint256 ratio) external onlyOwner {
+        if (ratio > RATIO_BASE) revert MCV2_Royalty__InvalidParams();
+
+        maxRoyaltyRange = ratio;
+
+        emit RoyaltyRangeUpdated(ratio);
     }
 
     // MARK: - Internal utility functions
@@ -117,6 +131,7 @@ abstract contract MCV2_Royalty is Ownable {
     /**
      * @dev Burns the accumulated royalties for a specific reserve token and sends them to the BURN_ADDRESS.
      * @dev Anyone can call this function to burn the accumulated royalties for a specific reserve token.
+     * @dev This function serves to clear the burned reserve balance from the bond contract.
      * @param reserveToken The address of the reserve token.
      */
     function burnRoyalties(address reserveToken) external {

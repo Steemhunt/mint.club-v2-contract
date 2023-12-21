@@ -49,7 +49,8 @@ contract MCV2_Bond is MCV2_Royalty {
 
     struct Bond {
         address creator;
-        uint16 royalty; // immutable - range: [0, 5000] - 0.00% ~ 50.00%
+        uint16 mintRoyalty; // immutable
+        uint16 burnRoyalty; // immutable
         uint40 createdAt; // immutable
         address reserveToken; // immutable
         uint256 reserveBalance;
@@ -120,7 +121,8 @@ contract MCV2_Bond is MCV2_Royalty {
     }
 
     struct BondParams {
-        uint16 royalty;
+        uint16 mintRoyalty;
+        uint16 burnRoyalty;
         address reserveToken;
         uint128 maxSupply;
         uint128[] stepRanges;
@@ -163,7 +165,8 @@ contract MCV2_Bond is MCV2_Royalty {
      * @param bp The bond parameters.
      */
     function _validateBondParams(BondParams calldata bp) view private {
-        if (bp.royalty > MAX_ROYALTY_RANGE) revert MCV2_Bond__InvalidTokenCreationParams('royalty');
+        if (bp.mintRoyalty > maxRoyaltyRange) revert MCV2_Bond__InvalidTokenCreationParams('mintRoyalty');
+        if (bp.burnRoyalty > maxRoyaltyRange) revert MCV2_Bond__InvalidTokenCreationParams('burnRoyalty');
 
         // Check if the reserveToken is compatible with IERC20Metadata
         address r = bp.reserveToken;
@@ -188,7 +191,8 @@ contract MCV2_Bond is MCV2_Royalty {
         // Set token bond data
         Bond storage bond = tokenBond[token];
         bond.creator = _msgSender();
-        bond.royalty = bp.royalty;
+        bond.mintRoyalty = bp.mintRoyalty;
+        bond.burnRoyalty = bp.burnRoyalty;
         bond.createdAt = uint40(block.timestamp);
         bond.reserveToken = bp.reserveToken;
 
@@ -393,7 +397,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
         if (reserveToBond == 0 || tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount(); // can never happen
 
-        royalty = _getRoyalty(reserveToBond, bond.royalty);
+        royalty = _getRoyalty(reserveToBond, bond.mintRoyalty);
         reserveAmount = reserveToBond + royalty;
     }
 
@@ -465,7 +469,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
         if (tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount(); // can never happen
 
-        royalty = _getRoyalty(reserveFromBond, bond.royalty);
+        royalty = _getRoyalty(reserveFromBond, bond.burnRoyalty);
         refundAmount = reserveFromBond - royalty;
     }
 
@@ -618,7 +622,8 @@ contract MCV2_Bond is MCV2_Royalty {
     }
 
     struct BondDetail {
-        uint16 royalty;
+        uint16 mintRoyalty;
+        uint16 burnRoyalty;
         BondInfo info;
         BondStep[] steps;
     }
@@ -630,7 +635,8 @@ contract MCV2_Bond is MCV2_Royalty {
     function getDetail(address token) external view returns(BondDetail memory detail) {
         Bond memory bond = tokenBond[token];
         detail = BondDetail({
-            royalty: bond.royalty,
+            mintRoyalty: bond.mintRoyalty,
+            burnRoyalty: bond.burnRoyalty,
             info: _getBondInfo(token),
             steps: bond.steps
         });
