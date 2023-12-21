@@ -4,13 +4,20 @@ require("solidity-coverage");
 
 module.exports = {
   solidity: {
-    version: '0.8.20',
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 50000
-      }
-    }
+    compilers: [
+      {
+        version: "0.4.18", // For WETH mock contract
+      },
+      {
+        version: '0.8.20',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 50000
+          }
+        }
+      },
+    ]
   },
   networks: {
     sepolia: {

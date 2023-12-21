@@ -9,7 +9,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {MCV2_Royalty} from "./MCV2_Royalty.sol";
 import {MCV2_Token} from "./MCV2_Token.sol";
 import {MCV2_MultiToken} from "./MCV2_MultiToken.sol";
-import {MCV2_ICommonToken} from "./lib/MCV2_ICommonToken.sol";
+import {MCV2_ICommonToken} from "./interfaces/MCV2_ICommonToken.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
@@ -408,7 +408,7 @@ contract MCV2_Bond is MCV2_Royalty {
      * @param maxReserveAmount The maximum reserve amount allowed for the minting operation.
      * @param receiver The address to receive the minted tokens.
      */
-    function mint(address token, uint256 tokensToMint, uint256 maxReserveAmount, address receiver) external {
+    function mint(address token, uint256 tokensToMint, uint256 maxReserveAmount, address receiver) external returns (uint256) {
         (uint256 reserveAmount, uint256 royalty) = getReserveForToken(token, tokensToMint);
         if (reserveAmount > maxReserveAmount) revert MCV2_Bond__SlippageLimitExceeded();
 
@@ -427,6 +427,8 @@ contract MCV2_Bond is MCV2_Royalty {
         MCV2_ICommonToken(token).mintByBond(receiver, tokensToMint);
 
         emit Mint(token, user, receiver, tokensToMint, bond.reserveToken, reserveAmount);
+
+        return reserveAmount;
     }
 
     // MARK: - Burn
@@ -481,7 +483,7 @@ contract MCV2_Bond is MCV2_Royalty {
      * @param minRefund The minimum refund amount required.
      * @param receiver The address to receive the refund.
      */
-    function burn(address token, uint256 tokensToBurn, uint256 minRefund, address receiver) external {
+    function burn(address token, uint256 tokensToBurn, uint256 minRefund, address receiver) external returns (uint256) {
         (uint256 refundAmount, uint256 royalty) = getRefundForTokens(token, tokensToBurn);
         if (refundAmount < minRefund) revert MCV2_Bond__SlippageLimitExceeded();
 
@@ -500,6 +502,8 @@ contract MCV2_Bond is MCV2_Royalty {
         reserveToken.safeTransfer(receiver, refundAmount);
 
         emit Burn(token, user, receiver, tokensToBurn, bond.reserveToken, refundAmount);
+
+        return refundAmount;
     }
 
     // MARK: - Utility functions

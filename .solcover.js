@@ -5,6 +5,7 @@ module.exports = {
     "lib/ERC1155Initializable.sol",
     "mock/TestToken.sol",
     "mock/TestMultiToken.sol",
-    "mock/TaxToken.sol"
+    "mock/TaxToken.sol",
+    "mock/WETH9.sol"
   ]
 };
