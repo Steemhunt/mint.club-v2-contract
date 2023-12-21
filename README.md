@@ -1,18 +1,30 @@
 # Mint Club V2
 ## Overview
 Mint Club is a bonding curve-based token (ERC20, ERC1155) creation and trading protocol. Users can create an asset with a custom bonding curve on top of any existing ERC20 token as collateral. By using a bonding curve, the new asset is immediately tradable without the need for liquidity creation on DEXs or CEXs.
+- Docs: https://docs.mint.club (V2 documentaion is in progress)
+- Demo Video: https://www.youtube.com/watch?v=BR_MJozU-DU
 
 ## Key features
-1. Token Creation (ERC20 or ERC1155)
-2. Buy (= Mint) and Sell (= Burn)
-3. Airdrop tool for any ERC20 or ERC1155 created on Mint Club V2
-4. Lock-up tool for any ERC20 or ERC1155 created on Mint Club V2
+1. **Token Creation (ERC20 or ERC1155)**
+   * Create a bonding curve token (ERC20) or NFT (ERC1155) by using another ERC20 token as the base asset for your token's bonding curve pool.
+   * Choose from curve types such as linear, exponential, or flat line, and adjust the price variation intervals for your token's journey.
+   * Set key token specifications like starting price, free minting allocation, maximum price, and supply.
+   * Deploy your asset on various Layer 1 and 2 networks.
+
+2. **Buy (= Mint) and Sell (= Burn) Bonding Curve Asset**
+   * When a bonding curve token is bought, the price curve determines the amount of the base token to be paid, enabling a swap. The paid base tokens are stored in the bonding curve pool, and an equivalent amount of the bonding curve tokens is minted to the buyer.
+   * Conversely, when a bonding curve token is sold, the curve calculates the amount of base tokens to be returned. These base tokens are then returned to the seller, and the equivalent bonding curve tokens are burned.
+
+3. **Airdrop Tool**
+   * Set up a public or private airdrop for ERC20 or ERC1155 tokens created on Mint Club V2.
+   * For private airdrops, Mint Club offers a merkleRoot-based whitelist feature.
+
+4. **Lock-up Tool**
+   * Create a contract-bound lock-up schedule for ERC20 or ERC1155 tokens created on Mint Club V2.
+   * Specify the unlock time and recipient address for after the lock-up period is completed.
 
 ## Gloals and Objectives
 Mint Club aims to provide no-code, yet flexible, token creation tools for web3 creators who want to build their token economy. One of the biggest hurdles in building token economics is providing liquidity in the early stages, but this issue is eliminated with the Mint Club protocol.
-
-## Docs
-https://docs.mint.club (V2 documentaion is in progress)
 
 ## Contract addresses 📜
 ### Ethereum Sepolia Testnet
