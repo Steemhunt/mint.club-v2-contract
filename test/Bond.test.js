@@ -236,7 +236,7 @@ describe('Bond', function () {
         await expect(
           Bond.createToken(
             this.newTokenParams,
-            modifiedValues(BABY_TOKEN.bondParams, { stepRanges: [...Array(MAX_STEPS + 2).keys()].splice(1) })
+            modifiedValues(BABY_TOKEN.bondParams, { stepRanges: [...Array(MAX_STEPS + 2n).keys()].splice(1) })
           )
         ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepParams')
         .withArgs('INVALID_STEP_LENGTH');

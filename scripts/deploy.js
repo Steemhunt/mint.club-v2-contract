@@ -1,13 +1,24 @@
 require('dotenv').config();
 const hre = require('hardhat');
-const { getMaxSteps } = require('./utils/test-utils');
+const { getMaxSteps } = require('../test/utils/test-utils');
 
 const PROTOCOL_BENEFIARY = process.env.PROTOCOL_BENEFIARY;
+const MAX_STEPS = getMaxSteps(hre.network.name);
+const WETH_ADDRESS = {
+  sepolia: '0xfff9976782d46cc05630d1f6ebab18b2324d6b14',
+  base: '0x4200000000000000000000000000000000000006',
+};
+const CREATION_FEE = 0n;
+
+console.log(`--------------------------------------------------`);
+console.log(`NETWORK: ${hre.network.name} | PROTOCOL_BENEFIARY: ${PROTOCOL_BENEFIARY}`);
+console.log(`MAX_STEPS: ${MAX_STEPS} | WETH_ADDRESS: ${WETH_ADDRESS[hre.network.name]}`);
+console.log(`--------------------------------------------------`);
 
 async function main() {
   const accounts = await hre.ethers.getSigners();
   const deployer = accounts[0].address;
-  console.log(`Deploy from account: ${deployer}`);
+  console.log(`Deploy from account: ${deployer} - Balance: ${Number(await hre.ethers.provider.getBalance(deployer))/1e18} ETH`);
 
   const tokenImplementation = await hre.ethers.deployContract('MCV2_Token');
   await tokenImplementation.waitForDeployment();
@@ -17,12 +28,15 @@ async function main() {
   await NFTImplementation.waitForDeployment();
   console.log(` -> MCV2_MultiToken contract deployed at ${NFTImplementation.target}`);
 
-  const MAX_STEPS = getMaxSteps(hre.network.name);
   const bond = await hre.ethers.deployContract('MCV2_Bond', [
-    tokenImplementation.target, NFTImplementation.target, PROTOCOL_BENEFIARY, MAX_STEPS
+    tokenImplementation.target, NFTImplementation.target, PROTOCOL_BENEFIARY, CREATION_FEE, MAX_STEPS
   ]);
   await bond.waitForDeployment();
   console.log(` -> MCV2_Bond contract deployed at ${bond.target}`);
+
+  const zap = await hre.ethers.deployContract('MCV2_ZapV1', [bond.target, WETH_ADDRESS[hre.network.name]]);
+  await zap.waitForDeployment();
+  console.log(` -> Zap contract deployed at ${zap.target}`);
 
   const locker = await hre.ethers.deployContract('Locker');
   await locker.waitForDeployment();
@@ -37,6 +51,7 @@ async function main() {
   console.log(`- MCV2_Token: ${tokenImplementation.target}`);
   console.log(`- MCV2_MultiToken: ${NFTImplementation.target}`);
   console.log(`- MCV2_Bond: ${bond.target}`);
+  console.log(`- MCV2_ZapV1: ${zap.target}`);
   console.log(`- Locker: ${locker.target}`);
   console.log(`- MerkleDistributor: ${merkleDistributor.target}`);
   console.log('```');
@@ -44,7 +59,8 @@ async function main() {
   console.log(`
     npx hardhat verify --network ${hre.network.name} ${tokenImplementation.target}
     npx hardhat verify --network ${hre.network.name} ${NFTImplementation.target}
-    npx hardhat verify --network ${hre.network.name} ${bond.target} ${tokenImplementation.target} ${NFTImplementation.target} ${PROTOCOL_BENEFIARY}
+    npx hardhat verify --network ${hre.network.name} ${bond.target} ${tokenImplementation.target} ${NFTImplementation.target} ${PROTOCOL_BENEFIARY} ${CREATION_FEE} ${MAX_STEPS}
+    npx hardhat verify --network ${hre.network.name} ${zap.target} ${bond.target} ${WETH_ADDRESS[hre.network.name]}
     npx hardhat verify --network ${hre.network.name} ${locker.target}
     npx hardhat verify --network ${hre.network.name} ${merkleDistributor.target}
   `);

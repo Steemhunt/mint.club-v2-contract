@@ -12,9 +12,9 @@ const PROTOCOL_CUT = 2000n; // 20% of the royalty
 exports.getMaxSteps = function(network) {
   // 1,000 steps reqruies about 15M gas
   const MAX_STEPS = {
-    ethereum: 1000, // 30M max
-    base: 1000,  // 30M max
-    sepolia: 1000, // 30M max
+    ethereum: 1000n, // 30M max
+    base: 1000n,  // 30M max
+    sepolia: 1000n, // 30M max
 
     // TODO: add more networks
   };

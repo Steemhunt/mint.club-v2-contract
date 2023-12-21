@@ -28,11 +28,21 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
 
 ## Contract addresses 📜
 ### Ethereum Sepolia Testnet
-- MCV2_Token: [0xAbd0087147958a164BCb41e7aD8Ee4a4af57b4a2](https://sepolia.etherscan.io/address/0xAbd0087147958a164BCb41e7aD8Ee4a4af57b4a2#code)
-- MCV2_MultiToken: [0xCFe883f228822214fC82868Cd5d4Cf6Df72699b2](https://sepolia.etherscan.io/address/0xCFe883f228822214fC82868Cd5d4Cf6Df72699b2#code)
-- MCV2_Bond: [0x81d60F3d5dB8586E09d20a96fAFB8437A79D8d94](https://sepolia.etherscan.io/address/0x81d60F3d5dB8586E09d20a96fAFB8437A79D8d94#code)
-- Locker: [0xD77AeD25FC2CE8F425c9a0d65c823EdA32531d1d](https://sepolia.etherscan.io/address/0xD77AeD25FC2CE8F425c9a0d65c823EdA32531d1d#code)
-- MerkleDistributor: [0x2c386c3711eF9548d43b6A332e8AAce60AF04Fc5](https://sepolia.etherscan.io/address/0x2c386c3711eF9548d43b6A332e8AAce60AF04Fc5#code)
+- MCV2_Token: [0x003E64dFcf66D597aDA5B151CA6C374f1A800e6c](https://sepolia.etherscan.io/address/0x003E64dFcf66D597aDA5B151CA6C374f1A800e6c#code)
+- MCV2_MultiToken: [0xf462a581E2977688bFD6984374F7aDFE5893e16F](https://sepolia.etherscan.io/address/0xf462a581E2977688bFD6984374F7aDFE5893e16F#code)
+- MCV2_Bond: [0x3384eD0d272dE35bF6DC516E1eA7d188CEb51793](https://sepolia.etherscan.io/address/0x3384eD0d272dE35bF6DC516E1eA7d188CEb51793#code)
+- MCV2_ZapV1: [0x09f1613414f8dA2452EF5Bdac468bB3F08BaF426](https://sepolia.etherscan.io/address/0x09f1613414f8dA2452EF5Bdac468bB3F08BaF426#code)
+- Locker: [0xD9886E3b71B8bf34610386a451E4c12Ce05bAdf8](https://sepolia.etherscan.io/address/0xD9886E3b71B8bf34610386a451E4c12Ce05bAdf8#code)
+- MerkleDistributor: [0xFC3304e5D4AB166aA91A52E91B85f1804a7feAB8](https://sepolia.etherscan.io/address/0xFC3304e5D4AB166aA91A52E91B85f1804a7feAB8#code)
+
+### Base L2 - TEST ONLY!
+- MCV2_Token: [0xeDeB9196B6648F5a4701067E851F3fEBcF62F549](https://sepolia.etherscan.io/address/0xeDeB9196B6648F5a4701067E851F3fEBcF62F549#code)
+- MCV2_MultiToken: [0xF4567Fc564Bfd23F50Fe092f65146CAf7266d241](https://sepolia.etherscan.io/address/0xF4567Fc564Bfd23F50Fe092f65146CAf7266d241#code)
+- MCV2_Bond: [0xAD5a113ee65F30269f7558f96483126B1FB60c4E](https://sepolia.etherscan.io/address/0xAD5a113ee65F30269f7558f96483126B1FB60c4E#code)
+- MCV2_ZapV1: [0x9770cadFCdba5BF9A26AfDcAd48cB51338941A1A](https://sepolia.etherscan.io/address/0x9770cadFCdba5BF9A26AfDcAd48cB51338941A1A#code)
+- Locker: [0xB43826E079dFB2e2b48a0a473Efc7F1fe6391763](https://sepolia.etherscan.io/address/0xB43826E079dFB2e2b48a0a473Efc7F1fe6391763#code)
+- MerkleDistributor: [0xC14d558AfFE9457E620338E7f2166Ae29E884463](https://sepolia.etherscan.io/address/0xC14d558AfFE9457E620338E7f2166Ae29E884463#code)
+
 
 ### V1 Contract Wrapper (BSC Mainnet):
 - MCV1_Wrapper: [0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89](https://bscscan.com/address/0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89#code)
