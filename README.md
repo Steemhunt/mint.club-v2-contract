@@ -1,3 +1,5 @@
+![image](https://github.com/Steemhunt/mint.club-v2-contract/assets/1332279/66ce69bd-7ebd-4d58-b064-f82053b51b5a)
+
 # Mint Club V2
 ## Overview
 Mint Club is a bonding curve-based token (ERC20, ERC1155) creation and trading protocol. Users can create an asset with a custom bonding curve on top of any existing ERC20 token as collateral. By using a bonding curve, the new asset is immediately tradable without the need for liquidity creation on DEXs or CEXs.
