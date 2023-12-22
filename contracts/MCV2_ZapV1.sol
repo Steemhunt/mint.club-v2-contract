@@ -19,6 +19,7 @@ contract MCV2_ZapV1 is Context {
     error MCV2_ZapV1__ReserveIsNotWETH();
     error MCV2_ZapV1__EthTransferFailed();
     error MCV2_ZapV1__SlippageLimitExceeded();
+    error MCV2_ZapV1__InvalidReceiver();
 
     MCV2_Bond public immutable BOND;
     IWETH public immutable WETH;
@@ -52,6 +53,7 @@ contract MCV2_ZapV1 is Context {
      */
     function mintWithEth(address token, uint256 tokensToMint, address receiver) external payable {
         if (_getReserveToken(token) != address(WETH)) revert MCV2_ZapV1__ReserveIsNotWETH();
+        if (receiver == address(0)) revert MCV2_ZapV1__InvalidReceiver();
 
         // Check slippage limit
         uint256 maxEthAmount = msg.value;
@@ -78,6 +80,7 @@ contract MCV2_ZapV1 is Context {
      */
     function burnToEth(address token, uint256 tokensToBurn, uint256 minRefund, address receiver) external {
         if (_getReserveToken(token) != address(WETH)) revert MCV2_ZapV1__ReserveIsNotWETH();
+        if (receiver == address(0)) revert MCV2_ZapV1__InvalidReceiver();
 
         // Burn and get refund WETH
         (uint256 refundAmount, ) = BOND.getRefundForTokens(token, tokensToBurn);
