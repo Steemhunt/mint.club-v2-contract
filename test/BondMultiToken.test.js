@@ -21,7 +21,8 @@ const MAX_STEPS = getMaxSteps('ethereum');
 const BABY_TOKEN = {
   tokenParams: { name: 'Baby Token', symbol: 'BABY', uri: 'https://api.hunt.town/token-metadata/buildings/0.json' },
   bondParams: {
-    royalty: 500n, // 5%
+    mintRoyalty: 500n, // 5%
+    burnRoyalty: 700n, // 7%
     reserveToken: null, // Should be set later
     maxSupply: 100n,
     stepRanges: [ 10n, 30n, 50n, 100n ],
@@ -144,14 +145,24 @@ describe('BondMultiToken', function () {
         .withArgs('symbol');
       });
 
-      it('should check if royalty is less than the max range', async function () {
+      it('should check if mintRoyalty is less than the max range', async function () {
         await expect(
           Bond.createMultiToken(
             this.newTokenParams,
-            modifiedValues(BABY_TOKEN.bondParams, { royalty: MAX_ROYALTY_RANGE + 1n })
+            modifiedValues(BABY_TOKEN.bondParams, { mintRoyalty: MAX_ROYALTY_RANGE + 1n })
           )
         ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenCreationParams')
-        .withArgs('royalty');
+        .withArgs('mintRoyalty');
+      });
+
+      it('should check if burnRoyalty is less than the max range', async function () {
+        await expect(
+          Bond.createMultiToken(
+            this.newTokenParams,
+            modifiedValues(BABY_TOKEN.bondParams, { burnRoyalty: MAX_ROYALTY_RANGE + 1n })
+          )
+        ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenCreationParams')
+        .withArgs('burnRoyalty');
       });
 
       it('should check if reserve token is valid', async function () {
@@ -304,7 +315,7 @@ describe('BondMultiToken', function () {
       it('should send fees to the new creator', async function () {
         // stepRanges: [ 10n, 30n, 50n, 100n ] / stepPrices: [ wei(0), wei(2), wei(5), wei(10) ]
         const tokensToMint = 20n; // requires 20 * wei(2) = 40 BASE tokens
-        const test = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty, 0n);
+        const test = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.mintRoyalty, 0n);
         // { royalty: 2, creatorCut: 1.6, protocolCut: 0.4, reserveToBond: 40, reserveRequired: 42 }
 
         await BaseToken.transfer(alice.address, test.reserveRequired);
@@ -324,7 +335,7 @@ describe('BondMultiToken', function () {
           this.tokensToMint = 15n;
 
           // stepRanges: [ 10n, 30n, 50n, 100n ] / stepPrices: [ wei(0), wei(2), wei(5), wei(10) ]
-          this.mintTest = calculateMint(this.tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty, 0n);
+          this.mintTest = calculateMint(this.tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.mintRoyalty, 0n);
           // { royalty: 1.5, creatorCut: 1.2, protocolCut: 0.3, reserveToBond: 30, reserveRequired: 31.5 }
 
           await BaseToken.transfer(alice.address, this.initialBaseBalance);
@@ -361,7 +372,7 @@ describe('BondMultiToken', function () {
 
         it('should emit Mint event', async function () {
           const tokensToMint2 = 3n;
-          const mintTest2 = calculateMint(tokensToMint2, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty, 0n);
+          const mintTest2 = calculateMint(tokensToMint2, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.mintRoyalty, 0n);
 
           await expect(Bond.connect(alice).mint(this.token.target, tokensToMint2, mintTest2.reserveRequired))
             .emit(Bond, 'Mint')
@@ -437,7 +448,7 @@ describe('BondMultiToken', function () {
             });
 
             it('should transfer BASE tokens to alice', async function () {
-              const { total } = calculateRoyalty(this.initial.bondReserve, BABY_TOKEN.bondParams.royalty);
+              const { total } = calculateRoyalty(this.initial.bondReserve, BABY_TOKEN.bondParams.burnRoyalty);
               const toRefund =  this.initial.bondReserve - total;
               expect(await BaseToken.balanceOf(alice.address)).to.equal(this.initial.baseBalance + toRefund);
             });
@@ -452,22 +463,30 @@ describe('BondMultiToken', function () {
             });
 
             it('should add claimable balance to the creator', async function () {
-              // mint + burn = 2
-              const royalty = calculateRoyalty(this.initial.bondReserve * 2n, BABY_TOKEN.bondParams.royalty);
+              const mintRoyalty = calculateRoyalty(this.initial.bondReserve, BABY_TOKEN.bondParams.mintRoyalty);
+              const burnRoyalty = calculateRoyalty(this.initial.bondReserve, BABY_TOKEN.bondParams.burnRoyalty);
 
-              expect(await Bond.userTokenRoyaltyBalance(owner.address, BaseToken.target)).to.equal(royalty.creatorCut);
+              expect(await Bond.userTokenRoyaltyBalance(owner.address, BaseToken.target)).to.equal(
+                mintRoyalty.creatorCut + burnRoyalty.creatorCut
+              );
             });
 
             it('should add claimable balance to the protocol', async function () {
-              const royalty = calculateRoyalty(this.initial.bondReserve * 2n, BABY_TOKEN.bondParams.royalty);
+              const mintRoyalty = calculateRoyalty(this.initial.bondReserve, BABY_TOKEN.bondParams.mintRoyalty);
+              const burnRoyalty = calculateRoyalty(this.initial.bondReserve, BABY_TOKEN.bondParams.burnRoyalty);
 
-              expect(await Bond.userTokenRoyaltyBalance(PROTOCOL_BENEFICIARY, BaseToken.target)).to.equal(royalty.protocolCut);
+              expect(await Bond.userTokenRoyaltyBalance(PROTOCOL_BENEFICIARY, BaseToken.target)).to.equal(
+                mintRoyalty.protocolCut + burnRoyalty.protocolCut
+              );
             });
 
             it('should leave claimable royalty balance on the bond', async function () {
-              const royalty = calculateRoyalty(this.initial.bondReserve * 2n, BABY_TOKEN.bondParams.royalty);
+              const mintRoyalty = calculateRoyalty(this.initial.bondReserve, BABY_TOKEN.bondParams.mintRoyalty);
+              const burnRoyalty = calculateRoyalty(this.initial.bondReserve, BABY_TOKEN.bondParams.burnRoyalty);
 
-              expect(await BaseToken.balanceOf(Bond.target)).to.equal(royalty.total);
+              expect(await BaseToken.balanceOf(Bond.target)).to.equal(
+                mintRoyalty.total + burnRoyalty.total
+              );
             });
           }); // Massive Burn
         }); // Massive Mint
@@ -478,7 +497,7 @@ describe('BondMultiToken', function () {
           const initialBaseBalance = wei(22, 9);
           const tokensToMint = 10n;
 
-          this.mintTest = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty, 0n);
+          this.mintTest = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.mintRoyalty, 0n);
           // { royalty: 1, creatorCut: 0.8, protocolCut: 0.2, reserveToBond: 20, reserveRequired: 21 }
 
           await BaseToken.transfer(alice.address, initialBaseBalance);
@@ -494,7 +513,7 @@ describe('BondMultiToken', function () {
           };
           this.tokensToBurn = 5n;
 
-          this.burnTest = calculateBurn(this.tokensToBurn, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty, 0n);
+          this.burnTest = calculateBurn(this.tokensToBurn, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.burnRoyalty, 0n);
           // { royalty: 0.5, creatorCut: 0.4, protocolCut: 0.1, reserveFromBond: 10, reserveToRefund: 9.5 }
 
           await this.token.connect(alice).setApprovalForAll(Bond.target, true);
@@ -559,7 +578,7 @@ describe('BondMultiToken', function () {
 
         it('should revert if the minTokens parameter is set more than the expected value', async function () {
           const tokensToMint = 10n;
-          const test = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty, 0n);
+          const test = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.mintRoyalty, 0n);
           await expect(
             Bond.connect(alice).mint(this.token.target, tokensToMint, test.reserveRequired - 1n)
           ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__SlippageLimitExceeded');
@@ -567,7 +586,7 @@ describe('BondMultiToken', function () {
 
         it('should revert if the slippage limit exceeded due to a front-run', async function () {
           const tokensToMint = 10n;
-          const test = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty, 0n);
+          const test = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.mintRoyalty, 0n);
 
           // front-run till the next price step
           await Bond.connect(alice).mint(this.token.target, BABY_TOKEN.bondParams.stepRanges[1], MAX_INT_256);
@@ -606,7 +625,7 @@ describe('BondMultiToken', function () {
 
         it('should revert if user try to mint more than the balance', async function () {
           const tokensToMint = 10n;
-          const test = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty, 0n);
+          const test = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.mintRoyalty, 0n);
           await BaseToken.connect(alice).transfer(owner.address, this.initialBaseBalance - test.reserveRequired);
 
           await expect(
@@ -658,7 +677,7 @@ describe('BondMultiToken', function () {
 
         it('should revert if the caller receives a smaller amount than minRefund', async function () {
           const burnAmount = 5n;
-          const { reserveToRefund } = calculateBurn(burnAmount, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty, 0n);
+          const { reserveToRefund } = calculateBurn(burnAmount, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.burnRoyalty, 0n);
           await this.token.connect(alice).setApprovalForAll(Bond.target, true);
 
           await expect(
@@ -668,7 +687,7 @@ describe('BondMultiToken', function () {
 
         it('should revert if the slippage limit exceeded due to a front-run', async function () {
           const burnAmount = 5n;
-          const { reserveToRefund } = calculateBurn(burnAmount, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty, 0n);
+          const { reserveToRefund } = calculateBurn(burnAmount, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.burnRoyalty, 0n);
           await this.token.connect(alice).setApprovalForAll(Bond.target, true);
 
           // Front-run the transaction - owner rugs the pool
@@ -688,7 +707,8 @@ describe('BondMultiToken', function () {
       const EXTREME_BABY = {
         tokenParams: BABY_TOKEN.tokenParams,
         bondParams: {
-          royalty: 100n, // 1%
+          mintRoyalty: 100n, // 1%
+          burnRoyalty: 100n, // 1%
           reserveToken: BaseToken.target,
           maxSupply: 100n,
           stepRanges: [50n, 100n],

@@ -15,7 +15,8 @@ const MAX_STEPS = getMaxSteps('ethereum');
 const BABY_TOKEN = {
   tokenParams: { name: 'Baby Token', symbol: 'BABY' },
   bondParams: {
-    royalty: 1000n, // 10%
+    mintRoyalty: 1000n, // 10%
+    burnRoyalty: 500n, // 5%
     reserveToken: null, // Should be set later
     maxSupply: wei(10000000), // supply: 10M
     stepRanges: [ wei(10000), wei(100000), wei(200000), wei(500000), wei(1000000), wei(2000000), wei(5000000), wei(10000000) ],
@@ -118,10 +119,40 @@ describe('Royalty', function () {
     }); // With creation fee
   }); // Update creation fee by deployer
 
+  describe('Update maxRoyaltyRange by deployer', function () {
+    it('should have initial value', async function () {
+      expect((await Bond.maxRoyaltyRange())).to.equal(5000n);
+    });
+
+    it('should be able to update maxRoyaltyRange by the deployer', async function () {
+      await Bond.connect(owner).updateMaxRoyaltyRange(10000n);
+      expect((await Bond.maxRoyaltyRange())).to.equal(10000n);
+    });
+
+    it('should not be able to update maxRoyaltyRange by non-owner', async function () {
+      await expect(Bond.connect(alice).updateMaxRoyaltyRange(10000n)).to.be.
+        revertedWithCustomError(Bond, 'OwnableUnauthorizedAccount');
+    });
+
+    it('should revert if maxRoyaltyRange is invalid', async function () {
+      await expect(Bond.connect(owner).updateMaxRoyaltyRange(10001n)).to.be.
+        revertedWithCustomError(Bond, 'MCV2_Royalty__InvalidParams');
+    });
+
+    it('should apply maxRoyaltyRange on creation of token', async function () {
+      await Bond.connect(owner).updateMaxRoyaltyRange(1000n);
+      await expect(Bond.connect(alice).createToken(
+        modifiedValues(BABY_TOKEN.tokenParams, { symbol: 'TEST_FEE' }),
+        modifiedValues(BABY_TOKEN.bondParams, { mintRoyalty: 1001n })
+      )).to.be.
+        revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenCreationParams').withArgs('mintRoyalty');
+    });
+  }); // Update maxRoyaltyRange by deployer
+
   describe('Mint royalty', function () {
     beforeEach(async function () {
       const tokensToMint = wei(500);
-      this.buyTest = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty);
+      this.buyTest = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.mintRoyalty);
       // { royalty: 100, creatorCut: 80, protocolCut: 20, reserveToBond: 1000, reserveRequired: 1100 }
 
       await BaseToken.transfer(bob.address, this.buyTest.reserveRequired);
@@ -144,7 +175,7 @@ describe('Royalty', function () {
     describe('Burn royalty', function () {
       beforeEach(async function () {
         const amountToBurn = wei(100);
-        this.sellTest = calculateBurn(amountToBurn, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty);
+        this.sellTest = calculateBurn(amountToBurn, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.burnRoyalty);
         // { royalty: 10, creatorCut: 8, protocolCut: 2, reserveFromBond: 200, reserveToRefund: 190 }
 
         await this.token.connect(bob).approve(Bond.target, amountToBurn);
@@ -199,7 +230,7 @@ describe('Royalty', function () {
   describe('Give up royalty', function () {
     beforeEach(async function () {
       const tokensToMint = wei(500);
-      this.buyTest = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.royalty);
+      this.buyTest = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.mintRoyalty);
       // { royalty: 100, creatorCut: 80, protocolCut: 20, reserveToBond: 1000, reserveRequired: 1100 }
 
       await BaseToken.transfer(bob.address, this.buyTest.reserveRequired);
