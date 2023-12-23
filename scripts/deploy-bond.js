@@ -15,7 +15,7 @@ async function main() {
 
   const MAX_STEPS = getMaxSteps(hre.network.name);
   const bond = await hre.ethers.deployContract('MCV2_Bond', [
-    tokenImplementation, NFTImplementation, PROTOCOL_BENEFIARY, MAX_STEPS[hre.network.name]
+    tokenImplementation, NFTImplementation, PROTOCOL_BENEFIARY, MAX_STEPS
   ]);
   await bond.waitForDeployment();
   console.log(` -> MCV2_Bond contract deployed at ${bond.target}`);

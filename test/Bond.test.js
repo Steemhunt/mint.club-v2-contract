@@ -236,7 +236,7 @@ describe('Bond', function () {
         await expect(
           Bond.createToken(
             this.newTokenParams,
-            modifiedValues(BABY_TOKEN.bondParams, { stepRanges: [...Array(MAX_STEPS + 2).keys()].splice(1) })
+            modifiedValues(BABY_TOKEN.bondParams, { stepRanges: [...Array(MAX_STEPS + 2n).keys()].splice(1) })
           )
         ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidStepParams')
         .withArgs('INVALID_STEP_LENGTH');
@@ -371,7 +371,7 @@ describe('Bond', function () {
 
         await BaseToken.transfer(alice.address, wei(1010, 9));
         await BaseToken.connect(alice).approve(Bond.target, MAX_INT_256);
-        await Bond.connect(alice).mint(this.token.target, tokensToMint, MAX_INT_256);
+        await Bond.connect(alice).mint(this.token.target, tokensToMint, MAX_INT_256, alice.address);
 
         const fees = await Bond.getRoyaltyInfo(bob.address, BaseToken.target);
         expect(fees[0]).to.equal(test.creatorCut);
@@ -419,11 +419,16 @@ describe('Bond', function () {
 
           await BaseToken.transfer(alice.address, this.initialBaseBalance);
           await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
-          await Bond.connect(alice).mint(this.token.target, this.tokensToMint, MAX_INT_256);
+          await Bond.connect(alice).mint(this.token.target, this.tokensToMint, MAX_INT_256, alice.address);
         });
 
         it('should mint correct amount', async function () {
           expect(await this.token.balanceOf(alice.address)).to.equal(this.tokensToMint);
+        });
+
+        it('should mint to a different receiver', async function () {
+          await Bond.connect(alice).mint(this.token.target, this.tokensToMint, MAX_INT_256, bob.address);
+          expect(await this.token.balanceOf(bob.address)).to.equal(this.tokensToMint);
         });
 
         it('should transfer BASE tokens to the bond', async function () {
@@ -450,9 +455,9 @@ describe('Bond', function () {
         });
 
         it('should emit Mint event', async function () {
-          await expect(Bond.connect(alice).mint(this.token.target, this.tokensToMint, MAX_INT_256))
+          await expect(Bond.connect(alice).mint(this.token.target, this.tokensToMint, MAX_INT_256, alice.address))
             .emit(Bond, 'Mint')
-            .withArgs(this.token.target, alice.address, this.tokensToMint, BaseToken.target, this.mintTest.reserveRequired);
+            .withArgs(this.token.target, alice.address, alice.address, this.tokensToMint, BaseToken.target, this.mintTest.reserveRequired);
         });
       }); // Mint once
 
@@ -463,7 +468,7 @@ describe('Bond', function () {
           this.initialBaseBalance = wei(117341800, 9); // 117,341,800 BASE tokens required
           await BaseToken.transfer(alice.address, this.initialBaseBalance);
           await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
-          await Bond.connect(alice).mint(this.token.target, this.tokensToMint, MAX_INT_256);
+          await Bond.connect(alice).mint(this.token.target, this.tokensToMint, MAX_INT_256, alice.address);
           this.predicted = {
             reserveOnBond: wei(116180000, 9),
             totalSupply: wei(10000000), // 10M = max supply
@@ -517,7 +522,7 @@ describe('Bond', function () {
               // Burn all BABY tokens Alice has
               await this.token.connect(alice).approve(Bond.target, MAX_INT_256);
 
-              await Bond.connect(alice).burn(this.token.target, this.initial.tokenBalance, 0);
+              await Bond.connect(alice).burn(this.token.target, this.initial.tokenBalance, 0, alice.address);
             });
 
             it('should burn all BABY tokens from alice', async function () {
@@ -580,7 +585,7 @@ describe('Bond', function () {
 
           await BaseToken.transfer(alice.address, initialBaseBalance);
           await BaseToken.connect(alice).approve(Bond.target, initialBaseBalance);
-          await Bond.connect(alice).mint(this.token.target, tokensToMint, MAX_INT_256);
+          await Bond.connect(alice).mint(this.token.target, tokensToMint, MAX_INT_256, alice.address);
 
           this.initial = {
             supply: await this.token.totalSupply(), // 10,500
@@ -596,7 +601,7 @@ describe('Bond', function () {
           // { royalty: 10, creatorCut: 8, protocolCut: 2, reserveFromBond: 200, reserveToRefund: 190 }
 
           await this.token.connect(alice).approve(Bond.target, MAX_INT_256);
-          await Bond.connect(alice).burn(this.token.target, this.tokensToBurn, 0);
+          await Bond.connect(alice).burn(this.token.target, this.tokensToBurn, 0, alice.address);
         });
 
         it('should decrease the BABY tokens from Alice', async function () {
@@ -634,9 +639,9 @@ describe('Bond', function () {
         });
 
         it('should emit Burn event', async function () {
-          await expect(Bond.connect(alice).burn(this.token.target, this.tokensToBurn, 0))
+          await expect(Bond.connect(alice).burn(this.token.target, this.tokensToBurn, 0, alice.address))
             .emit(Bond, 'Burn')
-            .withArgs(this.token.target, alice.address, this.tokensToBurn, BaseToken.target, this.burnTest.reserveToRefund);
+            .withArgs(this.token.target, alice.address, alice.address, this.tokensToBurn, BaseToken.target, this.burnTest.reserveToRefund);
         });
       }); // Burn
     }); // Mint
@@ -651,7 +656,7 @@ describe('Bond', function () {
 
         it('should revert if the pool does not exists', async function () {
           await expect(
-            Bond.connect(alice).mint(BaseToken.target, 100n, MAX_INT_256)
+            Bond.connect(alice).mint(BaseToken.target, 100n, MAX_INT_256, alice.address)
           ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__TokenNotFound');
         });
 
@@ -659,7 +664,7 @@ describe('Bond', function () {
           const tokensToMint = wei(10);
           const test = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.mintRoyalty);
           await expect(
-            Bond.connect(alice).mint(this.token.target, tokensToMint, test.reserveRequired - 1n)
+            Bond.connect(alice).mint(this.token.target, tokensToMint, test.reserveRequired - 1n, alice.address)
           ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__SlippageLimitExceeded');
         });
 
@@ -668,10 +673,10 @@ describe('Bond', function () {
           const test = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.mintRoyalty);
 
           // front-run till the next price step (price becomes 3 after 100k tokens, 180k reserve)
-          await Bond.connect(alice).mint(this.token.target, BABY_TOKEN.bondParams.stepRanges[1], MAX_INT_256);
+          await Bond.connect(alice).mint(this.token.target, BABY_TOKEN.bondParams.stepRanges[1], MAX_INT_256, alice.address);
 
           await expect(
-            Bond.connect(alice).mint(this.token.target, tokensToMint, test.reserveRequired)
+            Bond.connect(alice).mint(this.token.target, tokensToMint, test.reserveRequired, alice.address)
           ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__SlippageLimitExceeded');
         });
 
@@ -679,13 +684,13 @@ describe('Bond', function () {
           await BaseToken.connect(alice).approve(Bond.target, 0);
 
           await expect(
-            Bond.connect(alice).mint(this.token.target, 1n, MAX_INT_256)
+            Bond.connect(alice).mint(this.token.target, 1n, MAX_INT_256, alice.address)
           ).to.be.revertedWithCustomError(BaseToken, 'ERC20InsufficientAllowance');
         });
 
         it('should revert if reserve amount is zero', async function () {
           await expect(
-            Bond.connect(alice).mint(this.token.target, 0, MAX_INT_256)
+            Bond.connect(alice).mint(this.token.target, 0, MAX_INT_256, alice.address)
           ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenAmount');
         });
 
@@ -694,11 +699,11 @@ describe('Bond', function () {
             BABY_TOKEN.bondParams.stepRanges[0]; // except free minting
 
           await expect(
-            Bond.connect(alice).mint(this.token.target, maxTokensToMint + 1n, MAX_INT_256)
+            Bond.connect(alice).mint(this.token.target, maxTokensToMint + 1n, MAX_INT_256, alice.address)
           ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__ExceedMaxSupply');
 
           await expect(
-            Bond.connect(alice).mint(this.token.target, maxTokensToMint, MAX_INT_256)
+            Bond.connect(alice).mint(this.token.target, maxTokensToMint, MAX_INT_256, alice.address)
           ).not.to.be.reverted;
         });
 
@@ -707,7 +712,7 @@ describe('Bond', function () {
           const test = calculateMint(tokensToMint, BABY_TOKEN.bondParams.stepPrices[1], BABY_TOKEN.bondParams.mintRoyalty);
           await BaseToken.connect(alice).transfer(owner.address, this.initialBaseBalance - test.reserveRequired);
           await expect(
-            Bond.connect(alice).mint(this.token.target, tokensToMint + 1n, MAX_INT_256)
+            Bond.connect(alice).mint(this.token.target, tokensToMint + 1n, MAX_INT_256, alice.address)
           ).to.be.revertedWithCustomError(BaseToken, 'ERC20InsufficientBalance');
         });
       }); // Mint: Edge Cases
@@ -718,18 +723,18 @@ describe('Bond', function () {
           this.tokensToMint = wei(100);
           await BaseToken.transfer(alice.address, this.initialBaseBalance);
           await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
-          await Bond.connect(alice).mint(this.token.target, this.tokensToMint, MAX_INT_256);
+          await Bond.connect(alice).mint(this.token.target, this.tokensToMint, MAX_INT_256, alice.address);
         });
 
         it('should revert if the burn amount is 0', async function () {
           await expect(
-            Bond.connect(alice).burn(this.token.target, 0, 0)
+            Bond.connect(alice).burn(this.token.target, 0, 0, alice.address)
           ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__InvalidTokenAmount');
         });
 
         it('should revert if it did not approve', async function () {
           await expect(
-            Bond.connect(alice).burn(this.token.target, 100n, 0)
+            Bond.connect(alice).burn(this.token.target, 100n, 0, alice.address)
           ).to.be.revertedWithCustomError(this.token, 'ERC20InsufficientAllowance');
         });
 
@@ -737,7 +742,7 @@ describe('Bond', function () {
           await this.token.connect(alice).approve(Bond.target, this.tokensToMint + 1n);
 
           await expect(
-            Bond.connect(alice).burn(this.token.target, this.tokensToMint + 1n, 0)
+            Bond.connect(alice).burn(this.token.target, this.tokensToMint + 1n, 0, alice.address)
           ).to.be.revertedWithCustomError(BaseToken, 'ERC20InsufficientBalance');
         });
 
@@ -750,7 +755,7 @@ describe('Bond', function () {
 
           await this.token.connect(alice).approve(Bond.target, amount + 1n);
           await expect(
-            Bond.connect(alice).burn(this.token.target, amount + 1n, 0)
+            Bond.connect(alice).burn(this.token.target, amount + 1n, 0, alice.address)
           ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__ExceedTotalSupply');
         });
 
@@ -760,7 +765,7 @@ describe('Bond', function () {
           await this.token.connect(alice).approve(Bond.target, burnAmount);
 
           await expect(
-            Bond.connect(alice).burn(this.token.target, burnAmount, reserveToRefund + 1n)
+            Bond.connect(alice).burn(this.token.target, burnAmount, reserveToRefund + 1n, alice.address)
           ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__SlippageLimitExceeded');
         });
 
@@ -771,10 +776,10 @@ describe('Bond', function () {
 
           // Front-run the transaction - owner rugs the pool
           await this.token.connect(owner).approve(Bond.target, BABY_TOKEN.bondParams.stepRanges[0]);
-          await Bond.connect(owner).burn(this.token.target, BABY_TOKEN.bondParams.stepRanges[0], 0);
+          await Bond.connect(owner).burn(this.token.target, BABY_TOKEN.bondParams.stepRanges[0], 0, owner.address);
 
           await expect(
-            Bond.connect(alice).burn(this.token.target, burnAmount, reserveToRefund)
+            Bond.connect(alice).burn(this.token.target, burnAmount, reserveToRefund, alice.address)
           ).to.be.revertedWithCustomError(Bond, 'MCV2_Bond__SlippageLimitExceeded');
         });
       }); // Burn: Edge Cases
@@ -809,7 +814,7 @@ describe('Bond', function () {
 
     it('does not collect any royalties if the amount is too small, due to flooring', async function () {
       // minting 10 BABY requires 70.7 BASE, but it it will be floored to 70
-      await Bond.connect(alice).mint(this.token.target, wei(10), MAX_INT_256);
+      await Bond.connect(alice).mint(this.token.target, wei(10), MAX_INT_256, alice.address);
 
       expect(await this.token.balanceOf(alice.address)).to.equal(wei(10));
       expect(await BaseToken.balanceOf(alice.address)).to.equal(this.initialBaseBalance - 70n);
@@ -833,7 +838,7 @@ describe('Bond', function () {
         creatorCut: 6n
       }
 
-      await Bond.connect(alice).mint(this.token.target, tokensToMint, MAX_INT_256);
+      await Bond.connect(alice).mint(this.token.target, tokensToMint, MAX_INT_256, alice.address);
 
       expect(await this.token.balanceOf(alice.address)).to.equal(tokensToMint);
       expect((await Bond.tokenBond(this.token.target)).reserveBalance).to.equal(predicted.reserveOnBond);
@@ -871,7 +876,7 @@ describe('Bond', function () {
       await BaseToken.transfer(alice.address, this.initialBaseBalance);
       await BaseToken.connect(alice).approve(Bond.target, this.initialBaseBalance);
 
-      await Bond.connect(alice).mint(this.token.target, wei(12, 8), MAX_INT_256);
+      await Bond.connect(alice).mint(this.token.target, wei(12, 8), MAX_INT_256, alice.address);
     });
 
     it('does require 3 * 1e-9 BASE tokens to mint', async function () {
@@ -888,7 +893,7 @@ describe('Bond', function () {
 
     it('will only refund 1 * 1e-9 BASE tokens on burn', async function () {
       await this.token.connect(alice).approve(Bond.target, wei(12, 8));
-      await Bond.connect(alice).burn(this.token.target, wei(12, 8), 0);
+      await Bond.connect(alice).burn(this.token.target, wei(12, 8), 0, alice.address);
 
       // step 2 => (1.2 - 1.1)e9 * 2e9 = 0.1e18 -> reserveToRefund = 0.1e18 / 1e18 = 0
       // step 1 => 1.1e9 * 1e9 = 1.1e18 -> reserveToRefund = 1.1e18 / 1e18 = 1
@@ -946,7 +951,7 @@ describe('Bond', function () {
 
     it('should mint the correct amount after tax', async function () {
       // Minting 10 TBABY requires 50 TAXT
-      await Bond.connect(alice).mint(this.token.target, wei(10), MAX_INT_256);
+      await Bond.connect(alice).mint(this.token.target, wei(10), MAX_INT_256, alice.address);
 
       expect(await this.token.balanceOf(alice.address)).to.equal(wei(10));
       expect(await this.TaxToken.balanceOf(alice.address)).to.equal(this.aliceBalance - wei(50));
@@ -955,8 +960,8 @@ describe('Bond', function () {
     });
 
     it('could work on small amount', async function() {
-      await Bond.connect(alice).mint(this.token.target, wei(10), MAX_INT_256); // Bond has 45 TAXT, not 50 (undercollateralized)
-      await Bond.connect(alice).burn(this.token.target, wei(4), 0); // 20 TAXT can be refunded
+      await Bond.connect(alice).mint(this.token.target, wei(10), MAX_INT_256, alice.address); // Bond has 45 TAXT, not 50 (undercollateralized)
+      await Bond.connect(alice).burn(this.token.target, wei(4), 0, alice.address); // 20 TAXT can be refunded
 
       expect(await this.token.balanceOf(alice.address)).to.equal(wei(6));
       expect(await this.TaxToken.balanceOf(alice.address)).to.equal(this.aliceBalance - wei(32)); // -50 + 20 - 2 (tax)
@@ -964,9 +969,9 @@ describe('Bond', function () {
     });
 
     it('cannot refund the full collateral on burn', async function () {
-      await Bond.connect(alice).mint(this.token.target, wei(10), MAX_INT_256);
+      await Bond.connect(alice).mint(this.token.target, wei(10), MAX_INT_256, alice.address);
 
-      await expect(Bond.connect(alice).burn(this.token.target, wei(10), 0)).to.be.
+      await expect(Bond.connect(alice).burn(this.token.target, wei(10), 0, alice.address)).to.be.
         revertedWithCustomError(BaseToken, 'ERC20InsufficientBalance');
     });
   }); // Edge cases: Tax Token
