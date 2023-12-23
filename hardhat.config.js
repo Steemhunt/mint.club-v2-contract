@@ -1,16 +1,23 @@
 require('dotenv').config();
 require('@nomicfoundation/hardhat-toolbox');
-require("solidity-coverage");
+require('solidity-coverage');
 
 module.exports = {
   solidity: {
-    version: '0.8.20',
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 50000
+    compilers: [
+      {
+        version: '0.8.20',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 50000
+          }
+        }
+      },
+      {
+        version: '0.4.18', // For WETH mock contract
       }
-    }
+    ]
   },
   networks: {
     sepolia: {

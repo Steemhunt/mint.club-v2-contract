@@ -2,8 +2,8 @@
 
 pragma solidity =0.8.20;
 
-import {IMintClubBond} from "./lib/IMintClubBond.sol";
-import {MCV2_ICommonToken} from "./lib/MCV2_ICommonToken.sol";
+import {IMintClubBond} from "./interfaces/IMintClubBond.sol";
+import {MCV2_ICommonToken} from "./interfaces/MCV2_ICommonToken.sol";
 
 /**
  * @title A wrapper contract for the MintClub V1 Bond contract to provide a common interface for V2 front-end.

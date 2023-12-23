@@ -157,7 +157,7 @@ describe('Royalty', function () {
 
       await BaseToken.transfer(bob.address, this.buyTest.reserveRequired);
       await BaseToken.connect(bob).approve(Bond.target, MAX_INT_256);
-      await Bond.connect(bob).mint(this.token.target, tokensToMint, MAX_INT_256);
+      await Bond.connect(bob).mint(this.token.target, tokensToMint, MAX_INT_256, bob.address);
     });
 
     it('should add the creator royalty to alice', async function () {
@@ -179,7 +179,7 @@ describe('Royalty', function () {
         // { royalty: 10, creatorCut: 8, protocolCut: 2, reserveFromBond: 200, reserveToRefund: 190 }
 
         await this.token.connect(bob).approve(Bond.target, amountToBurn);
-        await Bond.connect(bob).burn(this.token.target, amountToBurn, 0);
+        await Bond.connect(bob).burn(this.token.target, amountToBurn, 0, bob.address);
       });
 
       it('should add the creator royalty to alice', async function () {
@@ -237,7 +237,7 @@ describe('Royalty', function () {
       await BaseToken.connect(bob).approve(Bond.target, MAX_INT_256);
 
       await Bond.connect(alice).updateBondCreator(this.token.target, DEAD_ADDRESS);
-      await Bond.connect(bob).mint(this.token.target, tokensToMint, MAX_INT_256);
+      await Bond.connect(bob).mint(this.token.target, tokensToMint, MAX_INT_256, bob.address);
     });
 
     it('should add the creator royalty to dead address', async function () {
