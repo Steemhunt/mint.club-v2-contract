@@ -33,6 +33,7 @@ contract MCV2_Bond is MCV2_Royalty {
     error MCV2_Bond__PermissionDenied();
     error MCV2_Bond__InvalidCreatorAddress();
     error MCV2_BOND__InvalidPaginationParameters();
+    error MCV2_Bond__InvalidReceiver();
 
     uint256 private constant MIN_UINT8_LENGTH = 31; // uint8 = 32 bits
     uint256 private constant MIN_STRING_LENGTH = 95; // empty string = 64 bits, 1 character = 96 bits
@@ -409,6 +410,8 @@ contract MCV2_Bond is MCV2_Royalty {
      * @param receiver The address to receive the minted tokens.
      */
     function mint(address token, uint256 tokensToMint, uint256 maxReserveAmount, address receiver) external returns (uint256) {
+        if (receiver == address(0)) revert MCV2_Bond__InvalidReceiver();
+
         (uint256 reserveAmount, uint256 royalty) = getReserveForToken(token, tokensToMint);
         if (reserveAmount > maxReserveAmount) revert MCV2_Bond__SlippageLimitExceeded();
 
@@ -484,6 +487,8 @@ contract MCV2_Bond is MCV2_Royalty {
      * @param receiver The address to receive the refund.
      */
     function burn(address token, uint256 tokensToBurn, uint256 minRefund, address receiver) external returns (uint256) {
+        if (receiver == address(0)) revert MCV2_Bond__InvalidReceiver();
+
         (uint256 refundAmount, uint256 royalty) = getRefundForTokens(token, tokensToBurn);
         if (refundAmount < minRefund) revert MCV2_Bond__SlippageLimitExceeded();
 

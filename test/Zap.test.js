@@ -6,6 +6,7 @@ const {
   wei,
   MAX_INT_256,
 } = require('./utils/test-utils');
+const { ethers } = require('hardhat');
 
 const MAX_STEPS = getMaxSteps('ethereum');
 const BABY_TOKEN = {
@@ -163,4 +164,25 @@ describe('MCV2_ZapV1', function () {
       });
     }); // burnToEth
   }); // mintWithEth
+
+  describe('Admin functions', function () {
+    beforeEach(async function () {
+      this.initialBobBalance = await ethers.provider.getBalance(bob.address);
+      this.ethBalance = wei(3);
+      await owner.sendTransaction({ to: Zap.target, value: this.ethBalance });
+    });
+
+    it('should return all ETH balance on the contract to the receiver', async function () {
+      await Zap.connect(owner).rescueETH(bob.address);
+      expect(await ethers.provider.getBalance(Zap.target)).to.equal(0n);
+      expect(await ethers.provider.getBalance(bob.address)).to.equal(this.initialBobBalance + this.ethBalance);
+    });
+
+    it('should revert if not owner', async function () {
+      await expect(Zap.connect(alice).rescueETH(bob.address)).to.be.revertedWithCustomError(
+        Zap,
+        'OwnableUnauthorizedAccount'
+      );
+    });
+  });
 }); // MCV2_ZapV1

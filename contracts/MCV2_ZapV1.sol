@@ -4,7 +4,7 @@ pragma solidity =0.8.20;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {Context} from "@openzeppelin/contracts/utils/Context.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {MCV2_Bond} from "./MCV2_Bond.sol";
 import {IWETH} from "./interfaces/IWETH.sol";
 
@@ -13,7 +13,7 @@ import {IWETH} from "./interfaces/IWETH.sol";
 * @dev This contract implements the Zap functionality for the Mint Club V2 Bond contract.
 */
 
-contract MCV2_ZapV1 is Context {
+contract MCV2_ZapV1 is Ownable {
     using SafeERC20 for IERC20;
 
     error MCV2_ZapV1__ReserveIsNotWETH();
@@ -26,7 +26,7 @@ contract MCV2_ZapV1 is Context {
 
     uint256 private constant MAX_INT = type(uint256).max;
 
-    constructor(address bondAddress, address wethAddress) {
+    constructor(address bondAddress, address wethAddress) Ownable(msg.sender) {
         BOND = MCV2_Bond(bondAddress);
         WETH = IWETH(wethAddress);
 
@@ -103,6 +103,17 @@ contract MCV2_ZapV1 is Context {
 
         // Transfer ETH to the receiver
         (bool sent, ) = receiver.call{value: refundAmount}("");
+        if (!sent) revert MCV2_ZapV1__EthTransferFailed();
+    }
+
+    // MARK: - Admin functions
+
+    /**
+     * @dev Rescue ETH from the contract because this contract can receive ETH from anyone.
+     * @param receiver The address to receive the ETH.
+     */
+    function rescueETH(address receiver) external onlyOwner {
+        (bool sent, ) = receiver.call{value: address(this).balance}("");
         if (!sent) revert MCV2_ZapV1__EthTransferFailed();
     }
 }
