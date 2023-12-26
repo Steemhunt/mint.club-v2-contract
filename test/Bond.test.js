@@ -379,34 +379,6 @@ describe('Bond', function () {
       });
     });
 
-    describe('Update token metadata', function () {
-      beforeEach(async function () {
-        await Bond.updateTokenMetaData(this.token.target, 'https://hunt.town/favicon-32x32.png', 'https://hunt.town');
-      });
-
-      it('should update the token metadata', async function () {
-        const metaData = await Bond.tokenMetaData(this.token.target);
-        expect(metaData.logo).to.equal('https://hunt.town/favicon-32x32.png');
-        expect(metaData.website).to.equal('https://hunt.town');
-      });
-
-      it('should revert if the msg.sender is not current creator', async function () {
-        await expect(Bond.connect(alice).updateTokenMetaData(this.token.target, '', ''))
-          .to.be.revertedWithCustomError(Bond, 'MCV2_Bond__PermissionDenied');
-      });
-
-      it('should revert if the token does not exist in the bond', async function () {
-        await expect(Bond.updateTokenMetaData(NULL_ADDRESS, '', ''))
-          .to.be.revertedWithCustomError(Bond, 'MCV2_Bond__PermissionDenied');
-      });
-
-      it('should emit TokenMetaDataUpdated event', async function () {
-        await expect(Bond.updateTokenMetaData(this.token.target, 'ab', 'cd'))
-          .emit(Bond, 'TokenMetaDataUpdated')
-          .withArgs(this.token.target, 'ab', 'cd');
-      });
-    });
-
     describe('Mint', function () {
       describe('Mint once', function() {
         beforeEach(async function () {
@@ -998,8 +970,6 @@ describe('Bond', function () {
       this.token0 = await Bond.tokens(0);
       this.token1 = await Bond.tokens(1);
       this.token2 = await Bond.tokens(2);
-
-      await Bond.connect(alice).updateTokenMetaData(this.token0, 'https://hunt.town/favicon-32x32.png', 'https://hunt.town');
     });
 
     it('should return [0] for ReserveToken = BaseToken', async function () {
@@ -1037,8 +1007,6 @@ describe('Bond', function () {
           18n,
           'BABY',
           BABY_TOKEN.tokenParams.name,
-          'https://hunt.town/favicon-32x32.png',
-          'https://hunt.town',
           (await this.tx0.getBlock()).timestamp,
           this.freeMint,
           BABY_TOKEN.bondParams.maxSupply,
@@ -1055,8 +1023,6 @@ describe('Bond', function () {
           18n,
           'BABY2',
           BABY_TOKEN.tokenParams.name,
-          '',
-          '',
           (await this.tx1.getBlock()).timestamp,
           this.freeMint,
           BABY_TOKEN.bondParams.maxSupply,
@@ -1073,8 +1039,6 @@ describe('Bond', function () {
           18n,
           'BABY3',
           BABY_TOKEN.tokenParams.name,
-          '',
-          '',
           (await this.tx2.getBlock()).timestamp,
           this.freeMint,
           BABY_TOKEN.bondParams.maxSupply,
@@ -1100,8 +1064,6 @@ describe('Bond', function () {
           18n,
           'BABY',
           BABY_TOKEN.tokenParams.name,
-          'https://hunt.town/favicon-32x32.png',
-          'https://hunt.town',
           (await this.tx0.getBlock()).timestamp,
           this.freeMint,
           BABY_TOKEN.bondParams.maxSupply,

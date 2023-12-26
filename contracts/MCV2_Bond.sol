@@ -64,14 +64,7 @@ contract MCV2_Bond is MCV2_Royalty {
         uint128 price; // multiplied by 10**18 for decimals
     }
 
-    // Optional on-chain metadata for the token
-    struct MetaData {
-        string logo;
-        string website;
-    }
-
     mapping (address => Bond) public tokenBond;
-    mapping (address => MetaData) public tokenMetaData;
     address[] public tokens; // Array of all created tokens
 
     event TokenCreated(address indexed token, string name, string symbol, address indexed reserveToken);
@@ -79,7 +72,6 @@ contract MCV2_Bond is MCV2_Royalty {
     event Mint(address indexed token, address indexed user, address receiver, uint256 amountMinted, address indexed reserveToken, uint256 reserveAmount);
     event Burn(address indexed token, address indexed user, address receiver, uint256 amountBurned, address indexed reserveToken, uint256 refundAmount);
     event BondCreatorUpdated(address indexed token, address indexed creator);
-    event TokenMetaDataUpdated(address indexed token, string logo, string website);
 
     // MARK: - Constructor
 
@@ -314,23 +306,6 @@ contract MCV2_Bond is MCV2_Royalty {
         bond.creator = creator;
 
         emit BondCreatorUpdated(token, creator);
-    }
-
-    /**
-     * @dev Updates the on-chain metadata for a token.
-     * @param token The address of the token.
-     * @param logo The new logo URL.
-     * @param website The new website URL.
-     */
-    function updateTokenMetaData(address token, string calldata logo, string calldata website) external {
-        Bond storage bond = tokenBond[token];
-        if (bond.creator != _msgSender()) revert MCV2_Bond__PermissionDenied(); // This will also check the existence of the bond
-
-        MetaData storage metaData = tokenMetaData[token];
-        metaData.logo = logo;
-        metaData.website = website;
-
-        emit TokenMetaDataUpdated(token, logo, website);
     }
 
     // MARK: - Mint
@@ -570,8 +545,6 @@ contract MCV2_Bond is MCV2_Royalty {
         uint8 decimals;
         string symbol;
         string name;
-        string logo;
-        string website;
         uint40 createdAt;
         uint128 currentSupply;
         uint128 maxSupply;
@@ -585,7 +558,6 @@ contract MCV2_Bond is MCV2_Royalty {
     function _getBondInfo(address token) private view returns(BondInfo memory info) {
         MCV2_ICommonToken t = MCV2_ICommonToken(token);
         Bond memory bond = tokenBond[token];
-        MetaData memory metaData = tokenMetaData[token];
         IERC20Metadata r = IERC20Metadata(bond.reserveToken);
 
         info = BondInfo({
@@ -594,8 +566,6 @@ contract MCV2_Bond is MCV2_Royalty {
             decimals: t.decimals(),
             symbol: t.symbol(),
             name: t.name(),
-            logo: metaData.logo,
-            website: metaData.website,
             createdAt: bond.createdAt,
             currentSupply: uint128(t.totalSupply()),
             maxSupply: maxSupply(token),
