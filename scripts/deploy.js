@@ -1,18 +1,15 @@
 require('dotenv').config();
 const hre = require('hardhat');
-const { getMaxSteps } = require('../test/utils/test-utils');
+const { getMaxSteps, getWETHAddress, getCreationFee } = require('../test/utils/test-utils');
 
 const PROTOCOL_BENEFIARY = process.env.PROTOCOL_BENEFIARY;
 const MAX_STEPS = getMaxSteps(hre.network.name);
-const WETH_ADDRESS = {
-  sepolia: '0xfff9976782d46cc05630d1f6ebab18b2324d6b14',
-  base: '0x4200000000000000000000000000000000000006',
-};
-const CREATION_FEE = 0n;
+const CREATION_FEE = getCreationFee(hre.network.name);
+const WETH_ADDRESS = getWETHAddress(hre.network.name);
 
 console.log(`--------------------------------------------------`);
 console.log(`NETWORK: ${hre.network.name} | PROTOCOL_BENEFIARY: ${PROTOCOL_BENEFIARY}`);
-console.log(`MAX_STEPS: ${MAX_STEPS} | WETH_ADDRESS: ${WETH_ADDRESS[hre.network.name]}`);
+console.log(`CREATION_FEE: ${CREATION_FEE} | MAX_STEPS: ${MAX_STEPS} | WETH_ADDRESS: ${WETH_ADDRESS}`);
 console.log(`--------------------------------------------------`);
 
 async function main() {
@@ -34,7 +31,7 @@ async function main() {
   await bond.waitForDeployment();
   console.log(` -> MCV2_Bond contract deployed at ${bond.target}`);
 
-  const zap = await hre.ethers.deployContract('MCV2_ZapV1', [bond.target, WETH_ADDRESS[hre.network.name]]);
+  const zap = await hre.ethers.deployContract('MCV2_ZapV1', [bond.target, WETH_ADDRESS]);
   await zap.waitForDeployment();
   console.log(` -> Zap contract deployed at ${zap.target}`);
 
@@ -60,7 +57,7 @@ async function main() {
     npx hardhat verify --network ${hre.network.name} ${tokenImplementation.target}
     npx hardhat verify --network ${hre.network.name} ${NFTImplementation.target}
     npx hardhat verify --network ${hre.network.name} ${bond.target} ${tokenImplementation.target} ${NFTImplementation.target} ${PROTOCOL_BENEFIARY} ${CREATION_FEE} ${MAX_STEPS}
-    npx hardhat verify --network ${hre.network.name} ${zap.target} ${bond.target} ${WETH_ADDRESS[hre.network.name]}
+    npx hardhat verify --network ${hre.network.name} ${zap.target} ${bond.target} ${WETH_ADDRESS}
     npx hardhat verify --network ${hre.network.name} ${locker.target}
     npx hardhat verify --network ${hre.network.name} ${merkleDistributor.target}
   `);

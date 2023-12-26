@@ -1,32 +1,56 @@
 require('dotenv').config();
 const hre = require('hardhat');
-const { getMaxSteps } = require('../utils/test-utils');
+const { wei, getMaxSteps, getWETHAddress, getCreationFee } = require('../test/utils/test-utils');
 
 const PROTOCOL_BENEFIARY = process.env.PROTOCOL_BENEFIARY;
+
+const TOKEN_IMPLEMENTATION = {
+  sepolia: '0x003E64dFcf66D597aDA5B151CA6C374f1A800e6c',
+  base: '0xeDeB9196B6648F5a4701067E851F3fEBcF62F549',
+};
+
+const MULTI_TOKEN_IMPLEMENTATION = {
+  sepolia: '0xf462a581E2977688bFD6984374F7aDFE5893e16F',
+  base: '0xF4567Fc564Bfd23F50Fe092f65146CAf7266d241',
+};
+
+const MAX_STEPS = getMaxSteps(hre.network.name);
+const CREATION_FEE = getCreationFee(hre.network.name);
+const WETH_ADDRESS = getWETHAddress(hre.network.name);
+
+console.log(`--------------------------------------------------`);
+console.log(`NETWORK: ${hre.network.name} | PROTOCOL_BENEFIARY: ${PROTOCOL_BENEFIARY}`);
+console.log(`CREATION_FEE: ${CREATION_FEE} | MAX_STEPS: ${MAX_STEPS} | WETH_ADDRESS: ${WETH_ADDRESS}`);
+console.log(`--------------------------------------------------`);
 
 async function main() {
   const accounts = await hre.ethers.getSigners();
   const deployer = accounts[0].address;
   console.log(`Deploy from account: ${deployer}`);
 
-  // Reuse existing implementations
-  const tokenImplementation = '0x37F540de37afE8bDf6C722d87CB019F30e5E406a'; // base
-  const NFTImplementation = '0xbba7de9897F8bB07D5070994efE44B8c203a02A8'; // base
-
-  const MAX_STEPS = getMaxSteps(hre.network.name);
   const bond = await hre.ethers.deployContract('MCV2_Bond', [
-    tokenImplementation, NFTImplementation, PROTOCOL_BENEFIARY, MAX_STEPS
+    TOKEN_IMPLEMENTATION[hre.network.name],
+    MULTI_TOKEN_IMPLEMENTATION[hre.network.name],
+    PROTOCOL_BENEFIARY,
+    CREATION_FEE,
+    MAX_STEPS
   ]);
   await bond.waitForDeployment();
   console.log(` -> MCV2_Bond contract deployed at ${bond.target}`);
 
+  const zap = await hre.ethers.deployContract('MCV2_ZapV1', [bond.target, WETH_ADDRESS]);
+  await zap.waitForDeployment();
+  console.log(` -> Zap contract deployed at ${zap.target}`);
+
   console.log(`\n\nNetwork: ${hre.network.name}`);
   console.log('```');
   console.log(`- MCV2_Bond: ${bond.target}`);
+  console.log(`- MCV2_ZapV1: ${zap.target}`);
   console.log('```');
 
   console.log(`
-    npx hardhat verify --network ${hre.network.name} ${bond.target} ${tokenImplementation} ${NFTImplementation} ${PROTOCOL_BENEFIARY}
+    npx hardhat verify --network ${hre.network.name} ${bond.target} ${TOKEN_IMPLEMENTATION[hre.network.name]} ${MULTI_TOKEN_IMPLEMENTATION[hre.network.name]} ${PROTOCOL_BENEFIARY} ${CREATION_FEE} ${MAX_STEPS}
+    npx hardhat verify --network ${hre.network.name} ${zap.target} ${bond.target} ${WETH_ADDRESS}
   `);
 };
 

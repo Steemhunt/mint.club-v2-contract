@@ -9,6 +9,32 @@ exports.PROTOCOL_BENEFICIARY = '0x00000B655d573662B9921e14eDA96DBC9311fDe6'; // 
 exports.MAX_ROYALTY_RANGE = 5000n; // 50%
 const PROTOCOL_CUT = 2000n; // 20% of the royalty
 
+exports.getCreationFee = function(network) {
+  const CREATION_FEE = {
+    sepolia: 10n*10n**15n, // 0.001 ETH ~ $2.2
+    base: 10n*10n**15n, // 0.001 ETH ~ $2.2
+  };
+
+  if (!CREATION_FEE[network]) {
+    throw new Error(`CREATION_FEE is not defined for ${network}`);
+  }
+
+  return CREATION_FEE[network];
+}
+
+exports.getWETHAddress = function(network) {
+  const WETH_ADDRESS = {
+    sepolia: '0xfff9976782d46cc05630d1f6ebab18b2324d6b14',
+    base: '0x4200000000000000000000000000000000000006',
+  };
+
+  if (!WETH_ADDRESS[network]) {
+    throw new Error(`WETH_ADDRESS is not defined for ${network}`);
+  }
+
+  return WETH_ADDRESS[network];
+};
+
 exports.getMaxSteps = function(network) {
   // 1,000 steps reqruies about 15M gas
   const MAX_STEPS = {

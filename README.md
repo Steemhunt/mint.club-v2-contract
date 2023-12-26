@@ -32,16 +32,16 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
 ### Ethereum Sepolia Testnet
 - MCV2_Token: [0x003E64dFcf66D597aDA5B151CA6C374f1A800e6c](https://sepolia.etherscan.io/address/0x003E64dFcf66D597aDA5B151CA6C374f1A800e6c#code)
 - MCV2_MultiToken: [0xf462a581E2977688bFD6984374F7aDFE5893e16F](https://sepolia.etherscan.io/address/0xf462a581E2977688bFD6984374F7aDFE5893e16F#code)
-- MCV2_Bond: [0x3384eD0d272dE35bF6DC516E1eA7d188CEb51793](https://sepolia.etherscan.io/address/0x3384eD0d272dE35bF6DC516E1eA7d188CEb51793#code)
-- MCV2_ZapV1: [0x09f1613414f8dA2452EF5Bdac468bB3F08BaF426](https://sepolia.etherscan.io/address/0x09f1613414f8dA2452EF5Bdac468bB3F08BaF426#code)
+- MCV2_Bond: [0xa6B9b69cefb519fC85aA02AD7693814D33bD7E85](https://sepolia.etherscan.io/address/0xa6B9b69cefb519fC85aA02AD7693814D33bD7E85#code)
+- MCV2_ZapV1: [0xc4C8071D651F093C4A5c2C06e7BFfc163A057DdA](https://sepolia.etherscan.io/address/0xc4C8071D651F093C4A5c2C06e7BFfc163A057DdA#code)
 - Locker: [0xD9886E3b71B8bf34610386a451E4c12Ce05bAdf8](https://sepolia.etherscan.io/address/0xD9886E3b71B8bf34610386a451E4c12Ce05bAdf8#code)
 - MerkleDistributor: [0xFC3304e5D4AB166aA91A52E91B85f1804a7feAB8](https://sepolia.etherscan.io/address/0xFC3304e5D4AB166aA91A52E91B85f1804a7feAB8#code)
 
 ### Base L2 - TEST ONLY!
 - MCV2_Token: [0xeDeB9196B6648F5a4701067E851F3fEBcF62F549](https://sepolia.etherscan.io/address/0xeDeB9196B6648F5a4701067E851F3fEBcF62F549#code)
 - MCV2_MultiToken: [0xF4567Fc564Bfd23F50Fe092f65146CAf7266d241](https://sepolia.etherscan.io/address/0xF4567Fc564Bfd23F50Fe092f65146CAf7266d241#code)
-- MCV2_Bond: [0xAD5a113ee65F30269f7558f96483126B1FB60c4E](https://sepolia.etherscan.io/address/0xAD5a113ee65F30269f7558f96483126B1FB60c4E#code)
-- MCV2_ZapV1: [0x9770cadFCdba5BF9A26AfDcAd48cB51338941A1A](https://sepolia.etherscan.io/address/0x9770cadFCdba5BF9A26AfDcAd48cB51338941A1A#code)
+- MCV2_Bond: [0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89](https://sepolia.etherscan.io/address/0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89#code)
+- MCV2_ZapV1: [0x60432191893c4F742205a2C834817a1891feC435](https://sepolia.etherscan.io/address/0x60432191893c4F742205a2C834817a1891feC435#code)
 - Locker: [0xB43826E079dFB2e2b48a0a473Efc7F1fe6391763](https://sepolia.etherscan.io/address/0xB43826E079dFB2e2b48a0a473Efc7F1fe6391763#code)
 - MerkleDistributor: [0xC14d558AfFE9457E620338E7f2166Ae29E884463](https://sepolia.etherscan.io/address/0xC14d558AfFE9457E620338E7f2166Ae29E884463#code)
 
