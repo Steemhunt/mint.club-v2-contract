@@ -136,6 +136,8 @@ contract MCV2_ZapV1 is Ownable {
      * @param receiver The address to receive the ETH.
      */
     function rescueETH(address receiver) external onlyOwner {
+        if (receiver == address(0)) revert MCV2_ZapV1__InvalidReceiver();
+
         (bool sent, ) = receiver.call{value: address(this).balance}("");
         if (!sent) revert MCV2_ZapV1__EthTransferFailed();
     }

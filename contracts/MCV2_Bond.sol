@@ -20,6 +20,7 @@ contract MCV2_Bond is MCV2_Royalty {
     using SafeERC20 for IERC20;
 
     // Error messages
+    error MCV2_Bond__InvalidConstructorParams(string reason);
     error MCV2_Bond__InvalidTokenCreationParams(string reason);
     error MCV2_Bond__InvalidReserveToken(string reason);
     error MCV2_Bond__InvalidStepParams(string reason);
@@ -89,6 +90,11 @@ contract MCV2_Bond is MCV2_Royalty {
         uint256 creationFee_,
         uint256 maxSteps
     ) MCV2_Royalty(protocolBeneficiary_, creationFee_, msg.sender) {
+        if (tokenImplementation == address(0)) revert MCV2_Bond__InvalidConstructorParams('tokenImplementation');
+        if (multiTokenImplementation == address(0)) revert MCV2_Bond__InvalidConstructorParams('multiTokenImplementation');
+        if (protocolBeneficiary_ == address(0)) revert MCV2_Bond__InvalidConstructorParams('protocolBeneficiary');
+        if (maxSteps == 0) revert MCV2_Bond__InvalidConstructorParams('maxSteps');
+
         TOKEN_IMPLEMENTATION = tokenImplementation;
         MULTI_TOKEN_IMPLEMENTATION = multiTokenImplementation;
         MAX_STEPS = maxSteps;
