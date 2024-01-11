@@ -10,7 +10,6 @@ import {MCV2_ICommonToken} from "./interfaces/MCV2_ICommonToken.sol";
  */
 contract MCV1_Wrapper {
     error MCV1_Wrapper__TokenNotFound();
-    error MCV1_Wrapper__SlippageLimitExceeded();
     error MCV1_Wrapper__InvalidPaginationParameters();
 
     address private constant BENEFICIARY = address(0x82CA6d313BffE56E9096b16633dfD414148D66b1);
