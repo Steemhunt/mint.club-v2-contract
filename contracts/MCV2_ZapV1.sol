@@ -4,9 +4,11 @@ pragma solidity =0.8.20;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {MCV2_Bond} from "./MCV2_Bond.sol";
 import {IWETH} from "./interfaces/IWETH.sol";
+import {MCV2_ICommonToken} from "./interfaces/MCV2_ICommonToken.sol";
 
 /**
 * @title Mint Club V2 Zap V1 Contract
@@ -43,6 +45,17 @@ contract MCV2_ZapV1 is Ownable {
      */
     function _getReserveToken(address token) private view returns (address reserveToken) {
         (,,,,reserveToken,) = BOND.tokenBond(token);
+    }
+
+    /**
+     * @dev Internal function to get the reserve amount for a given token.
+     * @param token The token address.
+     */
+    function _isERC20(address token) private pure returns (bool) {
+        MCV2_ICommonToken t = MCV2_ICommonToken(token);
+
+        // All MCV2_Token has 18 decimals, whereas MCV2_MultiToken has 0 decimals
+        return t.decimals() == 18;
     }
 
     /**
@@ -86,13 +99,23 @@ contract MCV2_ZapV1 is Ownable {
         (uint256 refundAmount, ) = BOND.getRefundForTokens(token, tokensToBurn);
         if (refundAmount < minRefund) revert MCV2_ZapV1__SlippageLimitExceeded();
 
-        // Receive tokens to burn
-        IERC20 t = IERC20(token);
-        t.safeTransferFrom(_msgSender(), address(this), tokensToBurn);
+        if (_isERC20(token)) {
+            // Receive tokens to burn
+            IERC20 t = IERC20(token);
+            t.safeTransferFrom(_msgSender(), address(this), tokensToBurn);
 
-        // Approve tokens to Bond contract for the first time
-        if (t.allowance(address(this), address(BOND)) < tokensToBurn) {
-            t.approve(address(BOND), MAX_INT);
+            // Approve tokens to Bond contract for the first time
+            if (t.allowance(address(this), address(BOND)) < tokensToBurn) {
+                t.approve(address(BOND), MAX_INT);
+            }
+        } else {
+            // Receive tokens to burn
+            IERC1155(token).safeTransferFrom(_msgSender(), address(this), 0, tokensToBurn, "");
+
+            // Approve tokens to Bond contract for the first time
+            if (!IERC1155(token).isApprovedForAll(address(this), address(BOND))) {
+                IERC1155(token).setApprovalForAll(address(BOND), true);
+            }
         }
 
         // Burn tokens
@@ -115,5 +138,11 @@ contract MCV2_ZapV1 is Ownable {
     function rescueETH(address receiver) external onlyOwner {
         (bool sent, ) = receiver.call{value: address(this).balance}("");
         if (!sent) revert MCV2_ZapV1__EthTransferFailed();
+    }
+
+    // MARK: - ERC1155 Receiver
+
+    function onERC1155Received(address, address, uint256, uint256, bytes memory) external pure returns (bytes4) {
+        return this.onERC1155Received.selector;
     }
 }
