@@ -371,7 +371,9 @@ contract MCV2_Bond is MCV2_Royalty {
             }
         }
 
-        if (reserveToBond == 0 || tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount(); // can never happen
+        // tokensLeft > 0 -> can never happen
+        // reserveToBond == 0 -> can happen if a user tries to mint within the free minting range, which is prohibited by design.
+        if (reserveToBond == 0 || tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount();
 
         royalty = _getRoyalty(reserveToBond, bond.mintRoyalty);
         reserveAmount = reserveToBond + royalty;
@@ -448,7 +450,9 @@ contract MCV2_Bond is MCV2_Royalty {
             if (i > 0) --i;
         }
 
-        if (tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount(); // can never happen
+        // tokensLeft > 0 -> can never happen
+        // reserveToBond == 0 -> can happen if a user tries to burn within the free minting range, which is prohibited by design.
+        if (tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount();
 
         royalty = _getRoyalty(reserveFromBond, bond.burnRoyalty);
         refundAmount = reserveFromBond - royalty;
