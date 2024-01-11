@@ -18,11 +18,11 @@ Mint Club is a bonding curve-based token (ERC20, ERC1155) creation and trading p
    * Conversely, when a bonding curve token is sold, the curve calculates the amount of base tokens to be returned. These base tokens are then returned to the seller, and the equivalent bonding curve tokens are burned.
 
 3. **Airdrop Tool**
-   * Set up a public or private airdrop for ERC20 or ERC1155 tokens created on Mint Club V2.
+   * Set up a public or private airdrop for ERC20 or ERC1155 (supports `id = 0` only) tokens.
    * For private airdrops, Mint Club offers a merkleRoot-based whitelist feature.
 
 4. **Lock-up Tool**
-   * Create a contract-bound lock-up schedule for ERC20 or ERC1155 tokens created on Mint Club V2.
+   * Create a contract-bound lock-up schedule for ERC20 or ERC1155 (supports `id = 0` only) tokens.
    * Specify the unlock time and recipient address for after the lock-up period is completed.
 
 ## Gloals and Objectives
