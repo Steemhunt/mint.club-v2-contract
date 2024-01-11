@@ -38,12 +38,12 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
 - MerkleDistributor: [0xFC3304e5D4AB166aA91A52E91B85f1804a7feAB8](https://sepolia.etherscan.io/address/0xFC3304e5D4AB166aA91A52E91B85f1804a7feAB8#code)
 
 ### Base L2 - TEST ONLY!
-- MCV2_Token: [0xeDeB9196B6648F5a4701067E851F3fEBcF62F549](https://sepolia.etherscan.io/address/0xeDeB9196B6648F5a4701067E851F3fEBcF62F549#code)
-- MCV2_MultiToken: [0xF4567Fc564Bfd23F50Fe092f65146CAf7266d241](https://sepolia.etherscan.io/address/0xF4567Fc564Bfd23F50Fe092f65146CAf7266d241#code)
-- MCV2_Bond: [0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89](https://sepolia.etherscan.io/address/0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89#code)
-- MCV2_ZapV1: [0x60432191893c4F742205a2C834817a1891feC435](https://sepolia.etherscan.io/address/0x60432191893c4F742205a2C834817a1891feC435#code)
-- Locker: [0xB43826E079dFB2e2b48a0a473Efc7F1fe6391763](https://sepolia.etherscan.io/address/0xB43826E079dFB2e2b48a0a473Efc7F1fe6391763#code)
-- MerkleDistributor: [0xC14d558AfFE9457E620338E7f2166Ae29E884463](https://sepolia.etherscan.io/address/0xC14d558AfFE9457E620338E7f2166Ae29E884463#code)
+- MCV2_Token: [0xeDeB9196B6648F5a4701067E851F3fEBcF62F549](https://basescan.org/address/0xeDeB9196B6648F5a4701067E851F3fEBcF62F549#code)
+- MCV2_MultiToken: [0xF4567Fc564Bfd23F50Fe092f65146CAf7266d241](https://basescan.org/address/0xF4567Fc564Bfd23F50Fe092f65146CAf7266d241#code)
+- MCV2_Bond: [0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89](https://basescan.org/address/0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89#code)
+- MCV2_ZapV1: [0x60432191893c4F742205a2C834817a1891feC435](https://basescan.org/address/0x60432191893c4F742205a2C834817a1891feC435#code)
+- Locker: [0xB43826E079dFB2e2b48a0a473Efc7F1fe6391763](https://basescan.org/address/0xB43826E079dFB2e2b48a0a473Efc7F1fe6391763#code)
+- MerkleDistributor: [0xC14d558AfFE9457E620338E7f2166Ae29E884463](https://basescan.org/address/0xC14d558AfFE9457E620338E7f2166Ae29E884463#code)
 
 
 ### V1 Contract Wrapper (BSC Mainnet):
