@@ -55,14 +55,6 @@ contract Locker {
         if (unlockTime <= block.timestamp) revert LockUp__InvalidParams('unlockTime');
         if (receiver == address(0)) revert LockUp__InvalidParams('receiver');
 
-        // Deposit total amount of tokens to this contract
-        if (isERC20) {
-            IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
-        } else {
-            // Only support an ERC1155 token at id = 0
-            IERC1155(token).safeTransferFrom(msg.sender, address(this), 0, amount, "");
-        }
-
         // Create a new lockUp
         lockUps.push();
         LockUp storage lockUp = lockUps[lockUps.length - 1];
@@ -73,6 +65,14 @@ contract Locker {
         lockUp.amount = amount;
         lockUp.receiver = receiver;
         lockUp.title = title;
+
+        // Deposit total amount of tokens to this contract
+        if (isERC20) {
+            IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+        } else {
+            // Only support an ERC1155 token at id = 0
+            IERC1155(token).safeTransferFrom(msg.sender, address(this), 0, amount, "");
+        }
 
         emit LockedUp(lockUps.length - 1, token, isERC20, receiver, amount, unlockTime);
     }

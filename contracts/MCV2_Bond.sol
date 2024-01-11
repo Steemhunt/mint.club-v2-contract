@@ -249,7 +249,6 @@ contract MCV2_Bond is MCV2_Royalty {
     function createToken(TokenParams calldata tp, BondParams calldata bp) external payable returns (address) {
         _validateTokenParams(tp);
         _validateBondParams(bp);
-        _collectCreationFee(msg.value);
 
         address token = _clone(TOKEN_IMPLEMENTATION, tp.symbol);
         MCV2_Token newToken = MCV2_Token(token);
@@ -257,6 +256,8 @@ contract MCV2_Bond is MCV2_Royalty {
         tokens.push(token);
 
         _setBond(token, bp);
+
+        _collectCreationFee(msg.value);
 
         emit TokenCreated(token, tp.name, tp.symbol, bp.reserveToken);
 
@@ -277,7 +278,6 @@ contract MCV2_Bond is MCV2_Royalty {
     function createMultiToken(MultiTokenParams calldata tp, BondParams calldata bp) external payable returns (address) {
         _validateMultiTokenParams(tp);
         _validateBondParams(bp);
-        _collectCreationFee(msg.value);
 
         address token = _clone(MULTI_TOKEN_IMPLEMENTATION, tp.symbol);
         MCV2_MultiToken newToken = MCV2_MultiToken(token);
@@ -285,6 +285,8 @@ contract MCV2_Bond is MCV2_Royalty {
         tokens.push(token);
 
         _setBond(token, bp);
+
+        _collectCreationFee(msg.value);
 
         emit MultiTokenCreated(token, tp.name, tp.symbol, tp.uri, bp.reserveToken);
 
@@ -400,10 +402,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
         Bond storage bond = tokenBond[token];
         address user = _msgSender();
-
-        // Transfer reserve tokens
         IERC20 reserveToken = IERC20(bond.reserveToken);
-        reserveToken.safeTransferFrom(user, address(this), reserveAmount);
 
         // Update reserve & fee balances
         bond.reserveBalance += reserveAmount - royalty;
@@ -411,6 +410,9 @@ contract MCV2_Bond is MCV2_Royalty {
 
         // Mint reward tokens to the receiver
         MCV2_ICommonToken(token).mintByBond(receiver, tokensToMint);
+
+        // Transfer reserve tokens from the user
+        reserveToken.safeTransferFrom(user, address(this), reserveAmount);
 
         emit Mint(token, user, receiver, tokensToMint, bond.reserveToken, reserveAmount);
 

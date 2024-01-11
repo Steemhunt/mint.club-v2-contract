@@ -95,14 +95,6 @@ contract MerkleDistributor {
         if (endTime <= block.timestamp) revert MerkleDistributor__InvalidParams('endTime');
         if (startTime >= endTime) revert MerkleDistributor__InvalidParams('startTime');
 
-        // Deposit total amount of tokens to this contract
-        if (isERC20) {
-            IERC20(token).safeTransferFrom(msg.sender, address(this), amountPerClaim * walletCount);
-        } else {
-            // Only support an ERC1155 token at id = 0
-            IERC1155(token).safeTransferFrom(msg.sender, address(this), 0, amountPerClaim * walletCount, "");
-        }
-
         // Create a new distribution
         distributions.push();
         Distribution storage distribution = distributions[distributions.length - 1];
@@ -120,6 +112,14 @@ contract MerkleDistributor {
         distribution.merkleRoot = merkleRoot; // optional
         distribution.title = title; // optional
         distribution.ipfsCID = ipfsCID; // optional
+
+        // Deposit total amount of tokens to this contract
+        if (isERC20) {
+            IERC20(token).safeTransferFrom(msg.sender, address(this), amountPerClaim * walletCount);
+        } else {
+            // Only support an ERC1155 token at id = 0
+            IERC1155(token).safeTransferFrom(msg.sender, address(this), 0, amountPerClaim * walletCount, "");
+        }
 
         emit Created(distributions.length - 1, token, isERC20, startTime);
     }
