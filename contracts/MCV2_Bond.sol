@@ -11,6 +11,7 @@ import {MCV2_Token} from "./MCV2_Token.sol";
 import {MCV2_MultiToken} from "./MCV2_MultiToken.sol";
 import {MCV2_ICommonToken} from "./interfaces/MCV2_ICommonToken.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /**
  * @title MintClub Bond V2
@@ -18,6 +19,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
  */
 contract MCV2_Bond is MCV2_Royalty {
     using SafeERC20 for IERC20;
+    using SafeCast for uint256;
 
     // Error messages
     error MCV2_Bond__InvalidConstructorParams(string reason);
@@ -579,7 +581,7 @@ contract MCV2_Bond is MCV2_Royalty {
             symbol: t.symbol(),
             name: t.name(),
             createdAt: bond.createdAt,
-            currentSupply: uint128(t.totalSupply()),
+            currentSupply: t.totalSupply().toUint128(),
             maxSupply: maxSupply(token),
             currentPrice: currentPrice(token),
             reserveToken: bond.reserveToken,
