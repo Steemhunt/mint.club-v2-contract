@@ -529,11 +529,11 @@ contract MCV2_Bond is MCV2_Royalty {
     }
 
     /**
-     * @dev Returns the current price of a token in the bond.
+     * @dev Returns the price for the next mint of a token
      * @param token The address of the token.
-     * @return The current price of the token in the bond.
+     * @return The price at the next step of the bonding curve
      */
-    function currentPrice(address token) public view returns (uint128) {
+    function priceForNextMint(address token) public view returns (uint128) {
         uint256 currentSupply = MCV2_ICommonToken(token).totalSupply();
         if (currentSupply < maxSupply(token)) {
             ++currentSupply; // Ensure currentSupply is in the next range
@@ -562,7 +562,7 @@ contract MCV2_Bond is MCV2_Royalty {
         uint40 createdAt;
         uint128 currentSupply;
         uint128 maxSupply;
-        uint128 currentPrice;
+        uint128 priceForNextMint;
         address reserveToken;
         uint8 reserveDecimals;
         string reserveSymbol;
@@ -583,7 +583,7 @@ contract MCV2_Bond is MCV2_Royalty {
             createdAt: bond.createdAt,
             currentSupply: t.totalSupply().toUint128(),
             maxSupply: maxSupply(token),
-            currentPrice: currentPrice(token),
+            priceForNextMint: priceForNextMint(token),
             reserveToken: bond.reserveToken,
             reserveDecimals: r.decimals(),
             reserveSymbol: r.symbol(),

@@ -451,7 +451,7 @@ describe('Bond', function () {
 
         describe('Massiv Mint', function () {
           it('should be at the last price step', async function () {
-            expect(await Bond.currentPrice(this.token.target)).to.equal(BABY_TOKEN.bondParams.stepPrices[7]);
+            expect(await Bond.priceForNextMint(this.token.target)).to.equal(BABY_TOKEN.bondParams.stepPrices[7]);
           });
 
           it('should mint correct amount after royalties', async function () {

@@ -82,7 +82,7 @@ contract MCV1_Wrapper {
         // uint40 createdAt; // off-chain data
         uint256 currentSupply;
         uint256 maxSupply;
-        uint256 currentPrice;
+        uint256 priceForNextMint;
         // address reserveToken; // Always MINT_CONTRACT
         // uint8 reserveDecimals; // Always 18
         // string reserveSymbol; // Always "MINT"
@@ -105,7 +105,7 @@ contract MCV1_Wrapper {
             name: t.name(),
             currentSupply: totalSupply,
             maxSupply: BOND.maxSupply(token),
-            currentPrice: totalSupply,
+            priceForNextMint: totalSupply,
             reserveBalance: BOND.reserveBalance(token)
         });
     }

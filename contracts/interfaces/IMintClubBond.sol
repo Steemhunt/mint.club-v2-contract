@@ -6,7 +6,7 @@ interface IMintClubBond {
   function buy ( address tokenAddress, uint256 reserveAmount, uint256 minReward, address beneficiary ) external;
   function createAndBuy ( string memory name, string memory symbol, uint256 maxTokenSupply, uint256 reserveAmount, address beneficiary ) external;
   function createToken ( string memory name, string memory symbol, uint256 maxTokenSupply ) external returns ( address );
-  function currentPrice ( address tokenAddress ) external view returns ( uint256 );
+  function priceForNextMint ( address tokenAddress ) external view returns ( uint256 );
   function defaultBeneficiary (  ) external view returns ( address );
   function exists ( address tokenAddress ) external view returns ( bool );
   function getBurnRefund ( address tokenAddress, uint256 tokenAmount ) external view returns ( uint256, uint256 );
