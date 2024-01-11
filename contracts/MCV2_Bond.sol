@@ -448,7 +448,7 @@ contract MCV2_Bond is MCV2_Royalty {
         uint256 reserveFromBond;
         uint256 tokensLeft = tokensToBurn;
         uint256 i = getCurrentStep(token, currentSupply);
-        while (i >= 0 && tokensLeft > 0) {
+        while (tokensLeft > 0) {
             uint256 supplyLeft = i == 0 ? currentSupply : currentSupply - steps[i - 1].rangeTo;
 
             uint256 tokensToProcess = tokensLeft < supplyLeft ? tokensLeft : supplyLeft;
