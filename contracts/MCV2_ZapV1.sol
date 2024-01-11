@@ -20,6 +20,7 @@ contract MCV2_ZapV1 is Ownable {
 
     error MCV2_ZapV1__ReserveIsNotWETH();
     error MCV2_ZapV1__EthTransferFailed();
+    error MCV2_ZapV1__FailedToApprove();
     error MCV2_ZapV1__SlippageLimitExceeded();
     error MCV2_ZapV1__InvalidReceiver();
 
@@ -35,7 +36,7 @@ contract MCV2_ZapV1 is Ownable {
         WETH = IWETH(wethAddress);
 
         // Approve WETH to Bond contract
-        WETH.approve(bondAddress, MAX_INT);
+        if(!WETH.approve(bondAddress, MAX_INT)) revert MCV2_ZapV1__FailedToApprove();
     }
 
     receive() external payable {}
@@ -108,7 +109,7 @@ contract MCV2_ZapV1 is Ownable {
 
             // Approve tokens to Bond contract for the first time
             if (t.allowance(address(this), address(BOND)) < tokensToBurn) {
-                t.approve(address(BOND), MAX_INT);
+                if (!t.approve(address(BOND), MAX_INT)) revert MCV2_ZapV1__FailedToApprove();
             }
         } else {
             // Receive tokens to burn
