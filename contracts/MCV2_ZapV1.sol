@@ -28,6 +28,8 @@ contract MCV2_ZapV1 is Ownable {
 
     uint256 private constant MAX_INT = type(uint256).max;
 
+    event RescuedETH(address receiver, uint256 amount);
+
     constructor(address bondAddress, address wethAddress) Ownable(msg.sender) {
         BOND = MCV2_Bond(bondAddress);
         WETH = IWETH(wethAddress);
@@ -138,8 +140,11 @@ contract MCV2_ZapV1 is Ownable {
     function rescueETH(address receiver) external onlyOwner {
         if (receiver == address(0)) revert MCV2_ZapV1__InvalidReceiver();
 
-        (bool sent, ) = receiver.call{value: address(this).balance}("");
+        uint256 balance = address(this).balance;
+        (bool sent, ) = receiver.call{value: balance}("");
         if (!sent) revert MCV2_ZapV1__EthTransferFailed();
+
+        emit RescuedETH(receiver, balance);
     }
 
     // MARK: - ERC1155 Receiver
