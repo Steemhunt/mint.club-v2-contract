@@ -71,6 +71,8 @@ Due to the diverse nature of custom cases, it is impractical for our bond contra
 
 We plan to issue warnings on our official front-end for tokens known to potentially disrupt our bond contract. However, **it's crucial for users to conduct their own research and understand the potential implications of selecting a specific reserve token.**
 
+The same issue applies to the `Locker` and `MerkleDistributor` tools, and appropriate warning messages will be provided on the front-end client.
+
 ## Run Tests 🧪
 ```bash
 npx hardhat test
