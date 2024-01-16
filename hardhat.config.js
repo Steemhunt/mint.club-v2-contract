@@ -8,6 +8,9 @@ module.exports = {
       {
         version: '0.8.20',
         settings: {
+           // NOTE: PUSH0 opcode is not supported on some L2s
+           // - Reference: https://hardhat.org/hardhat-runner/docs/config#default-evm-version
+          evmVersion: 'paris',
           optimizer: {
             enabled: true,
             runs: 50000
@@ -20,19 +23,39 @@ module.exports = {
     ]
   },
   networks: {
-    sepolia: {
-      url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_SEPOLIA_API_KEY}`,
-      chainId: 11155111,
-      accounts: [process.env.TEST_PRIVATE_KEY]
+    mainnet: {
+      url: process.env.RPC_MAINNET,
+      chainId: 1,
+      accounts: [process.env.MAINNET_PRIVATE_KEY]
+    },
+    optimisticEthereum: {
+      url: process.env.RPC_OPTIMISM,
+      chainId: 10,
+      accounts: [process.env.MAINNET_PRIVATE_KEY]
+    },
+    arbitrumOne: {
+      url: process.env.RPC_ARBITRUM,
+      chainId: 42161,
+      accounts: [process.env.MAINNET_PRIVATE_KEY]
     },
     base: {
-      url: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_BASE_API_KEY}`,
+      url: process.env.RPC_BASE,
       chainId: 8453,
-      accounts: [process.env.TEST_PRIVATE_KEY]
+      accounts: [process.env.MAINNET_PRIVATE_KEY]
+    },
+    polygon: {
+      url: process.env.RPC_POLYGON,
+      chainId: 137,
+      accounts: [process.env.MAINNET_PRIVATE_KEY]
     },
     bsc: {
-      url: 'https://bsc-dataseed.bnbchain.org',
+      url: process.env.RPC_BSC,
       chainId: 56,
+      accounts: [process.env.MAINNET_PRIVATE_KEY]
+    },
+    sepolia: {
+      url: process.env.RPC_SEPOLIA,
+      chainId: 11155111,
       accounts: [process.env.TEST_PRIVATE_KEY]
     }
   },
@@ -48,9 +71,13 @@ module.exports = {
   etherscan: {
     // network list: npx hardhat verify --list-networks
     apiKey: {
-      sepolia: process.env.ETHERSCAN_API_KEY,
+      mainnet: process.env.ETHERSCAN_API_KEY,
+      optimisticEthereum: process.env.OPTIMISM_ETHERSCAN_API_KEY,
+      arbitrumOne: process.env.ARBISCAN_API_KEY,
       base: process.env.BASESCAN_API_KEY,
-      bsc: process.env.BSCSCAN_API_KEY
+      polygon: process.env.POLYGONSCAN_API_KEY,
+      bsc: process.env.BSCSCAN_API_KEY,
+      sepolia: process.env.ETHERSCAN_API_KEY
     }
   }
 };

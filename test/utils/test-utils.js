@@ -10,9 +10,15 @@ exports.MAX_ROYALTY_RANGE = 5000n; // 50%
 const PROTOCOL_CUT = 2000n; // 20% of the royalty
 
 exports.getCreationFee = function(network) {
+  // Collect ~ $5 of asset creation fee to prevent spam
   const CREATION_FEE = {
-    sepolia: 10n*10n**15n, // 0.001 ETH ~ $2.2
-    base: 10n*10n**15n, // 0.001 ETH ~ $2.2
+    mainnet: 2n*10n**15n, // 0.002 ETH
+    optimisticEthereum: 2n*10n**15n, // 0.002 ETH
+    arbitrumOne: 2n*10n**15n, // 0.002 ETH
+    base: 2n*10n**15n, // 0.002 ETH
+    sepolia: 0n, // 0 ETH - testnet
+    polygon: 5n*10n**18n, // 5 MATIC
+    bsc: 15n*10n**15n, // 0.015 BNB
   };
 
   if (!CREATION_FEE[network]) {
@@ -24,8 +30,13 @@ exports.getCreationFee = function(network) {
 
 exports.getWETHAddress = function(network) {
   const WETH_ADDRESS = {
-    sepolia: '0xfff9976782d46cc05630d1f6ebab18b2324d6b14',
-    base: '0x4200000000000000000000000000000000000006',
+    mainnet: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // WETH
+    optimisticEthereum: '0x4200000000000000000000000000000000000006', // WETH
+    arbitrumOne: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1', // WETH
+    base: '0x4200000000000000000000000000000000000006', // WETH
+    sepolia: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14', // WETH
+    polygon: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270', // WMATIC
+    bsc: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', // WBNB
   };
 
   if (!WETH_ADDRESS[network]) {
