@@ -83,8 +83,11 @@ contract MCV2_ZapV1 is Ownable {
         BOND.mint(token, tokensToMint, ethAmount, receiver);
 
         // Refund leftover ETH to the sender
-        (bool sent, ) = _msgSender().call{value: maxEthAmount - ethAmount}("");
-        if (!sent) revert MCV2_ZapV1__EthTransferFailed();
+        uint256 leftover = maxEthAmount - ethAmount;
+        if (leftover > 0) {
+            (bool sent, ) = _msgSender().call{value: leftover}("");
+            if (!sent) revert MCV2_ZapV1__EthTransferFailed();
+        }
     }
 
     /**
@@ -124,12 +127,14 @@ contract MCV2_ZapV1 is Ownable {
         // Burn tokens
         BOND.burn(token, tokensToBurn, refundAmount, address(this));
 
-        // Unwrap WETH to ETH
-        IWETH(WETH).withdraw(refundAmount);
+        if (refundAmount > 0) {
+            // Unwrap WETH to ETH
+            IWETH(WETH).withdraw(refundAmount);
 
-        // Transfer ETH to the receiver
-        (bool sent, ) = receiver.call{value: refundAmount}("");
-        if (!sent) revert MCV2_ZapV1__EthTransferFailed();
+            // Transfer ETH to the receiver
+            (bool sent, ) = receiver.call{value: refundAmount}("");
+            if (!sent) revert MCV2_ZapV1__EthTransferFailed();
+        }
     }
 
     // MARK: - Admin functions
