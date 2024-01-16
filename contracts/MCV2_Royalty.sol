@@ -15,8 +15,6 @@ abstract contract MCV2_Royalty is Ownable {
 
     error MCV2_Royalty__NothingToClaim();
     error MCV2_Royalty__InvalidParams();
-    error MCV2_Royalty__InvalidCreationFee();
-    error MCV2_Royalty__CreationFeeTransactionFailed();
 
     uint256 private constant RATIO_BASE = 10000; // 100.00%
     uint256 private constant PROTOCOL_CUT = 2000;
@@ -95,18 +93,6 @@ abstract contract MCV2_Royalty is Ownable {
         uint256 protocolCut = royaltyAmount * PROTOCOL_CUT / RATIO_BASE;
         userTokenRoyaltyBalance[beneficiary][reserveToken] += royaltyAmount - protocolCut;
         userTokenRoyaltyBalance[protocolBeneficiary][reserveToken] += protocolCut;
-    }
-
-    /**
-     * @dev Collects the creation fee and send them to the protocol beneficiary.
-     * @param amount The amount paid for the creation fee
-     */
-    function _collectCreationFee(uint256 amount) internal {
-        if (amount != creationFee) revert MCV2_Royalty__InvalidCreationFee();
-        if (creationFee == 0) return;
-
-        (bool success, ) = payable(protocolBeneficiary).call{value: amount}("");
-        if (!success) revert MCV2_Royalty__CreationFeeTransactionFailed();
     }
 
     // MARK: - External functions

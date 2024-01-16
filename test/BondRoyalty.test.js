@@ -114,7 +114,7 @@ describe('Royalty', function () {
           Object.values(BABY_TOKEN.bondParams),
           { value: this.creationFee - 1n }
         )).to.be.
-          revertedWithCustomError(Bond, 'MCV2_Royalty__InvalidCreationFee');
+          revertedWithCustomError(Bond, 'MCV2_Bond__InvalidCreationFee');
       });
     }); // With creation fee
   }); // Update creation fee by deployer

@@ -37,6 +37,8 @@ contract MCV2_Bond is MCV2_Royalty {
     error MCV2_Bond__InvalidCreatorAddress();
     error MCV2_BOND__InvalidPaginationParameters();
     error MCV2_Bond__InvalidReceiver();
+    error MCV2_Bond__InvalidCreationFee();
+    error MCV2_Bond__CreationFeeTransactionFailed();
 
     uint256 private constant MIN_UINT8_LENGTH = 31; // uint8 = 32 bits
     uint256 private constant MIN_STRING_LENGTH = 95; // empty string = 64 bits, 1 character = 96 bits
@@ -249,6 +251,7 @@ contract MCV2_Bond is MCV2_Royalty {
      * @return The address of the newly created token.
      */
     function createToken(TokenParams calldata tp, BondParams calldata bp) external payable returns (address) {
+        if (msg.value != creationFee) revert MCV2_Bond__InvalidCreationFee();
         _validateTokenParams(tp);
         _validateBondParams(bp);
 
@@ -259,13 +262,17 @@ contract MCV2_Bond is MCV2_Royalty {
 
         _setBond(token, bp);
 
-        _collectCreationFee(msg.value);
-
         emit TokenCreated(token, tp.name, tp.symbol, bp.reserveToken);
 
         // Send free tokens to the creator if a free minting range exists
         if (bp.stepPrices[0] == 0) {
             newToken.mintByBond(_msgSender(), bp.stepRanges[0]);
+        }
+
+        // Collect creation fee if exists
+        if (creationFee > 0) {
+            (bool success, ) = payable(protocolBeneficiary).call{value: creationFee}("");
+            if (!success) revert MCV2_Bond__CreationFeeTransactionFailed();
         }
 
         return token;
@@ -278,6 +285,7 @@ contract MCV2_Bond is MCV2_Royalty {
      * @return The address of the newly created multi-token.
      */
     function createMultiToken(MultiTokenParams calldata tp, BondParams calldata bp) external payable returns (address) {
+        if (msg.value != creationFee) revert MCV2_Bond__InvalidCreationFee();
         _validateMultiTokenParams(tp);
         _validateBondParams(bp);
 
@@ -288,13 +296,17 @@ contract MCV2_Bond is MCV2_Royalty {
 
         _setBond(token, bp);
 
-        _collectCreationFee(msg.value);
-
         emit MultiTokenCreated(token, tp.name, tp.symbol, tp.uri, bp.reserveToken);
 
         // Send free tokens to the creator if a free minting range exists
         if (bp.stepPrices[0] == 0) {
             newToken.mintByBond(_msgSender(), bp.stepRanges[0]);
+        }
+
+        // Collect creation fee if exists
+        if (creationFee > 0) {
+            (bool success, ) = payable(protocolBeneficiary).call{value: creationFee}("");
+            if (!success) revert MCV2_Bond__CreationFeeTransactionFailed();
         }
 
         return token;
