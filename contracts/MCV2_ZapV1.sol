@@ -10,6 +10,25 @@ import {MCV2_Bond} from "./MCV2_Bond.sol";
 import {IWETH} from "./interfaces/IWETH.sol";
 import {MCV2_ICommonToken} from "./interfaces/MCV2_ICommonToken.sol";
 
+interface IAggregationRouterV5 {
+    struct SwapDescription {
+        IERC20 srcToken;
+        IERC20 dstToken;
+        address srcReceiver;
+        address dstReceiver;
+        uint256 amount;
+        uint256 minReturnAmount;
+        uint256 flags;
+    }
+    function swap(
+        address caller,
+        SwapDescription calldata desc,
+        bytes calldata data
+    ) external returns (uint256 returnAmount, uint256 gasLeft);
+}
+
+
+
 /**
 * @title Mint Club V2 Zap V1 Contract
 * @dev This contract implements the Zap functionality for the Mint Club V2 Bond contract.
@@ -59,6 +78,51 @@ contract MCV2_ZapV1 is Ownable {
 
         // All MCV2_Token has 18 decimals, whereas MCV2_MultiToken has 0 decimals
         return t.decimals() == 18;
+    }
+
+    /**
+     * @dev Swap sourceToken to destToken using 1inch aggregation router
+     * @param sourceToken The source token address.
+     * @param sourceTokenAmount The amount of source tokens to swap.
+     * @param destToken The destination token address.
+     * @param minDestTokenAmount The minimum amount of destination tokens to receive.
+     * @param data Data specific to the swap, refer to 1inch API for details
+     * REF: API call example - https://portal.1inch.dev/documentation/swap/swagger?method=get&path=%2Fv5.2%2F1%2Fswap
+     */
+    function swapWith1inch(
+        address sourceToken,
+        uint256 sourceTokenAmount,
+        address destToken,
+        uint256 minDestTokenAmount,
+        bytes calldata data
+    ) public returns (uint256 destTokenAmount) {
+        IAggregationRouterV5 aggregationRouter = IAggregationRouterV5(0x1111111254EEB25477B68fb85Ed929f73A960582);
+
+        // Transfer source tokens to this contract
+        require(IERC20(sourceToken).transferFrom(msg.sender, address(this), sourceTokenAmount), "Transfer failed");
+
+        // Approve the router to spend tokens
+        IERC20(sourceToken).approve(address(aggregationRouter), sourceTokenAmount);
+
+        // Set up the swap parameters
+        IAggregationRouterV5.SwapDescription memory callDescription;
+        callDescription.srcToken = IERC20(sourceToken);
+        callDescription.dstToken = IERC20(destToken);
+        callDescription.srcReceiver = address(this);
+        callDescription.dstReceiver = msg.sender;
+        callDescription.amount = sourceTokenAmount;
+        callDescription.minReturnAmount = minDestTokenAmount;
+        callDescription.flags = 0;
+
+        // Perform the swap
+        (uint256 returnAmount, ) = aggregationRouter.swap(
+            address(this),
+            callDescription,
+            data
+        );
+
+        require(returnAmount >= minDestTokenAmount, "Insufficient output amount");
+        return returnAmount;
     }
 
     /**
