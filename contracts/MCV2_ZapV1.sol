@@ -23,6 +23,7 @@ contract MCV2_ZapV1 is Ownable {
     error MCV2_ZapV1__FailedToApprove();
     error MCV2_ZapV1__SlippageLimitExceeded();
     error MCV2_ZapV1__InvalidReceiver();
+    error MCV2_ZapV1__NoETHToRescue();
 
     MCV2_Bond public immutable BOND;
     IWETH public immutable WETH;
@@ -147,6 +148,8 @@ contract MCV2_ZapV1 is Ownable {
         if (receiver == address(0)) revert MCV2_ZapV1__InvalidReceiver();
 
         uint256 balance = address(this).balance;
+        if (balance == 0) revert MCV2_ZapV1__NoETHToRescue();
+
         (bool sent, ) = receiver.call{value: balance}("");
         if (!sent) revert MCV2_ZapV1__EthTransferFailed();
 
