@@ -1,17 +1,17 @@
 ![image](https://github.com/Steemhunt/mint.club-v2-contract/assets/1332279/66ce69bd-7ebd-4d58-b064-f82053b51b5a)
 
 # Mint Club V2
-## Overview
+## Overview 👀
 Mint Club is a bonding curve-based token (ERC20, ERC1155) creation and trading protocol. Users can create an asset with a custom bonding curve on top of any existing ERC20 token as collateral. By using a bonding curve, the new asset is immediately tradable without the need for liquidity creation on DEXs or CEXs.
 - Docs: https://docs.mint.club (V2 documentaion is in progress)
 - Demo Video: https://www.youtube.com/watch?v=BR_MJozU-DU
 
-## Security Audit
+## Security Audit 🔒
 - TODO: Add CertiK Emblem
 - [Audit Report by CertiK](https://github.com/Steemhunt/mint.club-v2-contract/blob/main/security-audits/CertiK-20240118.pdf)
 - [Skynet Monitoring](https://skynet.certik.com/ko/projects/mint-club)
 
-## Key features
+## Key features 🗝️
 1. **Token Creation (ERC20 or ERC1155)**
    * Create a bonding curve token (ERC20) or NFT (ERC1155) by using another ERC20 token as the base asset for your token's bonding curve pool.
    * Choose from curve types such as linear, exponential, or flat line, and adjust the price variation intervals for your token's journey.
@@ -30,7 +30,7 @@ Mint Club is a bonding curve-based token (ERC20, ERC1155) creation and trading p
    * Create a contract-bound lock-up schedule for ERC20 or ERC1155 (supports `id = 0` only) tokens.
    * Specify the unlock time and recipient address for after the lock-up period is completed.
 
-## Gloals and Objectives
+## Gloals and Objectives ⛳️
 Mint Club aims to provide no-code, yet flexible, token creation tools for web3 creators who want to build their token economy. One of the biggest hurdles in building token economics is providing liquidity in the early stages, but this issue is eliminated with the Mint Club protocol.
 
 ## Contract addresses (Private Beta) 📜
