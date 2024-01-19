@@ -19,10 +19,12 @@ async function main() {
 
   const tokenImplementation = await hre.ethers.deployContract('MCV2_Token');
   await tokenImplementation.waitForDeployment();
+  await tokenImplementation.init('Token Implementation', 'TOKEN_PLACEHOLDER');
   console.log(` -> MCV2_Token contract deployed at ${tokenImplementation.target}`);
 
   const NFTImplementation = await hre.ethers.deployContract('MCV2_MultiToken');
   await NFTImplementation.waitForDeployment();
+  await NFTImplementation.init('MultiToken Implementation', 'MULTI_TOKEN_PLACEHOLDER', '');
   console.log(` -> MCV2_MultiToken contract deployed at ${NFTImplementation.target}`);
 
   const bond = await hre.ethers.deployContract('MCV2_Bond', [
@@ -74,6 +76,12 @@ main()
 /* Deploy script
 
 npx hardhat compile && npx hardhat run --network sepolia scripts/deploy.js
+
+npx hardhat compile && npx hardhat run --network optimisticEthereum scripts/deploy.js
+npx hardhat compile && npx hardhat run --network arbitrumOne scripts/deploy.js
 npx hardhat compile && npx hardhat run --network base scripts/deploy.js
+npx hardhat compile && npx hardhat run --network polygon scripts/deploy.js
+npx hardhat compile && npx hardhat run --network bsc scripts/deploy.js
+npx hardhat compile && npx hardhat run --network mainnet scripts/deploy.js
 
 */
