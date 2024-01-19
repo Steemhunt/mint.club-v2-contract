@@ -79,9 +79,6 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
    </tbody>
 </table>
 
-### V1 Contract Wrapper (BSC Mainnet):
-- MCV1_Wrapper: [0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89](https://bscscan.com/address/0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89#code)
-
 ## Design Choices 📐
 
 ### Discrete Bonding Curve (DBC)
