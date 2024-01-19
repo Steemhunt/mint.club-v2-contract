@@ -6,6 +6,11 @@ Mint Club is a bonding curve-based token (ERC20, ERC1155) creation and trading p
 - Docs: https://docs.mint.club (V2 documentaion is in progress)
 - Demo Video: https://www.youtube.com/watch?v=BR_MJozU-DU
 
+## Security Audit
+- TODO: Add CertiK Emblem
+- [Audit Report by CertiK](https://github.com/Steemhunt/mint.club-v2-contract/blob/main/security-audits/CertiK-20240118.pdf)
+- [Skynet Monitoring](https://skynet.certik.com/ko/projects/mint-club)
+
 ## Key features
 1. **Token Creation (ERC20 or ERC1155)**
    * Create a bonding curve token (ERC20) or NFT (ERC1155) by using another ERC20 token as the base asset for your token's bonding curve pool.
