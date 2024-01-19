@@ -49,11 +49,13 @@ exports.getWETHAddress = function(network) {
 exports.getMaxSteps = function(network) {
   // 1,000 steps reqruies about 15M gas
   const MAX_STEPS = {
-    ethereum: 1000n, // 30M max
-    base: 1000n,  // 30M max
-    sepolia: 1000n, // 30M max
-
-    // TODO: add more networks
+    mainnet: 1000n, // 30M gas limit
+    optimisticEthereum: 1000n, // 30M gas limit
+    arbitrumOne: 1000n, // over 30M gas limit
+    base: 1000n, // 30M gas limit
+    sepolia: 1000n, // 30M gas limit
+    polygon: 1000n, // 30M gas limit
+    bsc: 1000n // 30M gas limit
   };
   if (!MAX_STEPS[network]) {
     throw new Error(`MAX_STEPS is not defined for ${network}`);
