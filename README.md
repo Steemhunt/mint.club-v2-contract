@@ -33,23 +33,53 @@ Mint Club is a bonding curve-based token (ERC20, ERC1155) creation and trading p
 ## Gloals and Objectives
 Mint Club aims to provide no-code, yet flexible, token creation tools for web3 creators who want to build their token economy. One of the biggest hurdles in building token economics is providing liquidity in the early stages, but this issue is eliminated with the Mint Club protocol.
 
-## Contract addresses 📜
-### Ethereum Sepolia Testnet
-- MCV2_Token: [0x003E64dFcf66D597aDA5B151CA6C374f1A800e6c](https://sepolia.etherscan.io/address/0x003E64dFcf66D597aDA5B151CA6C374f1A800e6c#code)
-- MCV2_MultiToken: [0xf462a581E2977688bFD6984374F7aDFE5893e16F](https://sepolia.etherscan.io/address/0xf462a581E2977688bFD6984374F7aDFE5893e16F#code)
-- MCV2_Bond: [0xa6B9b69cefb519fC85aA02AD7693814D33bD7E85](https://sepolia.etherscan.io/address/0xa6B9b69cefb519fC85aA02AD7693814D33bD7E85#code)
-- MCV2_ZapV1: [0xc4C8071D651F093C4A5c2C06e7BFfc163A057DdA](https://sepolia.etherscan.io/address/0xc4C8071D651F093C4A5c2C06e7BFfc163A057DdA#code)
-- Locker: [0xD9886E3b71B8bf34610386a451E4c12Ce05bAdf8](https://sepolia.etherscan.io/address/0xD9886E3b71B8bf34610386a451E4c12Ce05bAdf8#code)
-- MerkleDistributor: [0xFC3304e5D4AB166aA91A52E91B85f1804a7feAB8](https://sepolia.etherscan.io/address/0xFC3304e5D4AB166aA91A52E91B85f1804a7feAB8#code)
-
-### Base L2 - TEST ONLY!
-- MCV2_Token: [0xeDeB9196B6648F5a4701067E851F3fEBcF62F549](https://basescan.org/address/0xeDeB9196B6648F5a4701067E851F3fEBcF62F549#code)
-- MCV2_MultiToken: [0xF4567Fc564Bfd23F50Fe092f65146CAf7266d241](https://basescan.org/address/0xF4567Fc564Bfd23F50Fe092f65146CAf7266d241#code)
-- MCV2_Bond: [0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89](https://basescan.org/address/0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89#code)
-- MCV2_ZapV1: [0x60432191893c4F742205a2C834817a1891feC435](https://basescan.org/address/0x60432191893c4F742205a2C834817a1891feC435#code)
-- Locker: [0xB43826E079dFB2e2b48a0a473Efc7F1fe6391763](https://basescan.org/address/0xB43826E079dFB2e2b48a0a473Efc7F1fe6391763#code)
-- MerkleDistributor: [0xC14d558AfFE9457E620338E7f2166Ae29E884463](https://basescan.org/address/0xC14d558AfFE9457E620338E7f2166Ae29E884463#code)
-
+## Contract addresses (Private Beta) 📜
+🛑 **Do not use these contracts!** Even though these contracts are deployed on the mainnet, they are not meant for production use and are for testing purposes only.
+<table>
+   <thead>
+      <tr>
+         <th>Contract /  Chain</th>
+         <th><a href="https://etherscan.io">Ethereum</a></th>
+         <th><a href="https://optimistic.etherscan.io/">Optimism</a></th>
+         <th><a href="https://arbiscan.io">Arbitrum</a></th>
+         <th><a href="https://basescan.org">Base</a></th>
+         <th><a href="https://bscscan.com">BNB Chain</a></th>
+         <th><a href="https://polygonscan.com">Polygon (PoS)</a></th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td>MCV2_Token</td>
+         <td colspan="6">0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df</td>
+      </tr>
+      <tr>
+         <td>MCV2_MultiToken</td>
+         <td colspan="6">0x6c61918eECcC306D35247338FDcf025af0f6120A</td>
+      </tr>
+      <tr>
+         <td>MCV2_Bond</td>
+         <td colspan="6">0xc5a076cad94176c2996B32d8466Be1cE757FAa27</td>
+      </tr>
+      <tr>
+         <td>MCV2_ZapV1</td>
+         <td colspan="6">0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa</td>
+      </tr>
+      <tr>
+         <td>Locker</td>
+         <td colspan="6">0xA3dCf3Ca587D9929d540868c924f208726DC9aB6</td>
+      </tr>
+      <tr>
+         <td>MerkleDistributor</td>
+         <td colspan="6">0x3bc6B601196752497a68B2625DB4f2205C3b150b</td>
+      </tr>
+      <tr>
+         <td>MCV1_Wrapper</td>
+         <td colspan="4">N/A</td>
+         <td>0x60432191893c4F742205a2C834817a1891feC435</td>
+         <td>N/A</td>
+      </tr>
+   </tbody>
+</table>
 
 ### V1 Contract Wrapper (BSC Mainnet):
 - MCV1_Wrapper: [0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89](https://bscscan.com/address/0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89#code)
