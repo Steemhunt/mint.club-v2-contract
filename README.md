@@ -78,6 +78,40 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       </tr>
    </tbody>
 </table>
+<table>
+   <thead>
+      <tr>
+         <th>Contract /  Chain</th>
+         <th><a href="https://snowtrace.io">Avalanche (C-Chain)</a></th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td>MCV2_Token</td>
+         <td>0x5DaE94e149CF2112Ec625D46670047814aA9aC2a</td>
+      </tr>
+      <tr>
+         <td>MCV2_MultiToken</td>
+         <td>0x621c335b4BD8f2165E120DC70d3AfcAfc6628681</td>
+      </tr>
+      <tr>
+         <td>MCV2_Bond</td>
+         <td>0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1</td>
+      </tr>
+      <tr>
+         <td>MCV2_ZapV1</td>
+         <td>0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724</td>
+      </tr>
+      <tr>
+         <td>Locker</td>
+         <td>0x5b64cECC5cF3E4B1A668Abd895D16BdDC0c77a17</td>
+      </tr>
+      <tr>
+         <td>MerkleDistributor</td>
+         <td>0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65</td>
+      </tr>
+   </tbody>
+</table>
 
 ## Design Choices 📐
 

@@ -16,7 +16,7 @@ const {
   ZERO_BYTES32
 } = require('./utils/test-utils');
 
-const MAX_STEPS = getMaxSteps('ethereum');
+const MAX_STEPS = getMaxSteps('mainnet');
 
 const BABY_TOKEN = {
   tokenParams: { name: 'Baby Token', symbol: 'BABY', uri: 'https://api.hunt.town/token-metadata/buildings/0.json' },

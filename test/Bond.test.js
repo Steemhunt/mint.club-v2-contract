@@ -15,7 +15,7 @@ const {
   calculateRoyalty
 } = require('./utils/test-utils');
 
-const MAX_STEPS = getMaxSteps('ethereum');
+const MAX_STEPS = getMaxSteps('mainnet');
 
 const BABY_TOKEN = {
   tokenParams: { name: 'Baby Token', symbol: 'BABY' },

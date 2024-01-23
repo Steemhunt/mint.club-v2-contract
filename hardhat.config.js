@@ -53,6 +53,11 @@ module.exports = {
       chainId: 56,
       accounts: [process.env.MAINNET_PRIVATE_KEY]
     },
+    avalanche: {
+      url: process.env.RPC_AVALANCHE,
+      chainId: 43114,
+      accounts: [process.env.MAINNET_PRIVATE_KEY]
+    },
     sepolia: {
       url: process.env.RPC_SEPOLIA,
       chainId: 11155111,
@@ -77,7 +82,8 @@ module.exports = {
       base: process.env.BASESCAN_API_KEY,
       polygon: process.env.POLYGONSCAN_API_KEY,
       bsc: process.env.BSCSCAN_API_KEY,
-      sepolia: process.env.ETHERSCAN_API_KEY
+      sepolia: process.env.ETHERSCAN_API_KEY,
+      avalanche: 'snowtrace'
     }
   }
 };
