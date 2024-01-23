@@ -21,7 +21,7 @@ exports.getCreationFee = function(network) {
     bsc: 15n*10n**15n, // 0.015 BNB
   };
 
-  if (!CREATION_FEE[network]) {
+  if (CREATION_FEE[network] === undefined) {
     throw new Error(`CREATION_FEE is not defined for ${network}`);
   }
 
