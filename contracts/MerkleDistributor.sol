@@ -35,12 +35,12 @@ contract MerkleDistributor {
     struct Distribution {
         address token;
         bool isERC20;
-        uint24 walletCount;
-        uint24 claimedCount; // 160 + 8 + 24 + 24 = 216 bits
+        uint40 walletCount; // max: ~1B wallets
+        uint40 claimedCount; // 160 + 8 + 40 + 40 = 248 bits
 
-        uint128 amountPerClaim;
+        uint176 amountPerClaim;
         uint40 startTime; // supports up to year 36,825
-        uint40 endTime; // 128 + 40 + 40 = 208 bits
+        uint40 endTime; // 176 + 40 + 40 = 256 bits
 
         address owner;
         uint40 refundedAt; // 160 + 40 = 200 bits
@@ -81,8 +81,8 @@ contract MerkleDistributor {
     function createDistribution(
         address token,
         bool isERC20,
-        uint96 amountPerClaim,
-        uint24 walletCount,
+        uint176 amountPerClaim,
+        uint40 walletCount,
         uint40 startTime,
         uint40 endTime,
         bytes32 merkleRoot,

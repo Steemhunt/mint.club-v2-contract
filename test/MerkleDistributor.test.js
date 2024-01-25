@@ -5,10 +5,10 @@ const keccak256 = require('keccak256');
 const { MerkleTree } = require('merkletreejs');
 const { NULL_ADDRESS, ZERO_BYTES32, wei } = require('./utils/test-utils');
 
-const ORIGINAL_BALANCE = wei(1000000);
+const ORIGINAL_BALANCE = wei(10000000000000);
 const TEST_DATA = {
-  amountPerClaim: wei(100),
-  walletCount: 10n,
+  amountPerClaim: wei(1000000),
+  walletCount: 1000000n,
   startTime: 0, // Start immediately
   endTime: Math.floor(Date.now() / 1000) + 60 * 60 * 24, // 24 hours from now
   title: 'Test Airdrop'
