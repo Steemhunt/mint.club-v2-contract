@@ -30,7 +30,14 @@ main()
 
 /* Deploy script
 
-npx hardhat compile && npx hardhat run --network sepolia scripts/deploy-bond.js
-npx hardhat compile && npx hardhat run --network base scripts/deploy-bond.js
+npx hardhat compile && npx hardhat run --network sepolia scripts/deploy-merkle-distributor.js
+
+npx hardhat compile && npx hardhat run --network optimisticEthereum scripts/deploy-merkle-distributor.js
+npx hardhat compile && npx hardhat run --network arbitrumOne scripts/deploy-merkle-distributor.js
+npx hardhat compile && npx hardhat run --network base scripts/deploy-merkle-distributor.js
+npx hardhat compile && npx hardhat run --network polygon scripts/deploy-merkle-distributor.js
+npx hardhat compile && npx hardhat run --network bsc scripts/deploy-merkle-distributor.js
+npx hardhat compile && npx hardhat run --network mainnet scripts/deploy-merkle-distributor.js
+npx hardhat compile && npx hardhat run --network avalanche scripts/deploy-merkle-distributor.js
 
 */

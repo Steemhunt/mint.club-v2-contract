@@ -70,7 +70,7 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       </tr>
       <tr>
          <td>MerkleDistributor</td>
-         <td colspan="6">0x3bc6B601196752497a68B2625DB4f2205C3b150b</td>
+         <td colspan="6">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</td>
       </tr>
       <tr>
          <td>MCV1_Wrapper</td>
@@ -108,7 +108,7 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       </tr>
       <tr>
          <td>MerkleDistributor</td>
-         <td>0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65</td>
+         <td>0x841A2bD2fc97DCB865b4Ddb352540148Bad2dB09</td>
       </tr>
    </tbody>
 </table>
@@ -142,7 +142,7 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       </tr>
       <tr>
          <td>MerkleDistributor</td>
-         <td>0xE816232886E2F37D70d79D1d42CAfe1FFD4FA333</td>
+         <td>0x0CD940395566d509168977Cf10E5296302efA57A</td>
       </tr>
    </tbody>
 </table>
