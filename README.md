@@ -40,7 +40,7 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       <tr>
          <th>Contract /  Chain</th>
          <th><a href="https://etherscan.io">Ethereum</a></th>
-         <th><a href="https://optimistic.etherscan.io/">Optimism</a></th>
+         <th><a href="https://optimistic.etherscan.io">Optimism</a></th>
          <th><a href="https://arbiscan.io">Arbitrum</a></th>
          <th><a href="https://basescan.org">Base</a></th>
          <th><a href="https://bscscan.com">BNB Chain</a></th>
@@ -109,6 +109,40 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       <tr>
          <td>MerkleDistributor</td>
          <td>0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65</td>
+      </tr>
+   </tbody>
+</table>
+<table>
+   <thead>
+      <tr>
+         <th>Contract /  Chain</th>
+         <th><a href="https://sepolia.etherscan.io">Sepolia Testnet</a></th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td>MCV2_Token</td>
+         <td>0x749bA94344521727f55a3007c777FbeB5F52C2Eb</td>
+      </tr>
+      <tr>
+         <td>MCV2_MultiToken</td>
+         <td>0x3cABE5125C5D8922c5f38c5b779F6E96F563cdc0</td>
+      </tr>
+      <tr>
+         <td>MCV2_Bond</td>
+         <td>0x8dce343A86Aa950d539eeE0e166AFfd0Ef515C0c</td>
+      </tr>
+      <tr>
+         <td>MCV2_ZapV1</td>
+         <td>0x1Bf3183acc57571BecAea0E238d6C3A4d00633da</td>
+      </tr>
+      <tr>
+         <td>Locker</td>
+         <td>0x7c204B1B03A88D24088941068f6DFC809f2fd022</td>
+      </tr>
+      <tr>
+         <td>MerkleDistributor</td>
+         <td>0xE816232886E2F37D70d79D1d42CAfe1FFD4FA333</td>
       </tr>
    </tbody>
 </table>
