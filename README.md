@@ -146,6 +146,40 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       </tr>
    </tbody>
 </table>
+<table>
+   <thead>
+      <tr>
+         <th>Contract /  Chain</th>
+         <th><a href="https://testnet.blastscan.io/">Blast Sepolia Testnet</a></th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td>MCV2_Token</td>
+         <td>0x37F540de37afE8bDf6C722d87CB019F30e5E406a</td>
+      </tr>
+      <tr>
+         <td>MCV2_MultiToken</td>
+         <td>0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881</td>
+      </tr>
+      <tr>
+         <td>MCV2_BlastBond **(Yield Generating Bond)**</td>
+         <td>0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d</td>
+      </tr>
+      <tr>
+         <td>MCV2_ZapV1</td>
+         <td>0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad</td>
+      </tr>
+      <tr>
+         <td>Locker</td>
+         <td>0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB</td>
+      </tr>
+      <tr>
+         <td>MerkleDistributor</td>
+         <td>0xCbb23973235feA43E62C41a0c67717a92a2467f2</td>
+      </tr>
+   </tbody>
+</table>
 
 ## Design Choices 📐
 

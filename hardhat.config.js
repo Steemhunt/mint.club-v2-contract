@@ -62,6 +62,11 @@ module.exports = {
       url: process.env.RPC_SEPOLIA,
       chainId: 11155111,
       accounts: [process.env.TEST_PRIVATE_KEY]
+    },
+    blastSepolia: {
+      url: process.env.RPC_BLAST_SEPOLIA,
+      chainId: 168587773,
+      accounts: [process.env.TEST_PRIVATE_KEY]
     }
   },
   gasReporter: {
@@ -83,7 +88,18 @@ module.exports = {
       polygon: process.env.POLYGONSCAN_API_KEY,
       bsc: process.env.BSCSCAN_API_KEY,
       sepolia: process.env.ETHERSCAN_API_KEY,
-      avalanche: 'snowtrace'
-    }
+      avalanche: 'snowtrace', // apiKey is not required, just set a placeholder
+      blastSepolia: "blast_sepolia" // apiKey is not required, just set a placeholder
+    },
+    customChains: [
+      {
+        network: "blastSepolia",
+        chainId: 168587773,
+        urls: {
+          apiURL: "https://api.routescan.io/v2/network/testnet/evm/168587773/etherscan",
+          browserURL: "https://testnet.blastscan.io"
+        }
+      }
+    ]
   }
 };

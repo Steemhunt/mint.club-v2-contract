@@ -27,11 +27,15 @@ async function main() {
   await NFTImplementation.init('MultiToken Implementation', 'MULTI_TOKEN_PLACEHOLDER', '');
   console.log(` -> MCV2_MultiToken contract deployed at ${NFTImplementation.target}`);
 
-  const bond = await hre.ethers.deployContract('MCV2_Bond', [
+  let bondContract = 'MCV2_Bond';
+  if (hre.network.name === 'blastSepolia') {
+    bondContract = 'MCV2_BlastBond';
+  }
+  const bond = await hre.ethers.deployContract(bondContract, [
     tokenImplementation.target, NFTImplementation.target, PROTOCOL_BENEFIARY, CREATION_FEE, MAX_STEPS
   ]);
   await bond.waitForDeployment();
-  console.log(` -> MCV2_Bond contract deployed at ${bond.target}`);
+  console.log(` -> ${bondContract} contract deployed at ${bond.target}`);
 
   const zap = await hre.ethers.deployContract('MCV2_ZapV1', [bond.target, WETH_ADDRESS]);
   await zap.waitForDeployment();
@@ -49,7 +53,7 @@ async function main() {
   console.log('```');
   console.log(`- MCV2_Token: ${tokenImplementation.target}`);
   console.log(`- MCV2_MultiToken: ${NFTImplementation.target}`);
-  console.log(`- MCV2_Bond: ${bond.target}`);
+  console.log(`- ${bondContract}: ${bond.target}`);
   console.log(`- MCV2_ZapV1: ${zap.target}`);
   console.log(`- Locker: ${locker.target}`);
   console.log(`- MerkleDistributor: ${merkleDistributor.target}`);
@@ -84,5 +88,7 @@ npx hardhat compile && npx hardhat run --network polygon scripts/deploy.js
 npx hardhat compile && npx hardhat run --network bsc scripts/deploy.js
 npx hardhat compile && npx hardhat run --network avalanche scripts/deploy.js
 npx hardhat compile && npx hardhat run --network mainnet scripts/deploy.js
+
+npx hardhat compile && npx hardhat run --network blastSepolia scripts/deploy.js
 
 */
