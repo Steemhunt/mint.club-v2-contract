@@ -163,7 +163,7 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
          <td>0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881</td>
       </tr>
       <tr>
-         <td>MCV2_BlastBond **(Yield Generating Bond)**</td>
+         <td>MCV2_BlastBond (Yield Generating)</td>
          <td>0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d</td>
       </tr>
       <tr>
