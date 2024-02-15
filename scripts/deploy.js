@@ -90,5 +90,7 @@ npx hardhat compile && npx hardhat run --network avalanche scripts/deploy.js
 npx hardhat compile && npx hardhat run --network mainnet scripts/deploy.js
 
 npx hardhat compile && npx hardhat run --network blastSepolia scripts/deploy.js
+npx hardhat compile && npx hardhat run --network avalancheFujiTestnet scripts/deploy.js
+npx hardhat compile && npx hardhat run --network movementDevnet scripts/deploy.js
 
 */

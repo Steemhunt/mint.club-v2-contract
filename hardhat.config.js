@@ -67,6 +67,16 @@ module.exports = {
       url: process.env.RPC_BLAST_SEPOLIA,
       chainId: 168587773,
       accounts: [process.env.TEST_PRIVATE_KEY]
+    },
+    avalancheFujiTestnet: {
+      url: process.env.RPC_AVALANCHE_FUJI_TESTNET,
+      chainId: 43113,
+      accounts: [process.env.TEST_PRIVATE_KEY]
+    },
+    movementDevnet: {
+      url: process.env.RPC_MOVEMENT_DEVNET,
+      chainId: 336,
+      accounts: [process.env.TEST_PRIVATE_KEY]
     }
   },
   gasReporter: {
@@ -89,7 +99,8 @@ module.exports = {
       bsc: process.env.BSCSCAN_API_KEY,
       sepolia: process.env.ETHERSCAN_API_KEY,
       avalanche: 'snowtrace', // apiKey is not required, just set a placeholder
-      blastSepolia: "blast_sepolia" // apiKey is not required, just set a placeholder
+      blastSepolia: "blast_sepolia", // apiKey is not required, just set a placeholder
+      avalancheFujiTestnet: 'snowtrace' // apiKey is not required, just set a placeholder
     },
     customChains: [
       {
@@ -98,6 +109,14 @@ module.exports = {
         urls: {
           apiURL: "https://api.routescan.io/v2/network/testnet/evm/168587773/etherscan",
           browserURL: "https://testnet.blastscan.io"
+        }
+      },
+      {
+        network: "movementDevnet",
+        chainId: 336,
+        urls: {
+          apiURL: "TODO: Block explorer is not available yet.",
+          browserURL: "https://explorer.devnet.m1.movementlabs.xyz/"
         }
       }
     ]

@@ -21,6 +21,8 @@ exports.getCreationFee = function(network) {
     bsc: 15n*10n**15n, // 0.015 BNB
     avalanche: 15n*10n**16n, // 0.15 AVAX
     blastSepolia: 0n, // 0 ETH - testnet
+    avalancheFujiTestnet: 0n, // 0 ETH - testnet
+    movementDevnet: 0n, // 0 MOVE - testnet
   };
 
   if (CREATION_FEE[network] === undefined) {
@@ -41,6 +43,8 @@ exports.getWETHAddress = function(network) {
     bsc: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', // WBNB
     avalanche: '0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7', // WAVAX
     blastSepolia: '0x4200000000000000000000000000000000000023', // WETH (yield accumulating)
+    avalancheFujiTestnet: '0xb767287a7143759f294cfb7b1adbca1140f3de71', // WETH
+    movementDevnet: '0x4200000000000000000000000000000000000023', // FIXME: WMOVE?
   };
 
   if (!WETH_ADDRESS[network]) {
@@ -62,6 +66,8 @@ exports.getMaxSteps = function(network) {
     bsc: 1000n, // 30M gas limit
     avalanche: 1000n, // 15M gas limit
     blastSepolia: 1000n, // 30M gas limit
+    avalancheFujiTestnet: 1000n, // ? gas limit
+    movementDevnet: 1000n, // ? gas limit
   };
   if (!MAX_STEPS[network]) {
     throw new Error(`MAX_STEPS is not defined for ${network}`);
