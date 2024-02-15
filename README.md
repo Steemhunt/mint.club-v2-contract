@@ -154,29 +154,29 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       </tr>
    </thead>
    <tbody>
-      <tr colspan="2">
+      <tr>
          <td>MCV2_Token</td>
-         <td>0x37F540de37afE8bDf6C722d87CB019F30e5E406a</td>
+         <td colspan="2">0x37F540de37afE8bDf6C722d87CB019F30e5E406a</td>
       </tr>
-      <tr colspan="2">
+      <tr>
          <td>MCV2_MultiToken</td>
-         <td>0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881</td>
+         <td colspan="2">0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881</td>
       </tr>
-      <tr colspan="2">
+      <tr>
          <td>MCV2_BlastBond (Yield Generating)</td>
-         <td>0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d</td>
+         <td colspan="2">0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d</td>
       </tr>
-      <tr colspan="2">
+      <tr>
          <td>MCV2_ZapV1</td>
-         <td>0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad</td>
+         <td colspan="2">0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad</td>
       </tr>
-      <tr colspan="2">
+      <tr>
          <td>Locker</td>
-         <td>0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB</td>
+         <td colspan="2">0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB</td>
       </tr>
-      <tr colspan="2">
+      <tr>
          <td>MerkleDistributor</td>
-         <td>0xCbb23973235feA43E62C41a0c67717a92a2467f2</td>
+         <td colspan="2">0xCbb23973235feA43E62C41a0c67717a92a2467f2</td>
       </tr>
    </tbody>
 </table>
