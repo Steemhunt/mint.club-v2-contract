@@ -1,6 +1,6 @@
 require('dotenv').config();
 const hre = require('hardhat');
-const { wei, getMaxSteps, getWETHAddress, getCreationFee } = require('../test/utils/test-utils');
+const { getMaxSteps, getWETHAddress, getCreationFee } = require('../test/utils/test-utils');
 
 const PROTOCOL_BENEFIARY = process.env.PROTOCOL_BENEFIARY;
 

@@ -47,7 +47,7 @@ contract MCV2_BlastBond is MCV2_Bond {
     BLAST.configureClaimableGas();
   }
 
-  function getClaimableYield(address tokenAddress) external view onlyOwner returns (uint256) {
+  function getClaimableYield(address tokenAddress) external view returns (uint256) {
     return IERC20Rebasing(tokenAddress).getClaimableAmount(address(this));
   }
 
@@ -57,7 +57,7 @@ contract MCV2_BlastBond is MCV2_Bond {
     token.claim(recipient, claimAmount);
   }
 
-  function getClaimableGas() external view onlyOwner returns (uint256) {
+  function getClaimableGas() external view returns (uint256) {
     return BLAST.readClaimableYield(address(this));
   }
 
