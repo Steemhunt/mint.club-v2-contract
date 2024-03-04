@@ -2,7 +2,7 @@ require('dotenv').config();
 
 async function main() {
   const BlastBond = await ethers.getContractFactory('MCV2_BlastBond');
-  const blastBond = BlastBond.attach('0xc5a076cad94176c2996B32d8466Be1cE757FAa27');
+  const blastBond = BlastBond.attach('0x621c335b4BD8f2165E120DC70d3AfcAfc6628681');
 
   const claimableGas = await blastBond.getClaimableGas();
   console.log(`Claimable Gas: ${ethers.formatEther(claimableGas)} ETH`);
@@ -37,4 +37,4 @@ main().catch((error) => {
   process.exitCode = 1;
 });
 
-// npx hardhat run --network blastSepolia scripts/check-blast.js
+// npx hardhat run --network blast scripts/check-blast-yield.js
