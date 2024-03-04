@@ -39,10 +39,9 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       <tr>
          <th>Contract /  Chain</th>
          <th><a href="https://etherscan.io">Ethereum</a></th>
-         <th><a href="https://optimistic.etherscan.io">Optimism</a></th>
-         <th><a href="https://arbiscan.io">Arbitrum</a></th>
-         <th><a href="https://basescan.org">Base</a></th>
-         <th><a href="https://blastscan.io">Blast</a></th>
+         <th><a href="https://optimistic.etherscan.io">Optimism (L2)</a></th>
+         <th><a href="https://arbiscan.io">Arbitrum (L2)</a></th>
+         <th><a href="https://basescan.org">Base (L2)</a></th>
          <th><a href="https://bscscan.com">BNB Chain</a></th>
          <th><a href="https://polygonscan.com">Polygon (PoS)</a></th>
       </tr>
@@ -50,31 +49,65 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
    <tbody>
       <tr>
          <td>MCV2_Token</td>
-         <td colspan="7">0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df</td>
+         <td colspan="6">0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df</td>
       </tr>
       <tr>
          <td>MCV2_MultiToken</td>
-         <td colspan="7">0x6c61918eECcC306D35247338FDcf025af0f6120A</td>
+         <td colspan="6">0x6c61918eECcC306D35247338FDcf025af0f6120A</td>
       </tr>
       <tr>
          <td>MCV2_Bond</td>
-         <td colspan="7">0xc5a076cad94176c2996B32d8466Be1cE757FAa27</td>
+         <td colspan="6">0xc5a076cad94176c2996B32d8466Be1cE757FAa27</td>
       </tr>
       <tr>
          <td>MCV2_ZapV1</td>
-         <td colspan="7">0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa</td>
+         <td colspan="6">0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa</td>
       </tr>
       <tr>
          <td>Locker</td>
-         <td colspan="7">0xA3dCf3Ca587D9929d540868c924f208726DC9aB6</td>
+         <td colspan="6">0xA3dCf3Ca587D9929d540868c924f208726DC9aB6</td>
       </tr>
       <tr>
          <td>MerkleDistributor</td>
-         <td colspan="7">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4 / 0x3bc6B601196752497a68B2625DB4f2205C3b150b (Blast)</td>
+         <td colspan="6">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</td>
       </tr>
       <tr>
          <td>MCV1_Wrapper</td>
-         <td colspan="7">0x60432191893c4F742205a2C834817a1891feC435 (BNB Chain only)</td>
+         <td colspan="6">0x60432191893c4F742205a2C834817a1891feC435 (BNB Chain only)</td>
+      </tr>
+   </tbody>
+</table>
+<table>
+   <thead>
+      <tr>
+         <th>Contract /  Chain</th>
+         <th><a href="https://blastexplorer.io/">Blast (L2)</a></th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td>MCV2_Token</td>
+         <td>0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</td>
+      </tr>
+      <tr>
+         <td>MCV2_MultiToken</td>
+         <td>0x5DaE94e149CF2112Ec625D46670047814aA9aC2a</td>
+      </tr>
+      <tr>
+         <td>MCV2_Bond</td>
+         <td>0x621c335b4BD8f2165E120DC70d3AfcAfc6628681</td>
+      </tr>
+      <tr>
+         <td>MCV2_ZapV1</td>
+         <td>0x06FD26c092Db44E5491abB7cDC580CE24D93030c</td>
+      </tr>
+      <tr>
+         <td>Locker</td>
+         <td>0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1</td>
+      </tr>
+      <tr>
+         <td>MerkleDistributor</td>
+         <td>0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724</td>
       </tr>
    </tbody>
 </table>

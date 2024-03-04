@@ -114,7 +114,7 @@ module.exports = {
         chainId: 81457,
         urls: {
           apiURL: "https://api.routescan.io/v2/network/mainnet/evm/81457/etherscan",
-          browserURL: "https://blastscan.io"
+          browserURL: "https://blastexplorer.io"
         }
       },
       {

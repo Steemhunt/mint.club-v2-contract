@@ -28,7 +28,7 @@ async function main() {
   console.log(` -> MCV2_MultiToken contract deployed at ${NFTImplementation.target}`);
 
   let bondContract = 'MCV2_Bond';
-  if (hre.network.name === 'blastSepolia') {
+  if (hre.network.name === 'blastSepolia' || hre.network.name === 'blast') {
     bondContract = 'MCV2_BlastBond';
   }
   const bond = await hre.ethers.deployContract(bondContract, [
