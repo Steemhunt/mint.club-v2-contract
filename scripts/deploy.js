@@ -86,8 +86,10 @@ npx hardhat compile && npx hardhat run --network arbitrumOne scripts/deploy.js
 npx hardhat compile && npx hardhat run --network base scripts/deploy.js
 npx hardhat compile && npx hardhat run --network polygon scripts/deploy.js
 npx hardhat compile && npx hardhat run --network bsc scripts/deploy.js
-npx hardhat compile && npx hardhat run --network avalanche scripts/deploy.js
 npx hardhat compile && npx hardhat run --network mainnet scripts/deploy.js
+
+npx hardhat compile && npx hardhat run --network avalanche scripts/deploy.js
+npx hardhat compile && npx hardhat run --network blast scripts/deploy.js
 
 npx hardhat compile && npx hardhat run --network blastSepolia scripts/deploy.js
 npx hardhat compile && npx hardhat run --network avalancheFujiTestnet scripts/deploy.js

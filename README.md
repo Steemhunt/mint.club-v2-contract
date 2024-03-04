@@ -42,6 +42,7 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
          <th><a href="https://optimistic.etherscan.io">Optimism</a></th>
          <th><a href="https://arbiscan.io">Arbitrum</a></th>
          <th><a href="https://basescan.org">Base</a></th>
+         <th><a href="https://blastscan.io">Blast</a></th>
          <th><a href="https://bscscan.com">BNB Chain</a></th>
          <th><a href="https://polygonscan.com">Polygon (PoS)</a></th>
       </tr>
@@ -69,7 +70,7 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       </tr>
       <tr>
          <td>MerkleDistributor</td>
-         <td colspan="6">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</td>
+         <td colspan="6">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4 / 0x3bc6B601196752497a68B2625DB4f2205C3b150b (Blast)</td>
       </tr>
       <tr>
          <td>MCV1_Wrapper</td>

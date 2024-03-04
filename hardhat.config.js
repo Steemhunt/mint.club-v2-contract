@@ -58,6 +58,11 @@ module.exports = {
       chainId: 43114,
       accounts: [process.env.MAINNET_PRIVATE_KEY]
     },
+    blast: {
+      url: process.env.RPC_BLAST,
+      chainId: 81457,
+      accounts: [process.env.MAINNET_PRIVATE_KEY]
+    },
     sepolia: {
       url: process.env.RPC_SEPOLIA,
       chainId: 11155111,
@@ -77,7 +82,7 @@ module.exports = {
       url: process.env.RPC_MOVEMENT_DEVNET,
       chainId: 336,
       accounts: [process.env.TEST_PRIVATE_KEY]
-    }
+    },
   },
   gasReporter: {
     enabled: true,
@@ -86,7 +91,7 @@ module.exports = {
     coinmarketcap: null // process.env.COIN_MARKET_CAP_API
   },
   sourcify: {
-    enabled: true
+    enabled: false
   },
   etherscan: {
     // network list: npx hardhat verify --list-networks
@@ -98,11 +103,20 @@ module.exports = {
       polygon: process.env.POLYGONSCAN_API_KEY,
       bsc: process.env.BSCSCAN_API_KEY,
       sepolia: process.env.ETHERSCAN_API_KEY,
+      blast: process.env.BLASTSCAN_API_KEY,
       avalanche: 'snowtrace', // apiKey is not required, just set a placeholder
       blastSepolia: "blast_sepolia", // apiKey is not required, just set a placeholder
       avalancheFujiTestnet: 'snowtrace' // apiKey is not required, just set a placeholder
     },
     customChains: [
+      {
+        network: "blast",
+        chainId: 81457,
+        urls: {
+          apiURL: "https://rpc.blast.io",
+          browserURL: "https://blastscan.io"
+        }
+      },
       {
         network: "blastSepolia",
         chainId: 168587773,

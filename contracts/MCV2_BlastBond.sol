@@ -29,9 +29,9 @@ interface IBlast {
 }
 
 contract MCV2_BlastBond is MCV2_Bond {
-  // NOTE: these addresses will be slightly different on the Blast mainnet
-  IERC20Rebasing public constant USDB = IERC20Rebasing(0x4200000000000000000000000000000000000022);
-  IERC20Rebasing public constant WETH = IERC20Rebasing(0x4200000000000000000000000000000000000023);
+  // NOTE: these addresses differ on the Blast mainnet and testnet; the lines below are the mainnet addresses
+  IERC20Rebasing public constant USDB = IERC20Rebasing(0x4300000000000000000000000000000000000003); // Mainnet USDB
+  IERC20Rebasing public constant WETH = IERC20Rebasing(0x4300000000000000000000000000000000000004); // Mainnet WETH
   IBlast public constant BLAST = IBlast(0x4300000000000000000000000000000000000002);
 
   constructor(

@@ -16,10 +16,12 @@ exports.getCreationFee = function(network) {
     optimisticEthereum: 2n*10n**15n, // 0.002 ETH
     arbitrumOne: 2n*10n**15n, // 0.002 ETH
     base: 2n*10n**15n, // 0.002 ETH
-    sepolia: 0n, // 0 ETH - testnet
     polygon: 5n*10n**18n, // 5 MATIC
     bsc: 15n*10n**15n, // 0.015 BNB
     avalanche: 15n*10n**16n, // 0.15 AVAX
+    blast: 2n*10n**15n, // 0.002 ETH
+    // Testnets
+    sepolia: 0n, // 0 ETH - testnet
     blastSepolia: 0n, // 0 ETH - testnet
     avalancheFujiTestnet: 0n, // 0 ETH - testnet
     movementDevnet: 0n, // 0 MOVE - testnet
@@ -38,10 +40,12 @@ exports.getWETHAddress = function(network) {
     optimisticEthereum: '0x4200000000000000000000000000000000000006', // WETH
     arbitrumOne: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1', // WETH
     base: '0x4200000000000000000000000000000000000006', // WETH
-    sepolia: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14', // WETH
     polygon: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270', // WMATIC
     bsc: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', // WBNB
     avalanche: '0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7', // WAVAX
+    blast: '0x4300000000000000000000000000000000000004', // WETH
+    // Testnets
+    sepolia: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14', // WETH
     blastSepolia: '0x4200000000000000000000000000000000000023', // WETH (yield accumulating)
     avalancheFujiTestnet: '0xb767287a7143759f294cfb7b1adbca1140f3de71', // WETH
     movementDevnet: '0x4200000000000000000000000000000000000023', // FIXME: WMOVE?
@@ -61,10 +65,12 @@ exports.getMaxSteps = function(network) {
     optimisticEthereum: 1000n, // 30M gas limit
     arbitrumOne: 1000n, // over 30M gas limit
     base: 1000n, // 30M gas limit
-    sepolia: 1000n, // 30M gas limit
     polygon: 1000n, // 30M gas limit
     bsc: 1000n, // 30M gas limit
     avalanche: 1000n, // 15M gas limit
+    blast: 1000n, // 30M gas limit
+    // Testnets
+    sepolia: 1000n, // 30M gas limit
     blastSepolia: 1000n, // 30M gas limit
     avalancheFujiTestnet: 1000n, // ? gas limit
     movementDevnet: 1000n, // ? gas limit
