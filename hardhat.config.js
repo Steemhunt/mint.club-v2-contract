@@ -91,7 +91,7 @@ module.exports = {
     coinmarketcap: null // process.env.COIN_MARKET_CAP_API
   },
   sourcify: {
-    enabled: false
+    // enabled: true
   },
   etherscan: {
     // network list: npx hardhat verify --list-networks
@@ -113,7 +113,7 @@ module.exports = {
         network: "blast",
         chainId: 81457,
         urls: {
-          apiURL: "https://rpc.blast.io",
+          apiURL: "https://api.routescan.io/v2/network/mainnet/evm/81457/etherscan",
           browserURL: "https://blastscan.io"
         }
       },

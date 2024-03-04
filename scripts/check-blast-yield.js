@@ -2,7 +2,7 @@ require('dotenv').config();
 
 async function main() {
   const BlastBond = await ethers.getContractFactory('MCV2_BlastBond');
-  const blastBond = BlastBond.attach('0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d');
+  const blastBond = BlastBond.attach('0xc5a076cad94176c2996B32d8466Be1cE757FAa27');
 
   const claimableGas = await blastBond.getClaimableGas();
   console.log(`Claimable Gas: ${ethers.formatEther(claimableGas)} ETH`);
@@ -19,16 +19,17 @@ async function main() {
   const PROTOCOL_BENEFIARY = await blastBond.protocolBeneficiary();
   console.log(`Claiming WETH and USDB yield.. Beneficiary: ${PROTOCOL_BENEFIARY}`);
   // Get balqance of current address
-  const balanceBefore = await WETH.balanceOf(PROTOCOL_BENEFIARY);
-  console.log(`Balance before: ${ethers.formatEther(balanceBefore)} ETH`);
+  console.log(` - WETH Balance before: ${ethers.formatEther(await WETH.balanceOf(PROTOCOL_BENEFIARY))} ETH`);
+  console.log(` - USDB Balance before: ${ethers.formatUnits(await USDB.balanceOf(PROTOCOL_BENEFIARY), 6)} USDB`)
 
   // Claim yield
-  await blastBond.claimYield(WETH.target, PROTOCOL_BENEFIARY);
+  console.log(`UNCOMMENT for actual claiming`)
+  // await blastBond.claimYield(WETH.target, PROTOCOL_BENEFIARY);
   // await blastBond.claimYield(USDB);
 
   // Get balance after
-  const balanceAfter = await WETH.balanceOf(PROTOCOL_BENEFIARY);
-  console.log(`Balance after: ${ethers.formatEther(balanceAfter)} ETH`);
+  console.log(` - WETH Balance after: ${ethers.formatEther(await WETH.balanceOf(PROTOCOL_BENEFIARY))} ETH`);
+  console.log(` - USDB Balance after: ${ethers.formatUnits(await USDB.balanceOf(PROTOCOL_BENEFIARY), 6)} USDB`)
 }
 
 main().catch((error) => {
