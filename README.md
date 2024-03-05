@@ -33,7 +33,7 @@ Mint Club is a bonding curve-based token (ERC20, ERC1155) creation and trading p
 ## Gloals and Objectives ⛳️
 Mint Club aims to provide no-code, yet flexible, token creation tools for web3 creators who want to build their token economy. One of the biggest hurdles in building token economics is providing liquidity in the early stages, but this issue is eliminated with the Mint Club protocol.
 
-## Contract addresses (Private Beta) 📜
+## Contract addresses (Beta) 📜
 <table>
    <thead>
       <tr>
