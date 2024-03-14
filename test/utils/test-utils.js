@@ -47,7 +47,7 @@ exports.getWETHAddress = function(network) {
     // Testnets
     sepolia: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14', // WETH
     blastSepolia: '0x4200000000000000000000000000000000000023', // WETH (yield accumulating)
-    avalancheFujiTestnet: '0xb767287a7143759f294cfb7b1adbca1140f3de71', // WETH
+    avalancheFujiTestnet: '0xd00ae08403B9bbb9124bB305C09058E32C39A48c', // WAVAX
     movementDevnet: '0x4200000000000000000000000000000000000023', // FIXME: WMOVE?
   };
 

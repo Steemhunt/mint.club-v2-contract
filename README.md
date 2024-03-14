@@ -184,33 +184,66 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       <tr>
          <th>Contract /  Chain</th>
          <th><a href="https://testnet.blastscan.io">Blast Sepolia Testnet</a></th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td>MCV2_Token</td>
+         <td>0x37F540de37afE8bDf6C722d87CB019F30e5E406a</td>
+      </tr>
+      <tr>
+         <td>MCV2_MultiToken</td>
+         <td>0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881</td>
+      </tr>
+      <tr>
+         <td>MCV2_BlastBond (Yield Generating)</td>
+         <td>0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d</td>
+      </tr>
+      <tr>
+         <td>MCV2_ZapV1</td>
+         <td>0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad</td>
+      </tr>
+      <tr>
+         <td>Locker</td>
+         <td>0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB</td>
+      </tr>
+      <tr>
+         <td>MerkleDistributor</td>
+         <td>0xCbb23973235feA43E62C41a0c67717a92a2467f2</td>
+      </tr>
+   </tbody>
+</table>
+<table>
+   <thead>
+      <tr>
+         <th>Contract /  Chain</th>
          <th><a href="https://testnet.snowtrace.io">Avalanche Fuji Testnet</a></th>
       </tr>
    </thead>
    <tbody>
       <tr>
          <td>MCV2_Token</td>
-         <td colspan="2">0x37F540de37afE8bDf6C722d87CB019F30e5E406a</td>
+         <td>0xAD5a113ee65F30269f7558f96483126B1FB60c4E</td>
       </tr>
       <tr>
          <td>MCV2_MultiToken</td>
-         <td colspan="2">0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881</td>
+         <td>0xB43826E079dFB2e2b48a0a473Efc7F1fe6391763</td>
       </tr>
       <tr>
-         <td>MCV2_BlastBond (Yield Generating)</td>
-         <td colspan="2">0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d</td>
+         <td>MCV2_Bond</td>
+         <td>0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89</td>
       </tr>
       <tr>
          <td>MCV2_ZapV1</td>
-         <td colspan="2">0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad</td>
+         <td>0x60432191893c4F742205a2C834817a1891feC435</td>
       </tr>
       <tr>
          <td>Locker</td>
-         <td colspan="2">0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB</td>
+         <td>0x789771E410527691729e54A84103594ee6Be6C3C</td>
       </tr>
       <tr>
          <td>MerkleDistributor</td>
-         <td colspan="2">0xCbb23973235feA43E62C41a0c67717a92a2467f2</td>
+         <td>0x6d1f4ecd17ddA7fb39C56Da566b66d63f06671d9</td>
       </tr>
    </tbody>
 </table>
