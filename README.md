@@ -149,6 +149,40 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
    <thead>
       <tr>
          <th>Contract /  Chain</th>
+         <th><a href="https://explorer.degen.tips">Degen L3</a></th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td>MCV2_Token</td>
+         <td>0xaF987E88bf30581F7074E628c894A3FCbf4EE12e</td>
+      </tr>
+      <tr>
+         <td>MCV2_MultiToken</td>
+         <td>0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa</td>
+      </tr>
+      <tr>
+         <td>MCV2_Bond</td>
+         <td>0x3bc6B601196752497a68B2625DB4f2205C3b150b</td>
+      </tr>
+      <tr>
+         <td>MCV2_ZapV1</td>
+         <td>0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</td>
+      </tr>
+      <tr>
+         <td>Locker</td>
+         <td>0xF44939c1613143ad587c79602182De7DcF593e33</td>
+      </tr>
+      <tr>
+         <td>MerkleDistributor</td>
+         <td>0x5DaE94e149CF2112Ec625D46670047814aA9aC2a</td>
+      </tr>
+   </tbody>
+</table>
+<table>
+   <thead>
+      <tr>
+         <th>Contract /  Chain</th>
          <th><a href="https://sepolia.etherscan.io">Sepolia Testnet</a></th>
       </tr>
    </thead>

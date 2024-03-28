@@ -13,13 +13,14 @@ exports.getCreationFee = function(network) {
   // Collect ~ $5 of asset creation fee to prevent spam
   const CREATION_FEE = {
     mainnet: 2n*10n**15n, // 0.002 ETH
-    optimisticEthereum: 2n*10n**15n, // 0.002 ETH
-    arbitrumOne: 2n*10n**15n, // 0.002 ETH
-    base: 2n*10n**15n, // 0.002 ETH
-    polygon: 5n*10n**18n, // 5 MATIC
-    bsc: 15n*10n**15n, // 0.015 BNB
-    avalanche: 15n*10n**16n, // 0.15 AVAX
-    blast: 2n*10n**15n, // 0.002 ETH
+    optimisticEthereum: 2n*10n**15n, // 0.002 ETH -> updated: 0.0007 ETH
+    arbitrumOne: 2n*10n**15n, // 0.002 ETH -> updated: 0.0007 ETH
+    base: 2n*10n**15n, // 0.002 ETH -> updated: 0.0007 ETH
+    polygon: 5n*10n**18n, // 5 MATIC -> updated: 2.5 MATIC
+    bsc: 15n*10n**15n, // 0.015 BNB -> updated: 0.005 BNB
+    avalanche: 15n*10n**16n, // 0.15 AVAX -> update4d: 0.05 AVAX
+    blast: 2n*10n**15n, // 0.002 ETH -> updated: 0.0007 ETH
+    degen: 50n*10n**18n, // 50 DEGEN (~$1.0)
     // Testnets
     sepolia: 0n, // 0 ETH - testnet
     blastSepolia: 0n, // 0 ETH - testnet
@@ -44,6 +45,7 @@ exports.getWETHAddress = function(network) {
     bsc: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', // WBNB
     avalanche: '0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7', // WAVAX
     blast: '0x4300000000000000000000000000000000000004', // WETH
+    degen: '0xEb54dACB4C2ccb64F8074eceEa33b5eBb38E5387', // WDEGEN - deployed ourselves
     // Testnets
     sepolia: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14', // WETH
     blastSepolia: '0x4200000000000000000000000000000000000023', // WETH (yield accumulating)
@@ -69,6 +71,7 @@ exports.getMaxSteps = function(network) {
     bsc: 1000n, // 30M gas limit
     avalanche: 1000n, // 15M gas limit
     blast: 1000n, // 30M gas limit
+    degen: 1000n, // 30M gas limit
     // Testnets
     sepolia: 1000n, // 30M gas limit
     blastSepolia: 1000n, // 30M gas limit

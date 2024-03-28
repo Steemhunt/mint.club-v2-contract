@@ -19,6 +19,14 @@ module.exports = {
       },
       {
         version: '0.4.18', // For WETH mock contract
+      },
+      {
+        version: '0.5.17', // For WDEGEN mock contract
+        evmVersion: 'istanbul',
+        optimizer: {
+          enabled: true,
+          runs: 50000
+        }
       }
     ]
   },
@@ -63,6 +71,11 @@ module.exports = {
       chainId: 81457,
       accounts: [process.env.MAINNET_PRIVATE_KEY]
     },
+    degen: {
+      url: 'https://rpc.degen.tips',
+      chainId: 666666666,
+      accounts: [process.env.MAINNET_PRIVATE_KEY]
+    },
     sepolia: {
       url: process.env.RPC_SEPOLIA,
       chainId: 11155111,
@@ -104,6 +117,7 @@ module.exports = {
       bsc: process.env.BSCSCAN_API_KEY,
       sepolia: process.env.ETHERSCAN_API_KEY,
       blast: process.env.BLASTSCAN_API_KEY,
+      degen: 'FIXME:', // FIXME: apiKey?
       avalanche: 'snowtrace', // apiKey is not required, just set a placeholder
       blastSepolia: "blast_sepolia", // apiKey is not required, just set a placeholder
       avalancheFujiTestnet: 'snowtrace' // apiKey is not required, just set a placeholder
@@ -115,6 +129,14 @@ module.exports = {
         urls: {
           apiURL: "https://api.routescan.io/v2/network/mainnet/evm/81457/etherscan",
           browserURL: "https://blastexplorer.io"
+        }
+      },
+      {
+        network: "degen",
+        chainId: 666666666,
+        urls: {
+          apiURL: "https://explorer.degen.tips/api/v2/FIXME:", // FIXME: API verification?
+          browserURL: "https://explorer.degen.tips"
         }
       },
       {
