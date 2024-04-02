@@ -1,32 +1,46 @@
-require('dotenv').config();
-const hre = require('hardhat');
+require("dotenv").config();
+const hre = require("hardhat");
+const { getCreationFee } = require("../test/utils/test-utils");
+
+const PROTOCOL_BENEFIARY = process.env.PROTOCOL_BENEFIARY;
+const CLAIM_FEE = getCreationFee(hre.network.name) / 20n;
 
 async function main() {
   const accounts = await hre.ethers.getSigners();
   const deployer = accounts[0].address;
   console.log(`Deploy from account: ${deployer}`);
 
-  const merkleDistributor = await hre.ethers.deployContract('MerkleDistributor');
+  console.log(`-------------------------------------------------`);
+  console.log(
+    `PROTOCOL_BENEFIARY: ${PROTOCOL_BENEFIARY} | CLAIM_FEE: ${CLAIM_FEE}`
+  );
+  console.log(`-------------------------------------------------`);
+
+  const merkleDistributor = await hre.ethers.deployContract(
+    "MerkleDistributorV2",
+    [PROTOCOL_BENEFIARY, CLAIM_FEE]
+  );
   await merkleDistributor.waitForDeployment();
-  console.log(` -> MerkleDistributor contract deployed at ${merkleDistributor.target}`);
+  console.log(
+    ` -> MerkleDistributorV2 contract deployed at ${merkleDistributor.target}`
+  );
 
   console.log(`\n\nNetwork: ${hre.network.name}`);
-  console.log('```');
-  console.log(`- MerkleDistributor: ${merkleDistributor.target}`);
-  console.log('```');
+  console.log("```");
+  console.log(`- MerkleDistributorV2: ${merkleDistributor.target}`);
+  console.log("```");
 
   console.log(`
-    npx hardhat verify --network ${hre.network.name} ${merkleDistributor.target}
+    npx hardhat verify --network ${hre.network.name} ${merkleDistributor.target} '${PROTOCOL_BENEFIARY}' '${CLAIM_FEE}'
   `);
-};
+}
 
 main()
   .then(() => process.exit(0))
-  .catch(error => {
+  .catch((error) => {
     console.error(error);
     process.exit(1);
   });
-
 
 /* Deploy script
 

@@ -5,26 +5,33 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
- * @title MerkleDistributor
+ * @title MerkleDistributorV2
  * @dev A contract for distributing tokens to multiple addresses using a Merkle tree.
+ * @dev Update logs
+ * 1. Added `claimFee` to charge a fee for claiming tokens to prevent bots from all public airdrops (no fee for private airdrops).
+ * 2. Change `distribution.owner` to `distribution.creator` to avoid conflicts with the `Ownable` contract.
+ * 3. Added `getDistributionsByCreator` and `getDistributionsByToken` to save read calls for each distribution.
+ * 4. Remove `getDistributionIdsByCreator` and `getDistributionIdsByToken`
  */
-contract MerkleDistributor {
+contract MerkleDistributorV2 is Ownable {
     using SafeERC20 for IERC20;
 
-    error MerkleDistributor__PermissionDenied();
-    error MerkleDistributor__NotStarted();
-    error MerkleDistributor__Finished();
-    error MerkleDistributor__Refunded();
-    error MerkleDistributor__AlreadyRefunded();
-    error MerkleDistributor__NoClaimableTokensLeft();
-    error MerkleDistributor__AlreadyClaimed();
-    error MerkleDistributor__InvalidCaller();
-    error MerkleDistributor__InvalidProof();
-    error MerkleDistributor__InvalidParams(string param);
-    error MerkleDistributor__NothingToRefund();
-    error MerkleDistributor__InvalidPaginationParameters();
+    error MerkleDistributorV2__PermissionDenied();
+    error MerkleDistributorV2__NotStarted();
+    error MerkleDistributorV2__Finished();
+    error MerkleDistributorV2__Refunded();
+    error MerkleDistributorV2__AlreadyRefunded();
+    error MerkleDistributorV2__NoClaimableTokensLeft();
+    error MerkleDistributorV2__AlreadyClaimed();
+    error MerkleDistributorV2__InvalidProof();
+    error MerkleDistributorV2__InvalidParams(string param);
+    error MerkleDistributorV2__InvalidClaimFee();
+    error MerkleDistributorV2__ClaimFeeTransactionFailed();
+    error MerkleDistributorV2__NothingToRefund();
+    error MerkleDistributorV2__InvalidPaginationParams();
 
     // Events
     event Created(
@@ -35,6 +42,8 @@ contract MerkleDistributor {
     );
     event Refunded(uint256 indexed distributionId, uint256 amount);
     event Claimed(uint256 indexed distributionId, address account);
+    event ProtocolBeneficiaryUpdated(address protocolBeneficiary);
+    event ClaimFeeUpdated(uint256 amount);
 
     // Struct to store distribution details
     struct Distribution {
@@ -45,24 +54,60 @@ contract MerkleDistributor {
         uint176 amountPerClaim;
         uint40 startTime; // supports up to year 36,825
         uint40 endTime; // 176 + 40 + 40 = 256 bits
-        address owner;
+        address creator;
         uint40 refundedAt; // 160 + 40 = 200 bits
         bytes32 merkleRoot; // 256 bits
         string title;
         string ipfsCID; // To store all WL addresses to create the Merkle Proof
-        mapping(address => bool) isClaimed;
     }
 
     Distribution[] public distributions;
+    mapping(uint256 => mapping(address => bool)) public isClaimed; // distributionId => account => claimed
+    mapping(address => uint256[]) private _tokenDistributions;
+    mapping(address => uint256[]) private _creatorDistributions;
+
+    address public protocolBeneficiary;
+    uint256 public claimFee;
+
+    constructor(
+        address protocolBeneficiary_,
+        uint256 claimFee_
+    ) Ownable(msg.sender) {
+        protocolBeneficiary = protocolBeneficiary_;
+        claimFee = claimFee_;
+    }
 
     /**
-     * @dev Modifier to check if the caller is the owner of the distribution.
+     * @dev Modifier to check if the caller is the creator of the distribution.
      * @param distributionId The ID of the distribution.
      */
-    modifier onlyOwner(uint256 distributionId) {
-        if (msg.sender != distributions[distributionId].owner)
-            revert MerkleDistributor__PermissionDenied();
+    modifier onlyCreator(uint256 distributionId) {
+        if (msg.sender != distributions[distributionId].creator)
+            revert MerkleDistributorV2__PermissionDenied();
         _;
+    }
+
+    // MARK: - Admin functions
+
+    /**
+     * @dev Updates the protocol beneficiary address.
+     * @param protocolBeneficiary_ The new address of the protocol beneficiary.
+     */
+    function updateProtocolBeneficiary(
+        address protocolBeneficiary_
+    ) public onlyOwner {
+        if (protocolBeneficiary == address(0))
+            revert MerkleDistributorV2__InvalidParams("NULL_ADDRESS");
+
+        protocolBeneficiary = protocolBeneficiary_;
+
+        emit ProtocolBeneficiaryUpdated(protocolBeneficiary_);
+    }
+
+    function updateClaimFee(uint256 amount) external onlyOwner {
+        claimFee = amount;
+
+        emit ClaimFeeUpdated(amount);
     }
 
     /**
@@ -80,6 +125,11 @@ contract MerkleDistributor {
      * @notice If the Merkle root is not provided, there will be no verification on claims,
      * anyone can claim all tokens with multiple accounts.
      */
+    struct MetadataParams {
+        string title;
+        string ipfsCID;
+    }
+
     function createDistribution(
         address token,
         bool isERC20,
@@ -88,25 +138,23 @@ contract MerkleDistributor {
         uint40 startTime,
         uint40 endTime,
         bytes32 merkleRoot,
-        string calldata title,
-        string calldata ipfsCID
+        MetadataParams calldata metaData
     ) external {
         if (token == address(0))
-            revert MerkleDistributor__InvalidParams("token");
+            revert MerkleDistributorV2__InvalidParams("token");
         if (amountPerClaim == 0)
-            revert MerkleDistributor__InvalidParams("amountPerClaim");
+            revert MerkleDistributorV2__InvalidParams("amountPerClaim");
         if (walletCount == 0)
-            revert MerkleDistributor__InvalidParams("walletCount");
+            revert MerkleDistributorV2__InvalidParams("walletCount");
         if (endTime <= block.timestamp)
-            revert MerkleDistributor__InvalidParams("endTime");
+            revert MerkleDistributorV2__InvalidParams("endTime");
         if (startTime >= endTime)
-            revert MerkleDistributor__InvalidParams("startTime");
+            revert MerkleDistributorV2__InvalidParams("startTime");
 
         // Create a new distribution
         distributions.push();
-        Distribution storage distribution = distributions[
-            distributions.length - 1
-        ];
+        uint256 distributionId = distributions.length - 1;
+        Distribution storage distribution = distributions[distributionId];
         distribution.token = token;
         distribution.isERC20 = isERC20;
         distribution.walletCount = walletCount;
@@ -116,11 +164,11 @@ contract MerkleDistributor {
         distribution.startTime = startTime;
         distribution.endTime = endTime;
 
-        distribution.owner = msg.sender;
+        distribution.creator = msg.sender;
         // distribution.refundedAt = 0;
         distribution.merkleRoot = merkleRoot; // optional
-        distribution.title = title; // optional
-        distribution.ipfsCID = ipfsCID; // optional
+        distribution.title = metaData.title; // optional
+        distribution.ipfsCID = metaData.ipfsCID; // optional
 
         // Deposit total amount of tokens to this contract
         if (isERC20) {
@@ -140,7 +188,11 @@ contract MerkleDistributor {
             );
         }
 
-        emit Created(distributions.length - 1, token, isERC20, startTime);
+        // Update mappings
+        _tokenDistributions[token].push(distributionId);
+        _creatorDistributions[msg.sender].push(distributionId);
+
+        emit Created(distributionId, token, isERC20, startTime);
     }
 
     /**
@@ -151,39 +203,37 @@ contract MerkleDistributor {
     function claim(
         uint256 distributionId,
         bytes32[] calldata merkleProof
-    ) external {
+    ) external payable {
         Distribution storage distribution = distributions[distributionId];
 
         if (distribution.startTime > block.timestamp)
-            revert MerkleDistributor__NotStarted();
+            revert MerkleDistributorV2__NotStarted();
         if (distribution.endTime < block.timestamp)
-            revert MerkleDistributor__Finished();
-        if (distribution.refundedAt > 0) revert MerkleDistributor__Refunded();
-        if (distribution.isClaimed[msg.sender])
-            revert MerkleDistributor__AlreadyClaimed();
+            revert MerkleDistributorV2__Finished();
+        if (distribution.refundedAt > 0) revert MerkleDistributorV2__Refunded();
+        if (isClaimed[distributionId][msg.sender])
+            revert MerkleDistributorV2__AlreadyClaimed();
         if (distribution.claimedCount >= distribution.walletCount)
-            revert MerkleDistributor__NoClaimableTokensLeft();
+            revert MerkleDistributorV2__NoClaimableTokensLeft();
 
+        // For public airdrop, we've added a claimFee to prevent bots from claiming all tokens
         if (distribution.merkleRoot == bytes32(0)) {
-            // Public airdrop
-            // NOTE: Block contracts from claiming tokens to prevent abuse during a public airdrop.
-            // This won't completely eliminate bot claiming but will make it more challenging.
-            // Caveat: ERC4337-based wallets will also be unable to claim; however, they can use an EOA to do so.
-            if (tx.origin != msg.sender)
-                revert MerkleDistributor__InvalidCaller();
+            if (msg.value != claimFee)
+                revert MerkleDistributorV2__InvalidClaimFee();
         } else {
             // Whitelist only
+            if (msg.value != 0) revert MerkleDistributorV2__InvalidClaimFee();
             if (
                 !MerkleProof.verify(
                     merkleProof,
                     distribution.merkleRoot,
                     keccak256(abi.encodePacked(msg.sender))
                 )
-            ) revert MerkleDistributor__InvalidProof();
+            ) revert MerkleDistributorV2__InvalidProof();
         }
 
         // Mark it claimed and send the token
-        distribution.isClaimed[msg.sender] = true;
+        isClaimed[distributionId][msg.sender] = true;
         distribution.claimedCount += 1;
 
         if (distribution.isERC20) {
@@ -202,36 +252,47 @@ contract MerkleDistributor {
             );
         }
 
+        // Collect claimFee if it's a public airdriop and claimFee exists
+        if (distribution.merkleRoot == bytes32(0) && claimFee > 0) {
+            (bool success, ) = payable(protocolBeneficiary).call{
+                value: claimFee
+            }("");
+            if (!success)
+                revert MerkleDistributorV2__ClaimFeeTransactionFailed();
+        }
+
         emit Claimed(distributionId, msg.sender);
     }
 
     /**
-     * @dev Allows the owner to refund the remaining tokens from a specific distribution.
+     * @dev Allows the creator to refund the remaining tokens from a specific distribution.
      * @param distributionId The ID of the distribution to refund.
-     * @notice The owner can refund the remaining tokens whenever they want, even during the distribution.
+     * @notice The creator can refund the remaining tokens whenever they want, even during the distribution.
      */
-    function refund(uint256 distributionId) external onlyOwner(distributionId) {
+    function refund(
+        uint256 distributionId
+    ) external onlyCreator(distributionId) {
         Distribution storage distribution = distributions[distributionId];
 
         if (distribution.refundedAt > 0)
-            revert MerkleDistributor__AlreadyRefunded();
+            revert MerkleDistributorV2__AlreadyRefunded();
 
         uint256 amountLeft = getAmountLeft(distributionId);
-        if (amountLeft == 0) revert MerkleDistributor__NothingToRefund();
+        if (amountLeft == 0) revert MerkleDistributorV2__NothingToRefund();
 
         distribution.refundedAt = uint40(block.timestamp);
 
-        // Transfer the remaining tokens back to the owner
+        // Transfer the remaining tokens back to the creator
         if (distribution.isERC20) {
             IERC20(distribution.token).safeTransfer(
-                distribution.owner,
+                distribution.creator,
                 amountLeft
             );
         } else {
             // Only support an ERC1155 token at id = 0
             IERC1155(distribution.token).safeTransferFrom(
                 address(this),
-                distribution.owner,
+                distribution.creator,
                 0,
                 amountLeft,
                 ""
@@ -275,19 +336,6 @@ contract MerkleDistributor {
     }
 
     /**
-     * @dev Checks if a specific wallet address has claimed the tokens for a given distribution ID.
-     * @param distributionId The ID of the distribution.
-     * @param wallet The wallet address to check.
-     * @return A boolean indicating whether the wallet address has claimed the tokens or not.
-     */
-    function isClaimed(
-        uint256 distributionId,
-        address wallet
-    ) external view returns (bool) {
-        return distributions[distributionId].isClaimed[wallet];
-    }
-
-    /**
      * @dev Returns the amount of tokens left to be claimed for a specific distribution.
      * @param distributionId The ID of the distribution.
      * @return The amount of tokens left to be claimed.
@@ -316,7 +364,7 @@ contract MerkleDistributor {
     }
 
     /**
-     * @dev Returns the number of distributions in the MerkleDistributor contract.
+     * @dev Returns the number of distributions in the MerkleDistributorV2 contract.
      * @return The number of distributions.
      */
     function distributionCount() external view returns (uint256) {
@@ -324,75 +372,121 @@ contract MerkleDistributor {
     }
 
     /**
-     * @dev Retrieves the distribution IDs for a given token address within a specified range.
-     * @param token The address of the token.
-     * @param start The starting index of the range (inclusive).
-     * @param stop The ending index of the range (exclusive).
-     * @return ids An array of distribution IDs within the specified range.
+     * @dev Retrieves the distribution length for made by a specific creator.
+     * @param creator The address of the creator.
+     * @return The distribution count
      */
-    function getDistributionIdsByToken(
-        address token,
-        uint256 start,
-        uint256 stop
-    ) external view returns (uint256[] memory ids) {
-        if (start >= stop || stop - start > 10000)
-            revert MerkleDistributor__InvalidPaginationParameters();
+    function getDistributionsCountByCreator(
+        address creator
+    ) external view returns (uint256) {
+        return _creatorDistributions[creator].length;
+    }
+
+    /**
+     * @dev Retrieves all the distributions created by a specific address.
+     * @param creator The address of the creator.
+     * @return An array of distribution IDs created by the address.
+     */
+    function getAllDistributionIdsByCreator(
+        address creator
+    ) external view returns (uint256[] memory) {
+        return _creatorDistributions[creator];
+    }
+
+    /**
+     * @dev Retrieves the distributions created by a specific address within a specified range.
+     * @param creator The address of the creator.
+     * @param startIndex The starting index.
+     * @param limit The maximum number of results to return.
+     * @return ids An array of distribution IDs within the specified range.
+     * @return data An array of Distribution structs within the specified range.
+     */
+    function getDistributionsByCreator(
+        address creator,
+        uint256 startIndex,
+        uint256 limit
+    ) external view returns (uint256[] memory ids, Distribution[] memory data) {
+        if (limit > 100) revert MerkleDistributorV2__InvalidPaginationParams();
 
         unchecked {
-            uint256 distributionsLength = distributions.length;
-            if (stop > distributionsLength) {
-                stop = distributionsLength;
+            uint256 totalLength = _creatorDistributions[creator].length;
+            if (startIndex >= totalLength) {
+                return (ids, data); // return empty
             }
-
-            uint256 count;
-            for (uint256 i = start; i < stop; ++i) {
-                if (distributions[i].token == token) ++count;
+            uint256 until = startIndex + limit;
+            if (until > totalLength) {
+                until = totalLength;
             }
+            uint256 size = until - startIndex;
 
-            ids = new uint256[](count);
-            uint256 j;
-            for (uint256 i = start; i < stop; ++i) {
-                if (distributions[i].token == token) {
-                    ids[j++] = i;
-                    if (j == count) break;
-                }
+            ids = new uint256[](size);
+            data = new Distribution[](size);
+            uint256 outputIndex;
+            for (uint256 i = startIndex; i < until; ++i) {
+                uint256 distributionId = _creatorDistributions[creator][i];
+                ids[outputIndex] = distributionId;
+                data[outputIndex] = distributions[distributionId];
+                ++outputIndex;
             }
         }
     }
 
     /**
-     * @dev Retrieves the distribution IDs owned by a specific address within a given range.
-     * @param owner The address of the owner.
-     * @param start The starting index of the range (inclusive).
-     * @param stop The ending index of the range (exclusive).
-     * @return ids An array of distribution IDs owned by the specified address within the given range.
+     * @dev Retrieves the distribution length for made by a specific token.
+     * @param token The address of the token.
+     * @return The distribution count
      */
-    function getDistributionIdsByOwner(
-        address owner,
-        uint256 start,
-        uint256 stop
-    ) external view returns (uint256[] memory ids) {
-        if (start >= stop || stop - start > 10000)
-            revert MerkleDistributor__InvalidPaginationParameters();
+    function getDistributionsCountByToken(
+        address token
+    ) external view returns (uint256) {
+        return _tokenDistributions[token].length;
+    }
+
+    /**
+     * @dev Retrieves all the distributions created by a specific address.
+     * @param token The address of the token.
+     * @return An array of distribution IDs created by the address.
+     */
+    function getAllDistributionIdsByToken(
+        address token
+    ) external view returns (uint256[] memory) {
+        return _tokenDistributions[token];
+    }
+
+    /**
+     * @dev Retrieves the distributions for a specific token within a specified range.
+     * @param token The address of the token.
+     * @param startIndex The starting index.
+     * @param limit The maximum number of result to return.
+     * @return ids An array of distribution IDs within the specified range.
+     * @return data An array of Distribution structs within the specified range.
+     */
+    function getDistributionsByToken(
+        address token,
+        uint256 startIndex,
+        uint256 limit
+    ) external view returns (uint256[] memory ids, Distribution[] memory data) {
+        if (limit > 100) revert MerkleDistributorV2__InvalidPaginationParams();
 
         unchecked {
-            uint256 distributionsLength = distributions.length;
-            if (stop > distributionsLength) {
-                stop = distributionsLength;
+            uint256 totalLength = _tokenDistributions[token].length;
+            if (startIndex >= totalLength) {
+                return (ids, data); // return empty
             }
-
-            uint256 count;
-            for (uint256 i = start; i < stop; ++i) {
-                if (distributions[i].owner == owner) ++count;
+            uint256 until = startIndex + limit;
+            if (until > totalLength) {
+                until = totalLength;
             }
+            uint256 size = until - startIndex;
 
-            ids = new uint256[](count);
-            uint256 j;
-            for (uint256 i = start; i < stop; ++i) {
-                if (distributions[i].owner == owner) {
-                    ids[j++] = i;
-                    if (j == count) break;
-                }
+            ids = new uint256[](size);
+            data = new Distribution[](size);
+            uint256 outputIndex;
+            for (uint256 i = startIndex; i < until; ++i) {
+                uint256 distributionId = _tokenDistributions[token][i];
+                ids[outputIndex] = distributionId;
+                data[outputIndex] = distributions[distributionId];
+                ++outputIndex;
             }
         }
     }
