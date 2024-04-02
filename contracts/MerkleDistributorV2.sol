@@ -15,6 +15,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
  * 2. Change `distribution.owner` to `distribution.creator` to avoid conflicts with the `Ownable` contract.
  * 3. Added `getDistributionsByCreator` and `getDistributionsByToken` to save read calls for each distribution.
  * 4. Remove `getDistributionIdsByCreator` and `getDistributionIdsByToken`
+ * 5. Rename `distributionCount` -> `getDistributionsCount`
  */
 contract MerkleDistributorV2 is Ownable {
     using SafeERC20 for IERC20;
@@ -364,10 +365,10 @@ contract MerkleDistributorV2 is Ownable {
     }
 
     /**
-     * @dev Returns the number of distributions in the MerkleDistributorV2 contract.
+     * @dev Returns the number of distributions
      * @return The number of distributions.
      */
-    function distributionCount() external view returns (uint256) {
+    function getDistributionsCount() external view returns (uint256) {
         return distributions.length;
     }
 
