@@ -18,27 +18,38 @@ abstract contract MCV2_Royalty is Ownable {
 
     uint256 private constant RATIO_BASE = 10000; // 100.00%
     uint256 private constant PROTOCOL_CUT = 2000;
-    address public constant BURN_ADDRESS = address(0x000000000000000000000000000000000000dEaD);
+    address public constant BURN_ADDRESS =
+        address(0x000000000000000000000000000000000000dEaD);
 
     address public protocolBeneficiary;
     uint256 public creationFee;
     uint256 public maxRoyaltyRange = 5000;
 
     // User => ReserveToken => Royalty Balance
-    mapping(address => mapping(address => uint256)) public userTokenRoyaltyBalance;
-    mapping(address => mapping(address => uint256)) public userTokenRoyaltyClaimed; // INFO
+    mapping(address => mapping(address => uint256))
+        public userTokenRoyaltyBalance;
+    mapping(address => mapping(address => uint256))
+        public userTokenRoyaltyClaimed; // INFO
 
     event ProtocolBeneficiaryUpdated(address protocolBeneficiary);
     event CreationFeeUpdated(uint256 amount);
     event RoyaltyRangeUpdated(uint256 ratio);
-    event RoyaltyClaimed(address indexed user, address reserveToken, uint256 amount);
+    event RoyaltyClaimed(
+        address indexed user,
+        address reserveToken,
+        uint256 amount
+    );
 
     /**
      * @dev Initializes the MCV2_Royalty contract.
      * @param protocolBeneficiary_ The address of the protocol beneficiary.
      * @param msgSender The address of the contract deployer.
      */
-    constructor(address protocolBeneficiary_, uint256 creationFee_, address msgSender) Ownable(msgSender) {
+    constructor(
+        address protocolBeneficiary_,
+        uint256 creationFee_,
+        address msgSender
+    ) Ownable(msgSender) {
         protocolBeneficiary = protocolBeneficiary_;
         creationFee = creationFee_;
     }
@@ -49,8 +60,11 @@ abstract contract MCV2_Royalty is Ownable {
      * @dev Updates the protocol beneficiary address.
      * @param protocolBeneficiary_ The new address of the protocol beneficiary.
      */
-    function updateProtocolBeneficiary(address protocolBeneficiary_) public onlyOwner {
-        if (protocolBeneficiary == address(0)) revert MCV2_Royalty__InvalidParams();
+    function updateProtocolBeneficiary(
+        address protocolBeneficiary_
+    ) public onlyOwner {
+        if (protocolBeneficiary_ == address(0))
+            revert MCV2_Royalty__InvalidParams();
 
         protocolBeneficiary = protocolBeneficiary_;
 
@@ -79,8 +93,11 @@ abstract contract MCV2_Royalty is Ownable {
      * @param royaltyRatio The royalty ratio.
      * @return The calculated royalty amount.
      */
-    function _getRoyalty(uint256 reserveAmount, uint16 royaltyRatio) internal pure returns (uint256) {
-        return reserveAmount * royaltyRatio / RATIO_BASE;
+    function _getRoyalty(
+        uint256 reserveAmount,
+        uint16 royaltyRatio
+    ) internal pure returns (uint256) {
+        return (reserveAmount * royaltyRatio) / RATIO_BASE;
     }
 
     /**
@@ -89,10 +106,18 @@ abstract contract MCV2_Royalty is Ownable {
      * @param reserveToken The address of the reserve token.
      * @param royaltyAmount The royalty amount to be added.
      */
-    function _addRoyalty(address beneficiary, address reserveToken, uint256 royaltyAmount) internal {
-        uint256 protocolCut = royaltyAmount * PROTOCOL_CUT / RATIO_BASE;
-        userTokenRoyaltyBalance[beneficiary][reserveToken] += royaltyAmount - protocolCut;
-        userTokenRoyaltyBalance[protocolBeneficiary][reserveToken] += protocolCut;
+    function _addRoyalty(
+        address beneficiary,
+        address reserveToken,
+        uint256 royaltyAmount
+    ) internal {
+        uint256 protocolCut = (royaltyAmount * PROTOCOL_CUT) / RATIO_BASE;
+        userTokenRoyaltyBalance[beneficiary][reserveToken] +=
+            royaltyAmount -
+            protocolCut;
+        userTokenRoyaltyBalance[protocolBeneficiary][
+            reserveToken
+        ] += protocolCut;
     }
 
     // MARK: - External functions
@@ -140,7 +165,13 @@ abstract contract MCV2_Royalty is Ownable {
      * @param reserveToken The address of the reserve token.
      * @return The royalty balance and claimed amount for the wallet and reserve token.
      */
-    function getRoyaltyInfo(address wallet, address reserveToken) external view returns (uint256, uint256) {
-        return (userTokenRoyaltyBalance[wallet][reserveToken], userTokenRoyaltyClaimed[wallet][reserveToken]);
+    function getRoyaltyInfo(
+        address wallet,
+        address reserveToken
+    ) external view returns (uint256, uint256) {
+        return (
+            userTokenRoyaltyBalance[wallet][reserveToken],
+            userTokenRoyaltyClaimed[wallet][reserveToken]
+        );
     }
 }
