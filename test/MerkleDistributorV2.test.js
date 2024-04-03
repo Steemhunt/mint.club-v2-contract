@@ -1259,5 +1259,58 @@ describe("MerkleDistributorV2", function () {
     }); // Pagination
   }); // Utility functions
 
-  // TODO: Admin functions
+  describe("Admin function", async function () {
+    it("should revert if not owner", async function () {
+      await expect(
+        MerkleDistributorV2.connect(alice).updateProtocolBeneficiary(
+          alice.address
+        )
+      ).to.be.revertedWithCustomError(
+        MerkleDistributorV2,
+        "OwnableUnauthorizedAccount"
+      );
+    });
+
+    it("should update the protocol beneficiary", async function () {
+      await MerkleDistributorV2.updateProtocolBeneficiary(alice.address);
+      expect(await MerkleDistributorV2.protocolBeneficiary()).to.equal(
+        alice.address
+      );
+    });
+
+    it("should revert if the protocol beneficiary is zero address", async function () {
+      await expect(MerkleDistributorV2.updateProtocolBeneficiary(NULL_ADDRESS))
+        .to.be.revertedWithCustomError(
+          MerkleDistributorV2,
+          "MerkleDistributorV2__InvalidParams"
+        )
+        .withArgs("NULL_ADDRESS");
+    });
+
+    it("should emit ProtocolBeneficiaryUpdated event", async function () {
+      await expect(MerkleDistributorV2.updateProtocolBeneficiary(alice.address))
+        .to.emit(MerkleDistributorV2, "ProtocolBeneficiaryUpdated")
+        .withArgs(alice.address);
+    });
+
+    it("should update the claim fee", async function () {
+      await MerkleDistributorV2.updateClaimFee(100);
+      expect(await MerkleDistributorV2.claimFee()).to.equal(100);
+    });
+
+    it("should emit ClaimFeeUpdated event", async function () {
+      await expect(MerkleDistributorV2.updateClaimFee(100))
+        .to.emit(MerkleDistributorV2, "ClaimFeeUpdated")
+        .withArgs(100);
+    });
+
+    it("should revert if not owner", async function () {
+      await expect(
+        MerkleDistributorV2.connect(alice).updateClaimFee(100)
+      ).to.be.revertedWithCustomError(
+        MerkleDistributorV2,
+        "OwnableUnauthorizedAccount"
+      );
+    });
+  }); // Admin function
 }); // MerkleDistributorV2

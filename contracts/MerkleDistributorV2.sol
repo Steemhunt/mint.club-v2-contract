@@ -97,7 +97,7 @@ contract MerkleDistributorV2 is Ownable {
     function updateProtocolBeneficiary(
         address protocolBeneficiary_
     ) public onlyOwner {
-        if (protocolBeneficiary == address(0))
+        if (protocolBeneficiary_ == address(0))
             revert MerkleDistributorV2__InvalidParams("NULL_ADDRESS");
 
         protocolBeneficiary = protocolBeneficiary_;
