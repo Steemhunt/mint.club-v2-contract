@@ -972,7 +972,7 @@ describe("MerkleDistributorV2", function () {
       this.Token2 = await ethers.deployContract("TestToken", [
         ORIGINAL_BALANCE,
         "Test Token2",
-        "TEST2",
+        "TEST",
         18n,
       ]);
       await this.Token2.waitForDeployment();
@@ -1003,7 +1003,7 @@ describe("MerkleDistributorV2", function () {
         TEST_DATA.metaData,
       ];
 
-      this.output = function (tokenAddress, creatorAddress) {
+      this.output = function (distributionId, tokenAddress, creatorAddress) {
         return [
           tokenAddress,
           true,
@@ -1016,6 +1016,10 @@ describe("MerkleDistributorV2", function () {
           0n,
           "0x0000000000000000000000000000000000000000000000000000000000000000",
           "Test Airdrop",
+          "",
+          distributionId,
+          "TEST",
+          18n,
           "",
         ];
       };
@@ -1047,7 +1051,7 @@ describe("MerkleDistributorV2", function () {
 
         expect(ids).to.deep.equal([0]);
         expect(results).to.deep.equal([
-          this.output(Token.target, alice.address),
+          this.output(0n, Token.target, alice.address),
         ]);
       });
 
@@ -1060,8 +1064,8 @@ describe("MerkleDistributorV2", function () {
           );
         expect(ids).to.deep.equal([1, 2]);
         expect(results).to.deep.equal([
-          this.output(this.Token2.target, alice.address),
-          this.output(this.Token2.target, bob.address),
+          this.output(1n, this.Token2.target, alice.address),
+          this.output(2n, this.Token2.target, bob.address),
         ]);
       });
 
@@ -1074,8 +1078,8 @@ describe("MerkleDistributorV2", function () {
           );
         expect(ids).to.deep.equal([0, 1]);
         expect(results).to.deep.equal([
-          this.output(Token.target, alice.address),
-          this.output(this.Token2.target, alice.address),
+          this.output(0n, Token.target, alice.address),
+          this.output(1n, this.Token2.target, alice.address),
         ]);
       });
 
@@ -1088,7 +1092,7 @@ describe("MerkleDistributorV2", function () {
           );
         expect(ids).to.deep.equal([2]);
         expect(results).to.deep.equal([
-          this.output(this.Token2.target, bob.address),
+          this.output(2n, this.Token2.target, bob.address),
         ]);
       });
     }); // List functions
@@ -1108,14 +1112,18 @@ describe("MerkleDistributorV2", function () {
               ...this.RANDOM_PARAMS
             );
             this.evenIds.push(BigInt(i));
-            this.evenOutputs.push(this.output(Token.target, alice.address));
+            this.evenOutputs.push(
+              this.output(BigInt(i), Token.target, alice.address)
+            );
           } else {
             await MerkleDistributorV2.connect(bob).createDistribution(
               this.Token2.target,
               ...this.RANDOM_PARAMS
             );
             this.oddIds.push(BigInt(i));
-            this.oddOutputs.push(this.output(this.Token2.target, bob.address));
+            this.oddOutputs.push(
+              this.output(BigInt(i), this.Token2.target, bob.address)
+            );
           }
         }
       });

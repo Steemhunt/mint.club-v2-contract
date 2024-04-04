@@ -54,4 +54,6 @@ npx hardhat compile && npx hardhat run --network bsc scripts/deploy-merkle-distr
 npx hardhat compile && npx hardhat run --network mainnet scripts/deploy-merkle-distributor.js
 npx hardhat compile && npx hardhat run --network avalanche scripts/deploy-merkle-distributor.js
 
+npx hardhat compile && npx hardhat run --network degen scripts/deploy-merkle-distributor.js
+
 */

@@ -6,6 +6,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {MCV2_ICommonToken} from "./interfaces/MCV2_ICommonToken.sol";
+import {IERC1155MetadataURI} from "@openzeppelin/contracts/token/ERC1155/extensions/IERC1155MetadataURI.sol";
 
 /**
  * @title MerkleDistributorV2
@@ -34,6 +36,9 @@ contract MerkleDistributorV2 is Ownable {
     error MerkleDistributorV2__NothingToRefund();
     error MerkleDistributorV2__InvalidPaginationParams();
 
+    uint256 private constant MIN_UINT8_LENGTH = 31; // uint8 = 32 bits
+    uint256 private constant MIN_STRING_LENGTH = 95; // empty string = 64 bits, 1 character = 96 bits
+
     // Events
     event Created(
         uint256 indexed distributionId,
@@ -60,10 +65,10 @@ contract MerkleDistributorV2 is Ownable {
         bytes32 merkleRoot; // 256 bits
         string title;
         string ipfsCID; // To store all WL addresses to create the Merkle Proof
+        mapping(address => bool) isClaimed; // account => claimed
     }
 
     Distribution[] public distributions;
-    mapping(uint256 => mapping(address => bool)) public isClaimed; // distributionId => account => claimed
     mapping(address => uint256[]) private _tokenDistributions;
     mapping(address => uint256[]) private _creatorDistributions;
 
@@ -152,6 +157,12 @@ contract MerkleDistributorV2 is Ownable {
         if (startTime >= endTime)
             revert MerkleDistributorV2__InvalidParams("startTime");
 
+        // Validate if the token supports `symbol` and `decimals` interface to prevent crashing on list functions
+        if (!_checkMethodExists(token, "decimals()", MIN_UINT8_LENGTH))
+            revert MerkleDistributorV2__InvalidParams("decimals");
+        if (!_checkMethodExists(token, "symbol()", MIN_STRING_LENGTH))
+            revert MerkleDistributorV2__InvalidParams("symbol");
+
         // Create a new distribution
         distributions.push();
         uint256 distributionId = distributions.length - 1;
@@ -197,6 +208,24 @@ contract MerkleDistributorV2 is Ownable {
     }
 
     /**
+     * @dev Checks if the contract has the method with the minimum length of the return data.
+     * @param implementation The address of the contract implementation.
+     * @param method The name of the method to check.
+     * @param minLength The minimum length of the return data.
+     * @return A boolean indicating whether the method exists.
+     */
+    function _checkMethodExists(
+        address implementation,
+        string memory method,
+        uint256 minLength
+    ) private view returns (bool) {
+        (bool success, bytes memory data) = implementation.staticcall(
+            abi.encodeWithSignature(method)
+        );
+        return success && data.length > minLength;
+    }
+
+    /**
      * @dev Allows a user to claim tokens from a specific distribution using a merkle proof.
      * @param distributionId The ID of the distribution.
      * @param merkleProof The merkle proof for the user's claim.
@@ -212,7 +241,7 @@ contract MerkleDistributorV2 is Ownable {
         if (distribution.endTime < block.timestamp)
             revert MerkleDistributorV2__Finished();
         if (distribution.refundedAt > 0) revert MerkleDistributorV2__Refunded();
-        if (isClaimed[distributionId][msg.sender])
+        if (distribution.isClaimed[msg.sender])
             revert MerkleDistributorV2__AlreadyClaimed();
         if (distribution.claimedCount >= distribution.walletCount)
             revert MerkleDistributorV2__NoClaimableTokensLeft();
@@ -234,7 +263,7 @@ contract MerkleDistributorV2 is Ownable {
         }
 
         // Mark it claimed and send the token
-        isClaimed[distributionId][msg.sender] = true;
+        distribution.isClaimed[msg.sender] = true;
         distribution.claimedCount += 1;
 
         if (distribution.isERC20) {
@@ -304,6 +333,19 @@ contract MerkleDistributorV2 is Ownable {
     }
 
     // MARK: - Utility functions
+
+    /**
+     * @dev Checks if a specific wallet address has claimed the tokens for a given distribution ID.
+     * @param distributionId The ID of the distribution.
+     * @param wallet The wallet address to check.
+     * @return A boolean indicating whether the wallet address has claimed the tokens or not.
+     */
+    function isClaimed(
+        uint256 distributionId,
+        address wallet
+    ) external view returns (bool) {
+        return distributions[distributionId].isClaimed[wallet];
+    }
 
     /**
      * @dev Checks if a distribution is whitelist-only.
@@ -384,6 +426,17 @@ contract MerkleDistributorV2 is Ownable {
     }
 
     /**
+     * @dev Retrieves the distribution length for made by a specific token.
+     * @param token The address of the token.
+     * @return The distribution count
+     */
+    function getDistributionsCountByToken(
+        address token
+    ) external view returns (uint256) {
+        return _tokenDistributions[token].length;
+    }
+
+    /**
      * @dev Retrieves all the distributions created by a specific address.
      * @param creator The address of the creator.
      * @return An array of distribution IDs created by the address.
@@ -392,6 +445,65 @@ contract MerkleDistributorV2 is Ownable {
         address creator
     ) external view returns (uint256[] memory) {
         return _creatorDistributions[creator];
+    }
+
+    /**
+     * @dev Retrieves all the distributions created by a specific address.
+     * @param token The address of the token.
+     * @return An array of distribution IDs created by the address.
+     */
+    function getAllDistributionIdsByToken(
+        address token
+    ) external view returns (uint256[] memory) {
+        return _tokenDistributions[token];
+    }
+
+    struct DistributionOutput {
+        // Distribution
+        address token;
+        bool isERC20;
+        uint40 walletCount;
+        uint40 claimedCount;
+        uint176 amountPerClaim;
+        uint40 startTime;
+        uint40 endTime;
+        address creator;
+        uint40 refundedAt;
+        bytes32 merkleRoot;
+        string title;
+        string ipfsCID;
+        // Additional info
+        uint256 id;
+        string tokenSymbol;
+        uint8 tokenDecimals;
+        string tokenURI; // only NFT
+    }
+
+    function _getDistributionOutput(
+        uint256 distributionId
+    ) private view returns (DistributionOutput memory) {
+        Distribution storage d = distributions[distributionId];
+        MCV2_ICommonToken token = MCV2_ICommonToken(d.token);
+
+        return
+            DistributionOutput(
+                d.token,
+                d.isERC20,
+                d.walletCount,
+                d.claimedCount,
+                d.amountPerClaim,
+                d.startTime,
+                d.endTime,
+                d.creator,
+                d.refundedAt,
+                d.merkleRoot,
+                d.title,
+                d.ipfsCID,
+                distributionId,
+                token.symbol(),
+                token.decimals(),
+                d.isERC20 ? "" : IERC1155MetadataURI(d.token).uri(0)
+            );
     }
 
     /**
@@ -406,7 +518,11 @@ contract MerkleDistributorV2 is Ownable {
         address creator,
         uint256 startIndex,
         uint256 limit
-    ) external view returns (uint256[] memory ids, Distribution[] memory data) {
+    )
+        external
+        view
+        returns (uint256[] memory ids, DistributionOutput[] memory data)
+    {
         if (limit > 100) revert MerkleDistributorV2__InvalidPaginationParams();
 
         unchecked {
@@ -421,37 +537,15 @@ contract MerkleDistributorV2 is Ownable {
             uint256 size = until - startIndex;
 
             ids = new uint256[](size);
-            data = new Distribution[](size);
+            data = new DistributionOutput[](size);
             uint256 outputIndex;
             for (uint256 i = startIndex; i < until; ++i) {
                 uint256 distributionId = _creatorDistributions[creator][i];
                 ids[outputIndex] = distributionId;
-                data[outputIndex] = distributions[distributionId];
+                data[outputIndex] = _getDistributionOutput(distributionId);
                 ++outputIndex;
             }
         }
-    }
-
-    /**
-     * @dev Retrieves the distribution length for made by a specific token.
-     * @param token The address of the token.
-     * @return The distribution count
-     */
-    function getDistributionsCountByToken(
-        address token
-    ) external view returns (uint256) {
-        return _tokenDistributions[token].length;
-    }
-
-    /**
-     * @dev Retrieves all the distributions created by a specific address.
-     * @param token The address of the token.
-     * @return An array of distribution IDs created by the address.
-     */
-    function getAllDistributionIdsByToken(
-        address token
-    ) external view returns (uint256[] memory) {
-        return _tokenDistributions[token];
     }
 
     /**
@@ -466,7 +560,11 @@ contract MerkleDistributorV2 is Ownable {
         address token,
         uint256 startIndex,
         uint256 limit
-    ) external view returns (uint256[] memory ids, Distribution[] memory data) {
+    )
+        external
+        view
+        returns (uint256[] memory ids, DistributionOutput[] memory data)
+    {
         if (limit > 100) revert MerkleDistributorV2__InvalidPaginationParams();
 
         unchecked {
@@ -481,12 +579,12 @@ contract MerkleDistributorV2 is Ownable {
             uint256 size = until - startIndex;
 
             ids = new uint256[](size);
-            data = new Distribution[](size);
+            data = new DistributionOutput[](size);
             uint256 outputIndex;
             for (uint256 i = startIndex; i < until; ++i) {
                 uint256 distributionId = _tokenDistributions[token][i];
                 ids[outputIndex] = distributionId;
-                data[outputIndex] = distributions[distributionId];
+                data[outputIndex] = _getDistributionOutput(distributionId);
                 ++outputIndex;
             }
         }
