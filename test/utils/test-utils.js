@@ -22,6 +22,7 @@ exports.getCreationFee = function (network) {
     avalanche: 5n * 10n ** 16n, // 0.05 AVAX (~$2)
     blast: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     degen: 50n * 10n ** 18n, // 50 DEGEN (~$2)
+    zora: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     // Testnets
     sepolia: 7n * 10n ** 14n, // 0.0007 ETH (~$2) - bond updated: 0
     blastSepolia: 0n, // 0 ETH - testnet
@@ -47,6 +48,7 @@ exports.getWETHAddress = function (network) {
     avalanche: "0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7", // WAVAX
     blast: "0x4300000000000000000000000000000000000004", // WETH
     degen: "0xEb54dACB4C2ccb64F8074eceEa33b5eBb38E5387", // WDEGEN - deployed ourselves
+    zora: "0x4200000000000000000000000000000000000006", // WETH
     // Testnets
     sepolia: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14", // WETH
     blastSepolia: "0x4200000000000000000000000000000000000023", // WETH (yield accumulating)
@@ -73,6 +75,7 @@ exports.getMaxSteps = function (network) {
     avalanche: 1000n, // 15M gas limit
     blast: 1000n, // 30M gas limit
     degen: 1000n, // 30M gas limit
+    zora: 1000n, // 30M gas limit
     // Testnets
     sepolia: 1000n, // 30M gas limit
     blastSepolia: 1000n, // 30M gas limit
