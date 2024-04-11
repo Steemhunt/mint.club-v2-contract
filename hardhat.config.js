@@ -81,6 +81,11 @@ module.exports = {
       chainId: 7777777,
       accounts: [process.env.MAINNET_PRIVATE_KEY],
     },
+    klaytn: {
+      url: "https://1rpc.io/klay",
+      chainId: 8217,
+      accounts: [process.env.MAINNET_PRIVATE_KEY],
+    },
     sepolia: {
       url: process.env.RPC_SEPOLIA,
       chainId: 11155111,
@@ -122,10 +127,12 @@ module.exports = {
       bsc: process.env.BSCSCAN_API_KEY,
       sepolia: process.env.ETHERSCAN_API_KEY,
       blast: process.env.BLASTSCAN_API_KEY,
-      degen: "FIXME:", // FIXME: apiKey?
-      avalanche: "snowtrace", // apiKey is not required, just set a placeholder
-      blastSepolia: "blast_sepolia", // apiKey is not required, just set a placeholder
-      avalancheFujiTestnet: "snowtrace", // apiKey is not required, just set a placeholder
+      avalanche: "unnecessary",
+      degen: "TODO:",
+      zora: "TODO:",
+      klaytn: "unnecessary",
+      blastSepolia: "unnecessary",
+      avalancheFujiTestnet: "unnecessary",
     },
     customChains: [
       {
@@ -141,7 +148,7 @@ module.exports = {
         network: "degen",
         chainId: 666666666,
         urls: {
-          apiURL: "https://explorer.degen.tips/api/v2/FIXME:", // FIXME: API verification?
+          apiURL: "https://explorer.degen.tips/api/v2/TODO:", // TODO: API verification?
           browserURL: "https://explorer.degen.tips",
         },
       },
@@ -149,8 +156,16 @@ module.exports = {
         network: "zora",
         chainId: 7777777,
         urls: {
-          apiURL: "https://explorer.zora.energy/api/v2/FIXME:", // FIXME: API verification?
+          apiURL: "https://explorer.zora.energy/api/v2/TODO:", // TODO: API verification?
           browserURL: "https://explorer.zora.energy",
+        },
+      },
+      {
+        network: "klaytn",
+        chainId: 8217,
+        urls: {
+          apiURL: "https://api-cypress.klaytnscope.com/api",
+          browserURL: "https://klaytnscope.com",
         },
       },
       {

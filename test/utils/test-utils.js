@@ -23,6 +23,7 @@ exports.getCreationFee = function (network) {
     blast: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     degen: 50n * 10n ** 18n, // 50 DEGEN (~$2)
     zora: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
+    klaytn: 8n * 10n ** 18n, // 8 KLAY (~$2)
     // Testnets
     sepolia: 7n * 10n ** 14n, // 0.0007 ETH (~$2) - bond updated: 0
     blastSepolia: 0n, // 0 ETH - testnet
@@ -49,6 +50,7 @@ exports.getWETHAddress = function (network) {
     blast: "0x4300000000000000000000000000000000000004", // WETH
     degen: "0xEb54dACB4C2ccb64F8074eceEa33b5eBb38E5387", // WDEGEN - deployed ourselves
     zora: "0x4200000000000000000000000000000000000006", // WETH
+    klaytn: "0x19Aac5f612f524B754CA7e7c41cbFa2E981A4432", // WKLAY - (ref: https://hrl.sh/g6ccv7)
     // Testnets
     sepolia: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14", // WETH
     blastSepolia: "0x4200000000000000000000000000000000000023", // WETH (yield accumulating)
@@ -76,6 +78,7 @@ exports.getMaxSteps = function (network) {
     blast: 1000n, // 30M gas limit
     degen: 1000n, // 30M gas limit
     zora: 1000n, // 30M gas limit
+    klaytn: 1000n, // 100M execution cost (ref: https://hrl.sh/eylozo)
     // Testnets
     sepolia: 1000n, // 30M gas limit
     blastSepolia: 1000n, // 30M gas limit
