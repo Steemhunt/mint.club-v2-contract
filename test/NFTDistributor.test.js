@@ -103,5 +103,10 @@ describe("NFTDistributor", function () {
       expect(await this.token.balanceOf(bob.address, 0)).to.equal(2n);
       expect(await this.token.balanceOf(carol.address, 0)).to.equal(3n);
     });
+
+    it("should transfer the NFT ownership to the message sender", async function () {
+      const bondInfo = await Bond.tokenBond(this.token.target);
+      expect(bondInfo.creator).to.equal(creator.address);
+    });
   }); // Create and send
 }); // NFTDistributor
