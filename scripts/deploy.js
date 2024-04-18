@@ -6,14 +6,14 @@ const {
   getCreationFee,
 } = require("../test/utils/test-utils");
 
-const PROTOCOL_BENEFIARY = process.env.PROTOCOL_BENEFIARY;
+const PROTOCOL_BENEFICIARY = process.env.PROTOCOL_BENEFICIARY;
 const MAX_STEPS = getMaxSteps(hre.network.name);
 const CREATION_FEE = getCreationFee(hre.network.name);
 const WETH_ADDRESS = getWETHAddress(hre.network.name);
 
 console.log(`--------------------------------------------------`);
 console.log(
-  `NETWORK: ${hre.network.name} | PROTOCOL_BENEFIARY: ${PROTOCOL_BENEFIARY}`
+  `NETWORK: ${hre.network.name} | PROTOCOL_BENEFICIARY: ${PROTOCOL_BENEFICIARY}`
 );
 console.log(
   `CREATION_FEE: ${CREATION_FEE} | MAX_STEPS: ${MAX_STEPS} | WETH_ADDRESS: ${WETH_ADDRESS}`
@@ -54,7 +54,7 @@ async function main() {
   const bond = await hre.ethers.deployContract(bondContract, [
     tokenImplementation.target,
     NFTImplementation.target,
-    PROTOCOL_BENEFIARY,
+    PROTOCOL_BENEFICIARY,
     CREATION_FEE,
     MAX_STEPS,
   ]);
@@ -93,7 +93,7 @@ async function main() {
   console.log(`
     npx hardhat verify --network ${hre.network.name} ${tokenImplementation.target}
     npx hardhat verify --network ${hre.network.name} ${NFTImplementation.target}
-    npx hardhat verify --network ${hre.network.name} ${bond.target} ${tokenImplementation.target} ${NFTImplementation.target} ${PROTOCOL_BENEFIARY} ${CREATION_FEE} ${MAX_STEPS}
+    npx hardhat verify --network ${hre.network.name} ${bond.target} ${tokenImplementation.target} ${NFTImplementation.target} ${PROTOCOL_BENEFICIARY} ${CREATION_FEE} ${MAX_STEPS}
     npx hardhat verify --network ${hre.network.name} ${zap.target} ${bond.target} ${WETH_ADDRESS}
     npx hardhat verify --network ${hre.network.name} ${locker.target}
     npx hardhat verify --network ${hre.network.name} ${merkleDistributor.target}
