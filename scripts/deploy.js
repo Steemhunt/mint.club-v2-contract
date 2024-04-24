@@ -110,6 +110,10 @@ main()
 /* Deploy script
 
 npx hardhat compile && npx hardhat run --network sepolia scripts/deploy.js
+npx hardhat compile && npx hardhat run --network baseSepolia scripts/deploy.js
+npx hardhat compile && npx hardhat run --network blastSepolia scripts/deploy.js
+npx hardhat compile && npx hardhat run --network avalancheFujiTestnet scripts/deploy.js
+npx hardhat compile && npx hardhat run --network movementDevnet scripts/deploy.js
 
 npx hardhat compile && npx hardhat run --network optimisticEthereum scripts/deploy.js
 npx hardhat compile && npx hardhat run --network arbitrumOne scripts/deploy.js
@@ -123,9 +127,5 @@ npx hardhat compile && npx hardhat run --network blast scripts/deploy.js
 npx hardhat compile && npx hardhat run --network degen scripts/deploy.js
 npx hardhat compile && npx hardhat run --network zora scripts/deploy.js
 npx hardhat compile && npx hardhat run --network klaytn scripts/deploy.js
-
-npx hardhat compile && npx hardhat run --network blastSepolia scripts/deploy.js
-npx hardhat compile && npx hardhat run --network avalancheFujiTestnet scripts/deploy.js
-npx hardhat compile && npx hardhat run --network movementDevnet scripts/deploy.js
 
 */

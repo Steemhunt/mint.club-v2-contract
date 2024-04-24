@@ -92,6 +92,11 @@ module.exports = {
       chainId: 11155111,
       accounts: [process.env.TEST_PRIVATE_KEY],
     },
+    baseSepolia: {
+      url: "https://base-sepolia-rpc.publicnode.com",
+      chainId: 84532,
+      accounts: [process.env.TEST_PRIVATE_KEY],
+    },
     blastSepolia: {
       url: process.env.RPC_BLAST_SEPOLIA,
       chainId: 168587773,
@@ -126,12 +131,13 @@ module.exports = {
       base: process.env.BASESCAN_API_KEY,
       polygon: process.env.POLYGONSCAN_API_KEY,
       bsc: process.env.BSCSCAN_API_KEY,
-      sepolia: process.env.ETHERSCAN_API_KEY,
       blast: process.env.BLASTSCAN_API_KEY,
       avalanche: "unnecessary",
       degen: "TODO:",
       zora: "TODO:",
       klaytn: "unnecessary",
+      sepolia: process.env.ETHERSCAN_API_KEY,
+      baseSepolia: process.env.BASESCAN_API_KEY,
       blastSepolia: "unnecessary",
       avalancheFujiTestnet: "unnecessary",
     },
@@ -167,6 +173,14 @@ module.exports = {
         urls: {
           apiURL: "https://api-cypress.klaytnscope.com/api",
           browserURL: "https://klaytnscope.com",
+        },
+      },
+      {
+        network: "baseSepolia",
+        chainId: 84532,
+        urls: {
+          apiURL: "https://api-sepolia.basescan.org/api",
+          browserURL: "https://sepolia.basescan.org",
         },
       },
       {

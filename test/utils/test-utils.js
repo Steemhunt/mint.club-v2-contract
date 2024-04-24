@@ -25,7 +25,8 @@ exports.getCreationFee = function (network) {
     zora: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     klaytn: 8n * 10n ** 18n, // 8 KLAY (~$2)
     // Testnets
-    sepolia: 7n * 10n ** 14n, // 0.0007 ETH (~$2) - bond updated: 0
+    sepolia: 7n * 10n ** 14n, // 0 ETH - testnet
+    baseSepolia: 0n, // 0 ETH - testnet
     blastSepolia: 0n, // 0 ETH - testnet
     avalancheFujiTestnet: 0n, // 0 ETH - testnet
     movementDevnet: 0n, // 0 MOVE - testnet
@@ -53,6 +54,7 @@ exports.getWETHAddress = function (network) {
     klaytn: "0x19Aac5f612f524B754CA7e7c41cbFa2E981A4432", // WKLAY - (ref: https://hrl.sh/g6ccv7)
     // Testnets
     sepolia: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14", // WETH
+    baseSepolia: "0x4200000000000000000000000000000000000006", // WETH
     blastSepolia: "0x4200000000000000000000000000000000000023", // WETH (yield accumulating)
     avalancheFujiTestnet: "0xd00ae08403B9bbb9124bB305C09058E32C39A48c", // WAVAX
     movementDevnet: "0x4200000000000000000000000000000000000023", // FIXME: WMOVE?
@@ -81,6 +83,7 @@ exports.getMaxSteps = function (network) {
     klaytn: 1000n, // 100M execution cost (ref: https://hrl.sh/eylozo)
     // Testnets
     sepolia: 1000n, // 30M gas limit
+    baseSepolia: 1000n, // 30M gas limit
     blastSepolia: 1000n, // 30M gas limit
     avalancheFujiTestnet: 1000n, // ? gas limit
     movementDevnet: 1000n, // ? gas limit

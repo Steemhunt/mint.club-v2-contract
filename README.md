@@ -262,6 +262,7 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
    <thead>
       <tr>
          <th>Contract /  Chain</th>
+         <th><a href="https://testnet.basescan.org">Base Sepolia Testnet</a></th>
          <th><a href="https://testnet.blastscan.io">Blast Sepolia Testnet</a></th>
       </tr>
    </thead>
@@ -275,7 +276,7 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
          <td>0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881</td>
       </tr>
       <tr>
-         <td>MCV2_BlastBond (Yield Generating)</td>
+         <td>MCV2_Bond / MCV2_BlastBond (Yield Generating)</td>
          <td>0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d</td>
       </tr>
       <tr>
