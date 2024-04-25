@@ -40,5 +40,6 @@ main()
 
 npx hardhat compile && npx hardhat run --network base scripts/deploy-bulk-sender.js
 npx hardhat compile && npx hardhat run --network sepolia scripts/deploy-bulk-sender.js
+npx hardhat compile && npx hardhat run --network baseSepolia scripts/deploy-bulk-sender.js
 
 */
