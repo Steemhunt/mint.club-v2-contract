@@ -112,6 +112,11 @@ module.exports = {
       chainId: 336,
       accounts: [process.env.TEST_PRIVATE_KEY],
     },
+    cyberTestnet: {
+      url: "https://cyber-testnet.alt.technology",
+      chainId: 111557560,
+      accounts: [process.env.TEST_PRIVATE_KEY],
+    },
   },
   gasReporter: {
     enabled: true,
@@ -140,6 +145,7 @@ module.exports = {
       baseSepolia: process.env.BASESCAN_API_KEY,
       blastSepolia: "unnecessary",
       avalancheFujiTestnet: "unnecessary",
+      cyberTestnet: "unnecessary",
     },
     customChains: [
       {
@@ -198,6 +204,14 @@ module.exports = {
         urls: {
           apiURL: "TODO: Block explorer is not available yet.",
           browserURL: "https://explorer.devnet.m1.movementlabs.xyz/",
+        },
+      },
+      {
+        network: "cyberTestnet",
+        chainId: 111557560,
+        urls: {
+          apiURL: "https://testnet.cyberscan.co/api",
+          browserURL: "https://testnet.cyberscan.co/",
         },
       },
     ],
