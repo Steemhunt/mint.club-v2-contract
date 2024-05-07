@@ -9,7 +9,7 @@ async function main() {
   console.log(`Current creation fee: ${current} wei`);
 
   const newCreationFee = 0n;
-  await bond.updateCreationFee(newCreationFee);
+  await bond.updateCreationFee(7n * 10n ** 14n); // 0.0007 ETH (~$2)
 
   const updated = await bond.creationFee();
   console.log(`Updated creation fee: ${updated} wei`);

@@ -128,5 +128,6 @@ npx hardhat compile && npx hardhat run --network blast scripts/deploy.js
 npx hardhat compile && npx hardhat run --network degen scripts/deploy.js
 npx hardhat compile && npx hardhat run --network zora scripts/deploy.js
 npx hardhat compile && npx hardhat run --network klaytn scripts/deploy.js
+npx hardhat compile && npx hardhat run --network cyber scripts/deploy.js
 
 */

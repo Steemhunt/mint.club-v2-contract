@@ -87,6 +87,11 @@ module.exports = {
       chainId: 8217,
       accounts: [process.env.MAINNET_PRIVATE_KEY],
     },
+    cyber: {
+      url: "https://cyber.alt.technology",
+      chainId: 7560,
+      accounts: [process.env.MAINNET_PRIVATE_KEY],
+    },
     sepolia: {
       url: process.env.RPC_SEPOLIA,
       chainId: 11155111,
@@ -125,7 +130,7 @@ module.exports = {
     coinmarketcap: null, // process.env.COIN_MARKET_CAP_API
   },
   sourcify: {
-    // enabled: true
+    enabled: true,
   },
   etherscan: {
     // network list: npx hardhat verify --list-networks
@@ -146,6 +151,7 @@ module.exports = {
       blastSepolia: "unnecessary",
       avalancheFujiTestnet: "unnecessary",
       cyberTestnet: "unnecessary",
+      cyber: "unnecessary",
     },
     customChains: [
       {
@@ -179,6 +185,14 @@ module.exports = {
         urls: {
           apiURL: "https://api-cypress.klaytnscope.com/api",
           browserURL: "https://klaytnscope.com",
+        },
+      },
+      {
+        network: "cyber",
+        chainId: 7560,
+        urls: {
+          apiURL: "https://cyberscan.co/api",
+          browserURL: "https://cyberscan.co/",
         },
       },
       {

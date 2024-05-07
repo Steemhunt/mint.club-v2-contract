@@ -195,6 +195,7 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
          <th>Contract /  Chain</th>
          <th><a href="https://explorer.zora.energy">Zora</a></th>
          <th><a href="https://klaytnscope.com/">Klaytn</a></th>
+         <th><a href="https://cyberscan.co/">Cyber</a></th>
       </tr>
    </thead>
    <tbody>
