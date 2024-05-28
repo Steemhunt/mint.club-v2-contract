@@ -92,6 +92,11 @@ module.exports = {
       chainId: 7560,
       accounts: [process.env.MAINNET_PRIVATE_KEY],
     },
+    ham: {
+      url: "https://ham.calderachain.xyz/http",
+      chainId: 5112,
+      accounts: [process.env.MAINNET_PRIVATE_KEY],
+    },
     sepolia: {
       url: process.env.RPC_SEPOLIA,
       chainId: 11155111,
@@ -146,12 +151,13 @@ module.exports = {
       degen: "TODO:",
       zora: "TODO:",
       klaytn: "unnecessary",
+      cyber: "unnecessary",
+      ham: "unnecessary",
       sepolia: process.env.ETHERSCAN_API_KEY,
       baseSepolia: process.env.BASESCAN_API_KEY,
       blastSepolia: "unnecessary",
       avalancheFujiTestnet: "unnecessary",
       cyberTestnet: "unnecessary",
-      cyber: "unnecessary",
     },
     customChains: [
       {
@@ -193,6 +199,14 @@ module.exports = {
         urls: {
           apiURL: "https://cyberscan.co/api",
           browserURL: "https://cyberscan.co/",
+        },
+      },
+      {
+        network: "ham",
+        chainId: 5112,
+        urls: {
+          apiURL: "https://ham.calderaexplorer.xyz/api/v2/TODO:", // TODO: API verification?
+          browserURL: "https://ham.calderaexplorer.xyz",
         },
       },
       {
