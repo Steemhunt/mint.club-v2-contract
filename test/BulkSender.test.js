@@ -6,7 +6,7 @@ const {
   wei,
 } = require("./utils/test-utils");
 
-const ORIGINAL_BALANCE = wei("100"); // 100 tokens
+const ORIGINAL_BALANCE = wei("100000000000"); // 100M tokens
 const FEE_PER_RECIPIENT = 10000000000000n; // 0.00001 ETH (~$0.03)
 
 describe("BulkSender", function () {
@@ -22,7 +22,7 @@ describe("BulkSender", function () {
       "Test Token",
       "TEST",
       18n,
-    ]); // supply: 200M
+    ]); // supply: 100M
     await Token.waitForDeployment();
 
     const MultiToken = await ethers.deployContract("TestMultiToken", [
@@ -77,9 +77,6 @@ describe("BulkSender", function () {
 
   describe("Send ERC20", function () {
     beforeEach(async function () {
-      [BulkSender, Token, MultiToken] = await loadFixture(deployFixtures);
-      [owner, alice, bob, carol] = await ethers.getSigners();
-
       this.TEST = {
         recipients: [alice.address, bob.address, carol.address],
         amounts: [wei("1"), wei("2"), wei("3")],
@@ -163,20 +160,45 @@ describe("BulkSender", function () {
         .to.emit(BulkSender, "Sent")
         .withArgs(Token.target, this.totalAmount, this.recipientsCount);
     });
+
+    it.skip("should handle the maximum number of recipients correctly", async function () {
+      const maxRecipients = Array(5500).fill(alice.address);
+      const maxAmounts = Array(5500).fill(wei("1"));
+      const totalAmount = maxAmounts.reduce((a, b) => a + b, 0n);
+      const totalFee = FEE_PER_RECIPIENT * BigInt(maxRecipients.length);
+
+      await Token.approve(BulkSender.target, totalAmount);
+
+      await expect(
+        BulkSender.sendERC20(Token.target, maxRecipients, maxAmounts, {
+          value: totalFee,
+        })
+      )
+        .to.emit(BulkSender, "Sent")
+        .withArgs(Token.target, totalAmount, BigInt(maxRecipients.length));
+    });
+
+    it("should revert if the total amount is zero", async function () {
+      const zeroAmounts = Array(this.TEST.recipients.length).fill(0n);
+      await expect(
+        BulkSender.sendERC20(Token.target, this.TEST.recipients, zeroAmounts, {
+          value: this.totalFee,
+        })
+      )
+        .to.be.revertedWithCustomError(BulkSender, "BulkSender__InvalidParams")
+        .withArgs("ZERO_AMOUNT");
+    });
   }); // Send ERC20
 
   describe("Send ERC1155", function () {
     beforeEach(async function () {
-      [BulkSender, Token, MultiToken] = await loadFixture(deployFixtures);
-      [owner, alice, bob, carol] = await ethers.getSigners();
-
       this.TEST = {
         recipients: [alice.address, bob.address, carol.address],
         amounts: [1n, 2n, 3n],
       };
       this.totalAmount = this.TEST.amounts.reduce((a, b) => a + b, 0n);
-      this.recipientsCount = BigInt(this.TEST.recipients.length);
-      this.totalFee = FEE_PER_RECIPIENT * this.recipientsCount;
+      this.recipientsCount = this.TEST.recipients.length;
+      this.totalFee = FEE_PER_RECIPIENT * BigInt(this.recipientsCount);
 
       await MultiToken.setApprovalForAll(BulkSender.target, true);
     });
@@ -190,14 +212,35 @@ describe("BulkSender", function () {
       );
 
       for (let i = 0; i < this.TEST.recipients.length; i++) {
-        expect(
-          await MultiToken.balanceOf(this.TEST.recipients[i], 0n)
-        ).to.equal(this.TEST.amounts[i]);
+        expect(await MultiToken.balanceOf(this.TEST.recipients[i], 0)).to.equal(
+          this.TEST.amounts[i]
+        );
       }
 
       expect(await MultiToken.balanceOf(BulkSender.target, 0)).to.equal(0);
       expect(await MultiToken.balanceOf(owner.address, 0)).to.equal(
         ORIGINAL_BALANCE - this.totalAmount
+      );
+    });
+
+    it("should revert if the sender does not have enough token balance", async function () {
+      await MultiToken.safeTransferFrom(
+        owner.address,
+        alice.address,
+        0,
+        ORIGINAL_BALANCE,
+        "0x"
+      );
+      await expect(
+        BulkSender.sendERC1155(
+          MultiToken.target,
+          this.TEST.recipients,
+          this.TEST.amounts,
+          { value: this.totalFee }
+        )
+      ).to.be.revertedWithCustomError(
+        BulkSender,
+        "BulkSender__InsufficientTokenBalance"
       );
     });
 
@@ -237,6 +280,37 @@ describe("BulkSender", function () {
       )
         .to.emit(BulkSender, "Sent")
         .withArgs(MultiToken.target, this.totalAmount, this.recipientsCount);
+    });
+
+    it.skip("should handle the maximum number of recipients correctly", async function () {
+      const maxRecipients = Array(4200).fill(alice.address);
+      const maxAmounts = Array(4200).fill(1);
+      const totalAmount = maxAmounts.reduce((a, b) => a + b, 0);
+      const totalFee = FEE_PER_RECIPIENT * BigInt(maxRecipients.length);
+
+      await MultiToken.setApprovalForAll(BulkSender.target, true);
+
+      await expect(
+        BulkSender.sendERC1155(MultiToken.target, maxRecipients, maxAmounts, {
+          value: totalFee,
+        })
+      )
+        .to.emit(BulkSender, "Sent")
+        .withArgs(MultiToken.target, totalAmount, BigInt(maxRecipients.length));
+    });
+
+    it("should revert if the total amount is zero", async function () {
+      const zeroAmounts = Array(this.TEST.recipients.length).fill(0);
+      await expect(
+        BulkSender.sendERC1155(
+          MultiToken.target,
+          this.TEST.recipients,
+          zeroAmounts,
+          { value: this.totalFee }
+        )
+      )
+        .to.be.revertedWithCustomError(BulkSender, "BulkSender__InvalidParams")
+        .withArgs("ZERO_AMOUNT");
     });
   }); // Send ERC1155
 }); // BulkSender
