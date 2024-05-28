@@ -1,9 +1,14 @@
 require("dotenv").config();
 const hre = require("hardhat");
+const { getCreationFee } = require("../test/utils/test-utils");
 
 async function main() {
   const PROTOCOL_BENEFICIARY = process.env.PROTOCOL_BENEFICIARY;
-  const FEE_PER_RECIPIENT = 0n;
+  const CREATION_FEE = getCreationFee(hre.network.name); // ~$2.6
+  const FEE_PER_RECIPIENT = CREATION_FEE / 50n; // ~$0.05 per recipient
+  // 10 recipients = 10 * $0.05 = $0.5
+  // 100 recipients = 100 * $0.05 = $5.0
+  // 1000 recipients = 1000 * $0.05 = $50.0
 
   const accounts = await hre.ethers.getSigners();
   const deployer = accounts[0].address;

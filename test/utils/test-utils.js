@@ -27,7 +27,7 @@ exports.getCreationFee = function (network) {
     cyber: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     ham: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     // Testnets
-    sepolia: 7n * 10n ** 14n, // 0 ETH - testnet
+    sepolia: 7n * 10n ** 14n, // 0.007 ETH - testnet
     baseSepolia: 0n, // 0 ETH - testnet
     blastSepolia: 0n, // 0 ETH - testnet
     avalancheFujiTestnet: 0n, // 0 ETH - testnet
