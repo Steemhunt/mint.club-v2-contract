@@ -341,6 +341,10 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
    </thead>
    <tbody>
       <tr>
+         <td>Base</td>
+         <td><a href="https://basescan.org/address/0xf7e2cDe9E603F15118E6E389cF14f11f19C1afbc#code">0xf7e2cDe9E603F15118E6E389cF14f11f19C1afbc</a></td>
+      </tr>
+      <tr>
          <td>Sepolia Testnet</td>
          <td><a href="https://sepolia.etherscan.io/address/0xD107315d3Ce8D22c056d49D742B84477D64bD58b#code">0xD107315d3Ce8D22c056d49D742B84477D64bD58b</a></td>
       </tr>
