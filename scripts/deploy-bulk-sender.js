@@ -44,7 +44,19 @@ main()
 /* Deploy script
 
 npx hardhat compile && npx hardhat run --network base scripts/deploy-bulk-sender.js
-npx hardhat compile && npx hardhat run --network sepolia scripts/deploy-bulk-sender.js
-npx hardhat compile && npx hardhat run --network baseSepolia scripts/deploy-bulk-sender.js
+npx hardhat compile && npx hardhat run --network optimisticEthereum scripts/deploy-bulk-sender.js
+npx hardhat compile && npx hardhat run --network arbitrumOne scripts/deploy-bulk-sender.js
+npx hardhat compile && npx hardhat run --network polygon scripts/deploy-bulk-sender.js
+npx hardhat compile && npx hardhat run --network bsc scripts/deploy-bulk-sender.js
+npx hardhat compile && npx hardhat run --network mainnet scripts/deploy-bulk-sender.js
+
+npx hardhat compile && npx hardhat run --network avalanche scripts/deploy-bulk-sender.js
+npx hardhat compile && npx hardhat run --network blast scripts/deploy-bulk-sender.js
+npx hardhat compile && npx hardhat run --network degen scripts/deploy-bulk-sender.js
+npx hardhat compile && npx hardhat run --network zora scripts/deploy-bulk-sender.js
+npx hardhat compile && npx hardhat run --network klaytn scripts/deploy-bulk-sender.js
+npx hardhat compile && npx hardhat run --network cyber scripts/deploy-bulk-sender.js
+npx hardhat compile && npx hardhat run --network ham scripts/deploy-bulk-sender.js
+
 
 */

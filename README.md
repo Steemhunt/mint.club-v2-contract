@@ -48,9 +48,9 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       <tr>
          <th>Contract /  Chain</th>
          <th><a href="https://etherscan.io">Ethereum</a></th>
-         <th><a href="https://optimistic.etherscan.io">Optimism (L2)</a></th>
-         <th><a href="https://arbiscan.io">Arbitrum (L2)</a></th>
-         <th><a href="https://basescan.org">Base (L2)</a></th>
+         <th><a href="https://optimistic.etherscan.io">Optimism</a></th>
+         <th><a href="https://arbiscan.io">Arbitrum One</a></th>
+         <th><a href="https://basescan.org">Base</a></th>
          <th><a href="https://bscscan.com">BNB Chain</a></th>
          <th><a href="https://polygonscan.com">Polygon (PoS)</a></th>
       </tr>
@@ -90,7 +90,7 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
    <thead>
       <tr>
          <th>Contract /  Chain</th>
-         <th><a href="https://blastexplorer.io/">Blast (L2)</a></th>
+         <th><a href="https://blastexplorer.io/">Blast</a></th>
       </tr>
    </thead>
    <tbody>
@@ -124,7 +124,7 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
    <thead>
       <tr>
          <th>Contract /  Chain</th>
-         <th><a href="https://snowtrace.io">Avalanche (C-Chain)</a></th>
+         <th><a href="https://snowtrace.io">Avalanche (C (C-Chain)-Chain)</a></th>
       </tr>
    </thead>
    <tbody>
@@ -299,7 +299,7 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
    <thead>
       <tr>
          <th>Contract /  Chain</th>
-         <th><a href="https://testnet.snowtrace.io">Avalanche Fuji Testnet</a></th>
+         <th><a href="https://testnet.snowtrace.io">Avalanche Fu (C-Chain)ji Testnet</a></th>
       </tr>
    </thead>
    <tbody>
@@ -341,8 +341,56 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
    </thead>
    <tbody>
       <tr>
+         <td>Ethereum</td>
+         <td><a href="https://etherscan.io/address/0xF44939c1613143ad587c79602182De7DcF593e33#code">0xF44939c1613143ad587c79602182De7DcF593e33</a></td>
+      </tr>
+      <tr>
          <td>Base</td>
          <td><a href="https://basescan.org/address/0xf7e2cDe9E603F15118E6E389cF14f11f19C1afbc#code">0xf7e2cDe9E603F15118E6E389cF14f11f19C1afbc</a></td>
+      </tr>
+      <tr>
+         <td>Optimism</td>
+         <td><a href="https://optimistic.etherscan.io/address/0xa4021a8907197Df92341F1218B32E26b250F6798#code">0xa4021a8907197Df92341F1218B32E26b250F6798</a></td>
+      </tr>
+      <tr>
+         <td>Arbitrum One</td>
+         <td><a href="https://arbiscan.io/address/0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724#code">0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724</a></td>
+      </tr>
+      <tr>
+         <td>Polygon (PoS)</td>
+         <td><a href="https://polygonscan.com/address/0x621c335b4BD8f2165E120DC70d3AfcAfc6628681#code">0x621c335b4BD8f2165E120DC70d3AfcAfc6628681</a></td>
+      </tr>
+      <tr>
+         <td>BNB Chain</td>
+         <td><a href="https://bscscan.com/address/0xa4021a8907197Df92341F1218B32E26b250F6798#code">0xa4021a8907197Df92341F1218B32E26b250F6798</a></td>
+      </tr>
+      <tr>
+         <td>Avalanche (C-Chain)</td>
+         <td><a href="https://snowtrace.io/address/0x9a176d09b3824cf50417e348696cBbBc43d7818d#code"></a>0x9a176d09b3824cf50417e348696cBbBc43d7818d</td>
+      </tr>
+      <tr>
+         <td>Blast</td>
+         <td><a href="https://blastexplorer.io/address/0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65#code"></a>0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65</td>
+      </tr>
+      <tr>
+         <td>Degen</td>
+         <td><a href="#">0x5b64cECC5cF3E4B1A668Abd895D16BdDC0c77a17</a></td>
+      </tr>
+      <tr>
+         <td>Zora</td>
+         <td><a href="#">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</a></td>
+      </tr>
+      <tr>
+         <td>Klaytn</td>
+         <td><a href="https://klaytnscope.com/account/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4?tabId=contractCode">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</a></td>
+      </tr>
+      <tr>
+         <td>Cyber</td>
+         <td><a href="#">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</a></td>
+      </tr>
+      <tr>
+         <td>Ham</td>
+         <td><a href="#">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</a></td>
       </tr>
       <tr>
          <td>Sepolia Testnet</td>
