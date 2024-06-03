@@ -366,19 +366,19 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       </tr>
       <tr>
          <td>Avalanche (C-Chain)</td>
-         <td><a href="https://snowtrace.io/address/0x9a176d09b3824cf50417e348696cBbBc43d7818d#code"></a>0x9a176d09b3824cf50417e348696cBbBc43d7818d</td>
+         <td><a href="https://snowtrace.io/address/0x9a176d09b3824cf50417e348696cBbBc43d7818d#code">0x9a176d09b3824cf50417e348696cBbBc43d7818d</a></td>
       </tr>
       <tr>
          <td>Blast</td>
-         <td><a href="https://blastexplorer.io/address/0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65#code"></a>0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65</td>
+         <td><a href="https://blastexplorer.io/address/0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65#code">0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65</a></td>
       </tr>
       <tr>
          <td>Degen</td>
-         <td><a href="#">0x5b64cECC5cF3E4B1A668Abd895D16BdDC0c77a17</a></td>
+         <td><a href="https://explorer.degen.tips/address/0x5b64cECC5cF3E4B1A668Abd895D16BdDC0c77a17?tab=contract">0x5b64cECC5cF3E4B1A668Abd895D16BdDC0c77a17</a></td>
       </tr>
       <tr>
          <td>Zora</td>
-         <td><a href="#">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</a></td>
+         <td><a href="https://explorer.zora.energy/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4?tab=contract">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</a></td>
       </tr>
       <tr>
          <td>Klaytn</td>
@@ -386,11 +386,11 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       </tr>
       <tr>
          <td>Cyber</td>
-         <td><a href="#">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</a></td>
+         <td><a href="https://cyberscan.co/address/0x1349a9ddee26fe16d0d44e35b3cb9b0ca18213a4#contract">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</a></td>
       </tr>
       <tr>
          <td>Ham</td>
-         <td><a href="#">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</a></td>
+         <td><a href="https://ham.calderaexplorer.xyz/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4?tab=read_contract">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</a></td>
       </tr>
       <tr>
          <td>Sepolia Testnet</td>
