@@ -25,13 +25,13 @@ async function main() {
     `Current fee: ${current} wei (${ethers.formatEther(current.toString())})`
   );
 
-  const newCreationFee = current / 10n; // 90% discount
-  const tx = await bulkSender.updateFeePerRecipient(newCreationFee);
-  await tx.wait(2); // Wait for 3 confirmation to make sure other RPCs updated
+  // const newCreationFee = current / 10n; // 90% discount
+  // const tx = await bulkSender.updateFeePerRecipient(newCreationFee);
+  // await tx.wait(2); // Wait for 3 confirmation to make sure other RPCs updated
 
   const updated = await bulkSender.feePerRecipient();
   console.log(`Updated fee: ${updated} wei (${ethers.formatEther(updated)})`);
-  console.log(`TX Hash: ${tx.transactionHash}`);
+  console.log(`TX Hash: ${tx.hash}`);
 }
 
 main().catch((error) => {
