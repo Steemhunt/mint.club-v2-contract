@@ -127,6 +127,11 @@ module.exports = {
       chainId: 111557560,
       accounts: [process.env.TEST_PRIVATE_KEY],
     },
+    overTestnet: {
+      url: "https://wallet-dolphin.rpc.over.network",
+      chainId: 541762,
+      accounts: [process.env.TEST_PRIVATE_KEY],
+    },
   },
   gasReporter: {
     enabled: true,
@@ -158,6 +163,7 @@ module.exports = {
       blastSepolia: "unnecessary",
       avalancheFujiTestnet: "unnecessary",
       cyberTestnet: "unnecessary",
+      overTestnet: "unnecessary",
     },
     customChains: [
       {
@@ -240,6 +246,14 @@ module.exports = {
         urls: {
           apiURL: "https://testnet.cyberscan.co/api",
           browserURL: "https://testnet.cyberscan.co/",
+        },
+      },
+      {
+        network: "overTestnet",
+        chainId: 541762,
+        urls: {
+          apiURL: "https://dolphin.view.over.network/TODO:", // TODO: API verification?
+          browserURL: "https://dolphin.view.over.network/",
         },
       },
     ],

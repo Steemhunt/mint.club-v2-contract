@@ -33,6 +33,7 @@ exports.getCreationFee = function (network) {
     avalancheFujiTestnet: 0n, // 0 ETH - testnet
     movementDevnet: 0n, // 0 MOVE - testnet
     cyberTestnet: 0n, // 0 ETH - testnet
+    overTestnet: 0n, // 0 ETH - testnet
   };
 
   if (CREATION_FEE[network] === undefined) {
@@ -64,6 +65,7 @@ exports.getWETHAddress = function (network) {
     avalancheFujiTestnet: "0xd00ae08403B9bbb9124bB305C09058E32C39A48c", // WAVAX
     movementDevnet: "0x4200000000000000000000000000000000000023", // FIXME: WMOVE?
     cyberTestnet: "0xf760686C2b40F7C526D040b979641293D2F55816", // WETH - TODO: double check
+    overTestnet: "0x2eFE8DBa880813F1d988208Ad35c184593559a9D", // Wrapped OVER
   };
 
   if (!WETH_ADDRESS[network]) {
@@ -96,6 +98,7 @@ exports.getMaxSteps = function (network) {
     avalancheFujiTestnet: 1000n, // ? gas limit
     movementDevnet: 1000n, // ? gas limit
     cyberTestnet: 1000n, // ? gas limit
+    overTestnet: 1000n, // ? gas limit
   };
   if (!MAX_STEPS[network]) {
     throw new Error(`MAX_STEPS is not defined for ${network}`);

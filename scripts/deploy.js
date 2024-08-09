@@ -115,6 +115,7 @@ npx hardhat compile && npx hardhat run --network blastSepolia scripts/deploy.js
 npx hardhat compile && npx hardhat run --network avalancheFujiTestnet scripts/deploy.js
 npx hardhat compile && npx hardhat run --network movementDevnet scripts/deploy.js
 npx hardhat compile && npx hardhat run --network cyberTestnet scripts/deploy.js
+npx hardhat compile && npx hardhat run --network overTestnet scripts/deploy.js
 
 npx hardhat compile && npx hardhat run --network optimisticEthereum scripts/deploy.js
 npx hardhat compile && npx hardhat run --network arbitrumOne scripts/deploy.js
