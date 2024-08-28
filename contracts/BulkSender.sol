@@ -8,7 +8,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 /**
  * @title BulkSender
  * @dev A contract for sending ERC20 / ERC1155 (id = 0) tokens to multiple addresses in a single transaction.
- * @notice With 30M block gas limit, the max number of recipient count was 4200 for ERC1155 / 5500 for ERC20
+ * @notice With 30M block gas limit, the max number of recipient count was 4200 for ERC1155 / 5500 for ERC20 / 3700 for Native
  */
 contract BulkSender is Ownable {
     error BulkSender__InvalidParams(string param);
@@ -131,6 +131,39 @@ contract BulkSender is Ownable {
         } // gas optimization
 
         emit Sent(token, totalAmount, recipientsCount);
+
+        _collectFee(totalFee);
+    }
+
+    /**
+     * @dev Sends native tokens to multiple addresses.
+     * @param recipients The addresses of the recipients.
+     * @param amounts The amounts of tokens to send to each recipient.
+     */
+    function sendNative(
+        address[] calldata recipients,
+        uint256[] calldata amounts
+    ) external payable {
+        uint256 totalAmount = _validateParams(recipients, amounts);
+        uint256 recipientsCount = recipients.length;
+        uint256 totalFee = feePerRecipient * recipientsCount;
+        uint256 totalAmountWithFee = totalAmount + totalFee;
+
+        if (msg.value != totalAmountWithFee)
+            revert BulkSender__InvalidFeeSent();
+
+        if (totalAmountWithFee > address(this).balance)
+            revert BulkSender__InsufficientTokenBalance();
+
+        // Send tokens to recipients
+        unchecked {
+            for (uint256 i = 0; i < recipientsCount; ++i) {
+                (bool success, ) = recipients[i].call{value: amounts[i]}("");
+                if (!success) revert BulkSender__FeeTransactionFailed();
+            }
+        } // gas optimization
+
+        emit Sent(address(0), totalAmount, recipientsCount);
 
         _collectFee(totalFee);
     }

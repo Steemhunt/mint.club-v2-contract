@@ -83,7 +83,7 @@ module.exports = {
       accounts: [process.env.MAINNET_PRIVATE_KEY],
     },
     klaytn: {
-      url: "https://1rpc.io/klay",
+      url: "https://public-en.node.kaia.io",
       chainId: 8217,
       accounts: [process.env.MAINNET_PRIVATE_KEY],
     },

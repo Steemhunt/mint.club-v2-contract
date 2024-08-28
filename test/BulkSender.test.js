@@ -190,6 +190,81 @@ describe("BulkSender", function () {
     });
   }); // Send ERC20
 
+  describe("Send Native", function () {
+    beforeEach(async function () {
+      this.TEST = {
+        recipients: [alice.address, bob.address, carol.address],
+        amounts: [wei("1"), wei("2"), wei("3")],
+      };
+      this.totalAmount = this.TEST.amounts.reduce((a, b) => a + b, 0n);
+      this.recipientsCount = BigInt(this.TEST.recipients.length);
+      this.totalFee = FEE_PER_RECIPIENT * this.recipientsCount;
+    });
+
+    it("should send native tokens to multiple recipients", async function () {
+      const initialBalances = await Promise.all(
+        this.TEST.recipients.map((r) => ethers.provider.getBalance(r))
+      );
+
+      await BulkSender.sendNative(this.TEST.recipients, this.TEST.amounts, {
+        value: this.totalAmount + this.totalFee,
+      });
+
+      for (let i = 0; i < this.TEST.recipients.length; i++) {
+        const newBalance = await ethers.provider.getBalance(
+          this.TEST.recipients[i]
+        );
+        expect(newBalance - initialBalances[i]).to.equal(this.TEST.amounts[i]);
+      }
+
+      expect(await ethers.provider.getBalance(BulkSender.target)).to.equal(0);
+    });
+
+    it("should revert if the sender does not send the valid fee", async function () {
+      await expect(
+        BulkSender.sendNative(this.TEST.recipients, this.TEST.amounts, {
+          value: this.totalAmount + this.totalFee - 1n,
+        })
+      ).to.be.revertedWithCustomError(BulkSender, "BulkSender__InvalidFeeSent");
+    });
+
+    it("should emit an event when sending native tokens", async function () {
+      await expect(
+        BulkSender.sendNative(this.TEST.recipients, this.TEST.amounts, {
+          value: this.totalAmount + this.totalFee,
+        })
+      )
+        .to.emit(BulkSender, "Sent")
+        .withArgs(NULL_ADDRESS, this.totalAmount, this.recipientsCount);
+    });
+
+    it.skip("should handle the maximum number of recipients correctly", async function () {
+      const maxRecipients = Array(3700).fill(alice.address);
+      const maxAmounts = Array(3700).fill(wei("1"));
+      const totalAmount = maxAmounts.reduce((a, b) => a + b, 0n);
+      const totalFee = FEE_PER_RECIPIENT * BigInt(maxRecipients.length);
+
+      await expect(
+        BulkSender.sendNative(maxRecipients, maxAmounts, {
+          value: totalAmount + totalFee,
+        })
+      )
+        .to.emit(BulkSender, "Sent")
+        .withArgs(NULL_ADDRESS, totalAmount, BigInt(maxRecipients.length));
+    });
+
+    it("should revert if the total amount is zero", async function () {
+      const zeroAmounts = Array(this.TEST.recipients.length).fill(0n);
+      await expect(
+        BulkSender.sendNative(this.TEST.recipients, zeroAmounts, {
+          value: this.totalFee,
+        })
+      )
+        .to.be.revertedWithCustomError(BulkSender, "BulkSender__InvalidParams")
+        .withArgs("ZERO_AMOUNT");
+    });
+  }); // Send Native
+
   describe("Send ERC1155", function () {
     beforeEach(async function () {
       this.TEST = {
