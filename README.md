@@ -82,7 +82,7 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       </tr>
       <tr>
          <td>MCV1_Wrapper</td>
-         <td colspan="6">0x60432191893c4F742205a2C834817a1891feC435 (BNB Chain only)</td>
+         <td colspan="6">0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724 (BNB Chain only)</td>
       </tr>
    </tbody>
 </table>
