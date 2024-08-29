@@ -36,8 +36,11 @@ contract MCV1_Wrapper {
         uint256 totalSupply = MCV2_ICommonToken(token).totalSupply();
 
         uint256 newTokenSupply = totalSupply + tokensToMint;
-        reserveAmount = (newTokenSupply ** 2 - totalSupply ** 2) / (2 * 1e18);
-        royalty = reserveAmount * 3 / 1000; // Buy tax of V1 is 0.3%
+        uint256 reserveToBond = (newTokenSupply ** 2 - totalSupply ** 2) / (2 * 1e18);
+
+        // Buy tax of V1 is 0.3% fixed
+        reserveAmount = (reserveToBond * 1000) / 997; // reserveToBond + royalty
+        royalty = reserveAmount - reserveToBond; // = reserveAmount * 3 / 1000
     }
 
     /**
