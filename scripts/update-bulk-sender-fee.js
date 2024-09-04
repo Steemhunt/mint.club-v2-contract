@@ -52,3 +52,4 @@ main().catch((error) => {
 // npx hardhat run --network cyber scripts/update-bulk-sender-fee.js
 // npx hardhat run --network ham scripts/update-bulk-sender-fee.js
 // npx hardhat run --network mainnet scripts/update-bulk-sender-fee.js
+

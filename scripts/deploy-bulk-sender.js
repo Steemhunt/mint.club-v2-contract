@@ -58,4 +58,6 @@ npx hardhat compile && npx hardhat run --network klaytn scripts/deploy-bulk-send
 npx hardhat compile && npx hardhat run --network cyber scripts/deploy-bulk-sender.js
 npx hardhat compile && npx hardhat run --network ham scripts/deploy-bulk-sender.js
 
+npx hardhat compile && npx hardhat run --network sepolia scripts/deploy-bulk-sender.js
+
 */

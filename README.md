@@ -393,6 +393,10 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
          <td>Ham</td>
          <td><a href="https://ham.calderaexplorer.xyz/address/0xa4021a8907197Df92341F1218B32E26b250F6798?tab=read_contract">0xa4021a8907197Df92341F1218B32E26b250F6798</a></td>
       </tr>
+      <tr>
+         <td>Sepolia</td>
+         <td><a href="https://sepolia.etherscan.io/address/0x7A6995CE649FA025a8792a375510d2B7C3c48581#code">0x7A6995CE649FA025a8792a375510d2B7C3c48581</a></td>
+      </tr>
    </tbody>
 </table>
 
