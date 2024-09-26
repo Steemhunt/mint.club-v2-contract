@@ -32,6 +32,12 @@ module.exports = {
     ],
   },
   networks: {
+    hardhat: {
+      forking: {
+        url: process.env.RPC_BSC,
+        blockNumber: 42558747,
+      },
+    },
     mainnet: {
       url: process.env.RPC_MAINNET,
       chainId: 1,
