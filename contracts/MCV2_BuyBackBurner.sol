@@ -36,8 +36,7 @@ contract MCV2_BuyBackBurner is Ownable {
     mapping(string => uint256) public premiumPrice;
     mapping(string => bool) public premiumEnabled;
 
-    uint256 public totalCreatorBurned;
-    uint256 public totalMintDaoBurned;
+    uint256 public premiumPurchasedCount;
     uint256 public totalGrantPurchased;
 
     event PurchasePremium(
@@ -118,7 +117,7 @@ contract MCV2_BuyBackBurner is Ownable {
             revert MCV2_BuyBackBurner__PremiumPurchaseFailed();
 
         premiumEnabled[key] = true;
-        totalCreatorBurned += burned;
+        premiumPurchasedCount++;
         IERC20(CREATOR).transfer(CREATOR, burned);
 
         emit PurchasePremium(
@@ -167,7 +166,6 @@ contract MCV2_BuyBackBurner is Ownable {
         if (burned < minMintDaoToBurn)
             revert MCV2_BuyBackBurner__SlippageExceeded();
 
-        totalMintDaoBurned += burned;
         IERC20(MINTDAO).transfer(MINTDAO, burned);
 
         emit BuyBackBurnMintDao(mintTokenAmount, burned, block.timestamp);
@@ -225,5 +223,19 @@ contract MCV2_BuyBackBurner is Ownable {
         uint256 balanceAfter = token.balanceOf(address(this));
 
         purchasedAmount = balanceAfter - balanceBefore;
+    }
+
+    /**
+     * @notice Get the total amount of CREATOR and MINTDAO tokens burned (including the amount before this contract was deployed)
+     * @return totalCreatorBurned The total amount of CREATOR tokens burned
+     * @return totalMintDaoBurned The total amount of MINTDAO tokens burned
+     */
+    function getBurnedStats()
+        external
+        view
+        returns (uint256 totalCreatorBurned, uint256 totalMintDaoBurned)
+    {
+        totalCreatorBurned = IERC20(CREATOR).balanceOf(CREATOR);
+        totalMintDaoBurned = IERC20(MINTDAO).balanceOf(MINTDAO);
     }
 }

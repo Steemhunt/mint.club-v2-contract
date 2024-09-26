@@ -142,6 +142,8 @@ describe("MCV2_BuyBackBurner", function () {
 
       describe("After purchase", async function () {
         beforeEach(async function () {
+          this.initialPremiumPurchasedCount =
+            await BuyBackBurner.premiumPurchasedCount();
           await BuyBackBurner.connect(burningAccount).purchasePremium(
             "abcd",
             burningAccount.address,
@@ -162,6 +164,12 @@ describe("MCV2_BuyBackBurner", function () {
         it("should burn the correct amount of CREATOR tokens", async function () {
           expect(await CreatorToken.balanceOf(CREATOR)).to.equal(
             this.initialCreatorBurned + this.creatorRequired
+          );
+        });
+
+        it("should increment premiumPurchasedCount", async function () {
+          expect(await BuyBackBurner.premiumPurchasedCount()).to.equal(
+            this.initialPremiumPurchasedCount + 1n
           );
         });
       }); // After purchase
@@ -246,6 +254,9 @@ describe("MCV2_BuyBackBurner", function () {
       this.initialMintTokenBalance = await MintToken.balanceOf(
         burningAccount.address
       );
+
+      this.initialTotalGrantPurchased =
+        await BuyBackBurner.totalGrantPurchased();
     });
 
     describe("Normal flow", function () {
@@ -265,6 +276,12 @@ describe("MCV2_BuyBackBurner", function () {
       it("should deduct MINT tokens from the purchasing account", async function () {
         expect(await MintToken.balanceOf(burningAccount.address)).to.equal(
           this.initialMintTokenBalance - this.mintAmount
+        );
+      });
+
+      it("should increase totalGrantPurchased", async function () {
+        expect(await BuyBackBurner.totalGrantPurchased()).to.equal(
+          this.initialTotalGrantPurchased + this.estimatedGrantAmount
         );
       });
     }); // Normal flow
@@ -382,4 +399,16 @@ describe("MCV2_BuyBackBurner", function () {
       });
     }); // Edge cases
   }); // Buy back and burn MINTDAO
+
+  describe.only("Utility functions", function () {
+    it("should return the total amount of CREATOR and MINTDAO tokens burned", async function () {
+      const creatorBalance = await CreatorToken.balanceOf(CREATOR);
+      const mintDaoBalance = await MintDaoToken.balanceOf(MINTDAO);
+      const { totalCreatorBurned, totalMintDaoBurned } =
+        await BuyBackBurner.getBurnedStats();
+
+      expect(totalCreatorBurned).to.equal(creatorBalance);
+      expect(totalMintDaoBurned).to.equal(mintDaoBalance);
+    });
+  }); // Utility functions
 }); // MCV2_BuyBackBurner
