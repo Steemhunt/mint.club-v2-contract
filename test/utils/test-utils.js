@@ -26,6 +26,7 @@ exports.getCreationFee = function (network) {
     klaytn: 8n * 10n ** 18n, // 8 KLAY (~$2)
     cyber: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     ham: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
+    apechain: 10n ** 18n, // 1.0 APE (~$1.6)
     // Testnets
     sepolia: 7n * 10n ** 14n, // 0.007 ETH - testnet
     baseSepolia: 0n, // 0 ETH - testnet
@@ -58,6 +59,7 @@ exports.getWETHAddress = function (network) {
     klaytn: "0x19Aac5f612f524B754CA7e7c41cbFa2E981A4432", // WKLAY - (ref: https://hrl.sh/g6ccv7)
     cyber: "0x4200000000000000000000000000000000000006", // WETH
     ham: "0x4200000000000000000000000000000000000006", // WETH
+    apechain: "0x48b62137EdfA95a428D35C09E44256a739F6B557", // WAPE
     // Testnets
     sepolia: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14", // WETH
     baseSepolia: "0x4200000000000000000000000000000000000006", // WETH
@@ -91,6 +93,7 @@ exports.getMaxSteps = function (network) {
     klaytn: 1000n, // 100M execution cost (ref: https://hrl.sh/eylozo)
     cyber: 1000n, // 30M gas limit
     ham: 1000n, // 30M gas limit
+    apechain: 1000n, // 1T gas limit??
     // Testnets
     sepolia: 1000n, // 30M gas limit
     baseSepolia: 1000n, // 30M gas limit

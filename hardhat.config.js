@@ -103,6 +103,11 @@ module.exports = {
       chainId: 5112,
       accounts: [process.env.MAINNET_PRIVATE_KEY],
     },
+    apechain: {
+      url: "https://apechain.calderachain.xyz/http",
+      chainId: 33139,
+      accounts: [process.env.MAINNET_PRIVATE_KEY],
+    },
     sepolia: {
       url: process.env.RPC_SEPOLIA,
       chainId: 11155111,
@@ -146,7 +151,7 @@ module.exports = {
     coinmarketcap: null, // process.env.COIN_MARKET_CAP_API
   },
   sourcify: {
-    enabled: true,
+    enabled: false,
   },
   etherscan: {
     // network list: npx hardhat verify --list-networks
@@ -164,6 +169,7 @@ module.exports = {
       klaytn: "unnecessary",
       cyber: "unnecessary",
       ham: "unnecessary",
+      apechain: process.env.APESCAN_API_KEY,
       sepolia: process.env.ETHERSCAN_API_KEY,
       baseSepolia: process.env.BASESCAN_API_KEY,
       blastSepolia: "unnecessary",
@@ -219,6 +225,14 @@ module.exports = {
         urls: {
           apiURL: "https://ham.calderaexplorer.xyz/api/v2/TODO:", // TODO: API verification?
           browserURL: "https://ham.calderaexplorer.xyz",
+        },
+      },
+      {
+        network: "apechain",
+        chainId: 33139,
+        urls: {
+          apiURL: "https://api.apescan.io/api",
+          browserURL: "https://apescan.io/",
         },
       },
       {
