@@ -132,5 +132,6 @@ npx hardhat compile && npx hardhat run --network klaytn scripts/deploy.js
 npx hardhat compile && npx hardhat run --network cyber scripts/deploy.js
 npx hardhat compile && npx hardhat run --network ham scripts/deploy.js
 npx hardhat compile && npx hardhat run --network apechain scripts/deploy.js
+npx hardhat compile && npx hardhat run --network shibarium scripts/deploy.js
 
 */

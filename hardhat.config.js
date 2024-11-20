@@ -108,6 +108,12 @@ module.exports = {
       chainId: 33139,
       accounts: [process.env.MAINNET_PRIVATE_KEY],
     },
+    shibarium: {
+      url: "https://www.shibrpc.com",
+      chainId: 109,
+      accounts: [process.env.MAINNET_PRIVATE_KEY],
+    },
+    // Testnets
     sepolia: {
       url: process.env.RPC_SEPOLIA,
       chainId: 11155111,
@@ -176,6 +182,7 @@ module.exports = {
       avalancheFujiTestnet: "unnecessary",
       cyberTestnet: "unnecessary",
       overTestnet: "unnecessary",
+      shibarium: "unnecessary",
     },
     customChains: [
       {
@@ -233,6 +240,14 @@ module.exports = {
         urls: {
           apiURL: "https://api.apescan.io/api",
           browserURL: "https://apescan.io/",
+        },
+      },
+      {
+        network: "shibarium",
+        chainId: 109,
+        urls: {
+          apiURL: "https://www.shibariumscan.io/api", // TODO: API verification?
+          browserURL: "https://www.shibariumscan.io/",
         },
       },
       {

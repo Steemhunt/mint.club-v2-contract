@@ -196,7 +196,8 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
          <th><a href="https://klaytnscope.com/">Klaytn</a></th>
          <th><a href="https://cyberscan.co/">Cyber</a></th>
          <th><a href="https://ham.calderaexplorer.xyz/">Ham</a></th>
-         <th><a href="https://apescan.io/">APE</a></th>
+         <th><a href="https://apescan.io/">APEChain</a></th>
+         <th><a href="https://shibariumscan.io/">Shibarium</a></th>
       </tr>
    </thead>
    <tbody>
