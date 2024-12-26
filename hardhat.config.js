@@ -149,6 +149,11 @@ module.exports = {
       chainId: 541762,
       accounts: [process.env.TEST_PRIVATE_KEY],
     },
+    puppynet: {
+      url: "https://puppynet.shibrpc.com",
+      chainId: 157,
+      accounts: [process.env.TEST_PRIVATE_KEY],
+    },
   },
   gasReporter: {
     enabled: true,
@@ -183,6 +188,7 @@ module.exports = {
       cyberTestnet: "unnecessary",
       overTestnet: "unnecessary",
       shibarium: "unnecessary",
+      puppynet: "unnecessary",
     },
     customChains: [
       {
@@ -289,6 +295,14 @@ module.exports = {
         urls: {
           apiURL: "https://dolphin.view.over.network/TODO:", // TODO: API verification?
           browserURL: "https://dolphin.view.over.network/",
+        },
+      },
+      {
+        network: "puppynet",
+        chainId: 157,
+        urls: {
+          apiURL: "https://puppyscan.shib.io/TODO:", // TODO: API verification?
+          browserURL: "https://puppyscan.shib.io/",
         },
       },
     ],
