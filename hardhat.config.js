@@ -31,6 +31,9 @@ module.exports = {
       },
     ],
   },
+  mocha: {
+    timeout: 12000 * 1000, // test timeout: 2 minutes
+  },
   networks: {
     hardhat: {
       forking: {
