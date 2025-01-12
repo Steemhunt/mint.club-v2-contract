@@ -116,6 +116,11 @@ module.exports = {
       chainId: 109,
       accounts: [process.env.MAINNET_PRIVATE_KEY],
     },
+    hashkey: {
+      url: "https://mainnet.hsk.xyz",
+      chainId: 177,
+      accounts: [process.env.MAINNET_PRIVATE_KEY],
+    },
     // Testnets
     sepolia: {
       url: process.env.RPC_SEPOLIA,
@@ -192,6 +197,7 @@ module.exports = {
       overTestnet: "unnecessary",
       shibarium: "unnecessary",
       puppynet: "unnecessary",
+      hashkey: "unnecessary",
     },
     customChains: [
       {
@@ -257,6 +263,14 @@ module.exports = {
         urls: {
           apiURL: "https://www.shibariumscan.io/api", // TODO: API verification?
           browserURL: "https://www.shibariumscan.io/",
+        },
+      },
+      {
+        network: "hashkey",
+        chainId: 177,
+        urls: {
+          apiURL: "https://explorer.hsk.xyz/api", // TODO: API verification?
+          browserURL: "https://explorer.hsk.xyz",
         },
       },
       {

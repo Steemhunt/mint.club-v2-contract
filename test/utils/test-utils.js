@@ -28,6 +28,7 @@ exports.getCreationFee = function (network) {
     ham: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     apechain: 10n ** 18n, // 1.0 APE (~$1.6)
     shibarium: 5n * 10n ** 18n, // 5 BONE (~$2)
+    hashkey: 10n ** 18n, // 1 HSK (~$2)
     // Testnets
     sepolia: 7n * 10n ** 14n, // 0.007 ETH - testnet
     baseSepolia: 0n, // 0 ETH - testnet
@@ -63,6 +64,7 @@ exports.getWETHAddress = function (network) {
     ham: "0x4200000000000000000000000000000000000006", // WETH
     apechain: "0x48b62137EdfA95a428D35C09E44256a739F6B557", // WAPE
     shibarium: "0xC76F4c819D820369Fb2d7C1531aB3Bb18e6fE8d8", // WBONE
+    hashkey: "0xB210D2120d57b758EE163cFfb43e73728c471Cf1", // WHSK
     // Testnets
     sepolia: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14", // WETH
     baseSepolia: "0x4200000000000000000000000000000000000006", // WETH
@@ -99,6 +101,7 @@ exports.getMaxSteps = function (network) {
     ham: 1000n, // 30M gas limit
     apechain: 1000n, // 1T gas limit??
     shibarium: 1000n, // 20M gas limit
+    hashkey: 1000n, // 30M gas limit
     // Testnets
     sepolia: 1000n, // 30M gas limit
     baseSepolia: 1000n, // 30M gas limit

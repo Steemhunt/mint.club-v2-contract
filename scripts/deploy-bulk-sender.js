@@ -42,6 +42,7 @@ main()
   });
 
 /* Deploy script
+npx hardhat compile && npx hardhat run --network sepolia scripts/deploy-bulk-sender.js
 
 npx hardhat compile && npx hardhat run --network base scripts/deploy-bulk-sender.js
 npx hardhat compile && npx hardhat run --network optimisticEthereum scripts/deploy-bulk-sender.js
@@ -59,7 +60,6 @@ npx hardhat compile && npx hardhat run --network cyber scripts/deploy-bulk-sende
 npx hardhat compile && npx hardhat run --network ham scripts/deploy-bulk-sender.js
 npx hardhat compile && npx hardhat run --network apechain scripts/deploy-bulk-sender.js
 npx hardhat compile && npx hardhat run --network shibarium scripts/deploy-bulk-sender.js
-
-npx hardhat compile && npx hardhat run --network sepolia scripts/deploy-bulk-sender.js
+npx hardhat compile && npx hardhat run --network hashkey scripts/deploy-bulk-sender.js
 
 */

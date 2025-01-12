@@ -198,32 +198,33 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
          <th><a href="https://ham.calderaexplorer.xyz/">Ham</a></th>
          <th><a href="https://apescan.io/">APEChain</a></th>
          <th><a href="https://shibariumscan.io/">Shibarium</a></th>
+         <th><a href="https://explorer.hsk.xyz/">HashKey</a></th>
       </tr>
    </thead>
    <tbody>
       <tr>
          <td>MCV2_Token</td>
-         <td colspan="6">0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df</td>
+         <td colspan="7">0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df</td>
       </tr>
       <tr>
          <td>MCV2_MultiToken</td>
-         <td colspan="6">0x6c61918eECcC306D35247338FDcf025af0f6120A</td>
+         <td colspan="7">0x6c61918eECcC306D35247338FDcf025af0f6120A</td>
       </tr>
       <tr>
          <td>MCV2_Bond</td>
-         <td colspan="6">0xc5a076cad94176c2996B32d8466Be1cE757FAa27</td>
+         <td colspan="7">0xc5a076cad94176c2996B32d8466Be1cE757FAa27</td>
       </tr>
       <tr>
          <td>MCV2_ZapV1</td>
-         <td colspan="6">0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa</td>
+         <td colspan="7">0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa</td>
       </tr>
       <tr>
          <td>Locker</td>
-         <td colspan="6">0xA3dCf3Ca587D9929d540868c924f208726DC9aB6</td>
+         <td colspan="7">0xA3dCf3Ca587D9929d540868c924f208726DC9aB6</td>
       </tr>
       <tr>
          <td>MerkleDistributor</td>
-         <td colspan="6">0x3bc6B601196752497a68B2625DB4f2205C3b150b</td>
+         <td colspan="7">0x3bc6B601196752497a68B2625DB4f2205C3b150b</td>
       </tr>
    </tbody>
 </table>
@@ -403,6 +404,10 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       <tr>
          <td>Shibarium</td>
          <td><a href="https://www.shibariumscan.io/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4?tab=contract">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</a></td>
+      </tr>
+      <tr>
+         <td>HashKey</td>
+         <td><a href="https://explorer.hsk.xyz/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4?tab=contract">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</a></td>
       </tr>
       <tr>
          <td>Sepolia</td>
