@@ -269,7 +269,7 @@ module.exports = {
         network: "hashkey",
         chainId: 177,
         urls: {
-          apiURL: "https://explorer.hsk.xyz/api", // TODO: API verification?
+          apiURL: "https://explorer.hsk.xyz/api",
           browserURL: "https://explorer.hsk.xyz",
         },
       },
