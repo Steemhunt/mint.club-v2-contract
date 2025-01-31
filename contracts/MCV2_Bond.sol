@@ -13,6 +13,10 @@ import {MCV2_ICommonToken} from "./interfaces/MCV2_ICommonToken.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
+// FIXME:
+// zksync is not compatible with OZ's cloneDeterministic() function
+// ref: https://docs.zksync.io/zksync-protocol/differences/evm-instructions
+
 /**
  * @title MintClub Bond V2
  * @dev Providing liquidity for MintClubV2 tokens with a bonding curve.
@@ -69,13 +73,38 @@ contract MCV2_Bond is MCV2_Royalty {
         uint128 price; // multiplied by 10**18 for decimals
     }
 
-    mapping (address => Bond) public tokenBond;
+    mapping(address => Bond) public tokenBond;
     address[] public tokens; // Array of all created tokens
 
-    event TokenCreated(address indexed token, string name, string symbol, address indexed reserveToken);
-    event MultiTokenCreated(address indexed token, string name, string symbol, string uri, address indexed reserveToken);
-    event Mint(address indexed token, address indexed user, address receiver, uint256 amountMinted, address indexed reserveToken, uint256 reserveAmount);
-    event Burn(address indexed token, address indexed user, address receiver, uint256 amountBurned, address indexed reserveToken, uint256 refundAmount);
+    event TokenCreated(
+        address indexed token,
+        string name,
+        string symbol,
+        address indexed reserveToken
+    );
+    event MultiTokenCreated(
+        address indexed token,
+        string name,
+        string symbol,
+        string uri,
+        address indexed reserveToken
+    );
+    event Mint(
+        address indexed token,
+        address indexed user,
+        address receiver,
+        uint256 amountMinted,
+        address indexed reserveToken,
+        uint256 reserveAmount
+    );
+    event Burn(
+        address indexed token,
+        address indexed user,
+        address receiver,
+        uint256 amountBurned,
+        address indexed reserveToken,
+        uint256 refundAmount
+    );
     event BondCreatorUpdated(address indexed token, address indexed creator);
 
     // MARK: - Constructor
@@ -94,10 +123,16 @@ contract MCV2_Bond is MCV2_Royalty {
         uint256 creationFee_,
         uint256 maxSteps
     ) MCV2_Royalty(protocolBeneficiary_, creationFee_, msg.sender) {
-        if (tokenImplementation == address(0)) revert MCV2_Bond__InvalidConstructorParams('tokenImplementation');
-        if (multiTokenImplementation == address(0)) revert MCV2_Bond__InvalidConstructorParams('multiTokenImplementation');
-        if (protocolBeneficiary_ == address(0)) revert MCV2_Bond__InvalidConstructorParams('protocolBeneficiary');
-        if (maxSteps == 0) revert MCV2_Bond__InvalidConstructorParams('maxSteps');
+        if (tokenImplementation == address(0))
+            revert MCV2_Bond__InvalidConstructorParams("tokenImplementation");
+        if (multiTokenImplementation == address(0))
+            revert MCV2_Bond__InvalidConstructorParams(
+                "multiTokenImplementation"
+            );
+        if (protocolBeneficiary_ == address(0))
+            revert MCV2_Bond__InvalidConstructorParams("protocolBeneficiary");
+        if (maxSteps == 0)
+            revert MCV2_Bond__InvalidConstructorParams("maxSteps");
 
         TOKEN_IMPLEMENTATION = tokenImplementation;
         MULTI_TOKEN_IMPLEMENTATION = multiTokenImplementation;
@@ -105,7 +140,8 @@ contract MCV2_Bond is MCV2_Royalty {
     }
 
     modifier _checkBondExists(address token) {
-        if(tokenBond[token].reserveToken == address(0)) revert MCV2_Bond__TokenNotFound();
+        if (tokenBond[token].reserveToken == address(0))
+            revert MCV2_Bond__TokenNotFound();
         _;
     }
 
@@ -136,19 +172,26 @@ contract MCV2_Bond is MCV2_Royalty {
      * @dev Validates the token creation parameters.
      * @param tp The token parameters.
      */
-    function _validateTokenParams(TokenParams calldata tp) pure private {
-        if (bytes(tp.name).length == 0) revert MCV2_Bond__InvalidTokenCreationParams('name');
-        if (bytes(tp.symbol).length == 0) revert MCV2_Bond__InvalidTokenCreationParams('symbol');
+    function _validateTokenParams(TokenParams calldata tp) private pure {
+        if (bytes(tp.name).length == 0)
+            revert MCV2_Bond__InvalidTokenCreationParams("name");
+        if (bytes(tp.symbol).length == 0)
+            revert MCV2_Bond__InvalidTokenCreationParams("symbol");
     }
 
     /**
      * @dev Validates the multi-token creation parameters.
      * @param tp The multi-token parameters.
      */
-    function _validateMultiTokenParams(MultiTokenParams calldata tp) pure private {
-        if (bytes(tp.name).length == 0) revert MCV2_Bond__InvalidTokenCreationParams('name');
-        if (bytes(tp.symbol).length == 0) revert MCV2_Bond__InvalidTokenCreationParams('symbol');
-        if (bytes(tp.uri).length == 0) revert MCV2_Bond__InvalidTokenCreationParams('uri');
+    function _validateMultiTokenParams(
+        MultiTokenParams calldata tp
+    ) private pure {
+        if (bytes(tp.name).length == 0)
+            revert MCV2_Bond__InvalidTokenCreationParams("name");
+        if (bytes(tp.symbol).length == 0)
+            revert MCV2_Bond__InvalidTokenCreationParams("symbol");
+        if (bytes(tp.uri).length == 0)
+            revert MCV2_Bond__InvalidTokenCreationParams("uri");
     }
 
     /**
@@ -158,8 +201,14 @@ contract MCV2_Bond is MCV2_Royalty {
      * @param minLength The minimum length of the return data.
      * @return A boolean indicating whether the method exists.
      */
-    function _checkMethodExists(address implementation, string memory method, uint256 minLength) private view returns (bool) {
-        (bool success, bytes memory data) = implementation.staticcall(abi.encodeWithSignature(method));
+    function _checkMethodExists(
+        address implementation,
+        string memory method,
+        uint256 minLength
+    ) private view returns (bool) {
+        (bool success, bytes memory data) = implementation.staticcall(
+            abi.encodeWithSignature(method)
+        );
         return success && data.length > minLength;
     }
 
@@ -167,22 +216,32 @@ contract MCV2_Bond is MCV2_Royalty {
      * @dev Validates the bond parameters.
      * @param bp The bond parameters.
      */
-    function _validateBondParams(BondParams calldata bp) view private {
-        if (bp.mintRoyalty > maxRoyaltyRange) revert MCV2_Bond__InvalidTokenCreationParams('mintRoyalty');
-        if (bp.burnRoyalty > maxRoyaltyRange) revert MCV2_Bond__InvalidTokenCreationParams('burnRoyalty');
+    function _validateBondParams(BondParams calldata bp) private view {
+        if (bp.mintRoyalty > maxRoyaltyRange)
+            revert MCV2_Bond__InvalidTokenCreationParams("mintRoyalty");
+        if (bp.burnRoyalty > maxRoyaltyRange)
+            revert MCV2_Bond__InvalidTokenCreationParams("burnRoyalty");
 
         // Check if the reserveToken is compatible with IERC20Metadata
         address r = bp.reserveToken;
-        if (r == address(0)) revert MCV2_Bond__InvalidTokenCreationParams('reserveToken');
-        if(!_checkMethodExists(r, "decimals()", MIN_UINT8_LENGTH)) revert MCV2_Bond__InvalidReserveToken('decimals');
-        if(!_checkMethodExists(r, "name()", MIN_STRING_LENGTH)) revert MCV2_Bond__InvalidReserveToken('name');
-        if(!_checkMethodExists(r, "symbol()", MIN_STRING_LENGTH)) revert MCV2_Bond__InvalidReserveToken('symbol');
+        if (r == address(0))
+            revert MCV2_Bond__InvalidTokenCreationParams("reserveToken");
+        if (!_checkMethodExists(r, "decimals()", MIN_UINT8_LENGTH))
+            revert MCV2_Bond__InvalidReserveToken("decimals");
+        if (!_checkMethodExists(r, "name()", MIN_STRING_LENGTH))
+            revert MCV2_Bond__InvalidReserveToken("name");
+        if (!_checkMethodExists(r, "symbol()", MIN_STRING_LENGTH))
+            revert MCV2_Bond__InvalidReserveToken("symbol");
 
-        if (bp.maxSupply == 0) revert MCV2_Bond__InvalidTokenCreationParams('maxSupply');
-        if (bp.stepRanges.length == 0 || bp.stepRanges.length > MAX_STEPS) revert MCV2_Bond__InvalidStepParams('INVALID_STEP_LENGTH');
-        if (bp.stepRanges.length != bp.stepPrices.length) revert MCV2_Bond__InvalidStepParams('STEP_LENGTH_DO_NOT_MATCH');
+        if (bp.maxSupply == 0)
+            revert MCV2_Bond__InvalidTokenCreationParams("maxSupply");
+        if (bp.stepRanges.length == 0 || bp.stepRanges.length > MAX_STEPS)
+            revert MCV2_Bond__InvalidStepParams("INVALID_STEP_LENGTH");
+        if (bp.stepRanges.length != bp.stepPrices.length)
+            revert MCV2_Bond__InvalidStepParams("STEP_LENGTH_DO_NOT_MATCH");
         // Last value or the rangeTo must be the same as the maxSupply
-        if (bp.stepRanges[bp.stepRanges.length - 1] != bp.maxSupply) revert MCV2_Bond__InvalidStepParams('MAX_SUPPLY_MISMATCH');
+        if (bp.stepRanges[bp.stepRanges.length - 1] != bp.maxSupply)
+            revert MCV2_Bond__InvalidStepParams("MAX_SUPPLY_MISMATCH");
     }
 
     /**
@@ -199,29 +258,35 @@ contract MCV2_Bond is MCV2_Royalty {
         bond.createdAt = uint40(block.timestamp);
         bond.reserveToken = bp.reserveToken;
 
-        uint256 multiFactor = 10**IERC20Metadata(token).decimals();
+        uint256 multiFactor = 10 ** IERC20Metadata(token).decimals();
 
         for (uint256 i = 0; i < bp.stepRanges.length; ++i) {
             uint256 stepRange = bp.stepRanges[i];
             uint256 stepPrice = bp.stepPrices[i];
 
             if (stepRange == 0) {
-                revert MCV2_Bond__InvalidStepParams('STEP_CANNOT_BE_ZERO');
+                revert MCV2_Bond__InvalidStepParams("STEP_CANNOT_BE_ZERO");
             } else if (stepPrice > 0 && stepRange * stepPrice < multiFactor) {
                 // To minimize rounding errors, the product of the range and price must be at least multiFactor (1e18 for ERC20, 1 for ERC1155).
-                revert MCV2_Bond__InvalidStepParams('STEP_RANG_OR_PRICE_TOO_SMALL');
+                revert MCV2_Bond__InvalidStepParams(
+                    "STEP_RANG_OR_PRICE_TOO_SMALL"
+                );
             }
 
             // Ranges and prices must be strictly increasing
             if (i > 0) {
-                if (stepRange <= bp.stepRanges[i - 1]) revert MCV2_Bond__InvalidStepParams('DECREASING_RANGE');
-                if (stepPrice <= bp.stepPrices[i - 1]) revert MCV2_Bond__InvalidStepParams('DECREASING_PRICE');
+                if (stepRange <= bp.stepRanges[i - 1])
+                    revert MCV2_Bond__InvalidStepParams("DECREASING_RANGE");
+                if (stepPrice <= bp.stepPrices[i - 1])
+                    revert MCV2_Bond__InvalidStepParams("DECREASING_PRICE");
             }
 
-            bond.steps.push(BondStep({
-                rangeTo: uint128(stepRange),
-                price: uint128(stepPrice)
-            }));
+            bond.steps.push(
+                BondStep({
+                    rangeTo: uint128(stepRange),
+                    price: uint128(stepPrice)
+                })
+            );
         }
     }
 
@@ -231,14 +296,20 @@ contract MCV2_Bond is MCV2_Royalty {
      * @param symbol The symbol of the token.
      * @return The address of the cloned token contract.
      */
-    function _clone(address implementation, string calldata symbol) private returns (address) {
+    function _clone(
+        address implementation,
+        string calldata symbol
+    ) private returns (address) {
         // Uniqueness of symbols on this network is guaranteed by the deterministic contract address
         bytes32 salt = keccak256(abi.encodePacked(address(this), symbol));
 
         // NOTE: This check might not be necessary as the clone would fail with an 'ERC1167: create2 failed'
         // error anyway, and the collision is nearly impossible (one in 2^160).
         // However, we retain this check to provide a clearer error message, albeit at the expense of an additional gas cost.
-        address predicted = Clones.predictDeterministicAddress(implementation, salt);
+        address predicted = Clones.predictDeterministicAddress(
+            implementation,
+            salt
+        );
         if (exists(predicted)) revert MCV2_Bond__TokenSymbolAlreadyExists();
 
         return Clones.cloneDeterministic(implementation, salt);
@@ -250,7 +321,10 @@ contract MCV2_Bond is MCV2_Royalty {
      * @param bp The bond parameters.
      * @return The address of the newly created token.
      */
-    function createToken(TokenParams calldata tp, BondParams calldata bp) external payable returns (address) {
+    function createToken(
+        TokenParams calldata tp,
+        BondParams calldata bp
+    ) external payable returns (address) {
         if (msg.value != creationFee) revert MCV2_Bond__InvalidCreationFee();
         _validateTokenParams(tp);
         _validateBondParams(bp);
@@ -271,7 +345,9 @@ contract MCV2_Bond is MCV2_Royalty {
 
         // Collect creation fee if exists
         if (creationFee > 0) {
-            (bool success, ) = payable(protocolBeneficiary).call{value: creationFee}("");
+            (bool success, ) = payable(protocolBeneficiary).call{
+                value: creationFee
+            }("");
             if (!success) revert MCV2_Bond__CreationFeeTransactionFailed();
         }
 
@@ -284,7 +360,10 @@ contract MCV2_Bond is MCV2_Royalty {
      * @param bp The bond parameters.
      * @return The address of the newly created multi-token.
      */
-    function createMultiToken(MultiTokenParams calldata tp, BondParams calldata bp) external payable returns (address) {
+    function createMultiToken(
+        MultiTokenParams calldata tp,
+        BondParams calldata bp
+    ) external payable returns (address) {
         if (msg.value != creationFee) revert MCV2_Bond__InvalidCreationFee();
         _validateMultiTokenParams(tp);
         _validateBondParams(bp);
@@ -296,7 +375,13 @@ contract MCV2_Bond is MCV2_Royalty {
 
         _setBond(token, bp);
 
-        emit MultiTokenCreated(token, tp.name, tp.symbol, tp.uri, bp.reserveToken);
+        emit MultiTokenCreated(
+            token,
+            tp.name,
+            tp.symbol,
+            tp.uri,
+            bp.reserveToken
+        );
 
         // Send free tokens to the creator if a free minting range exists
         if (bp.stepPrices[0] == 0) {
@@ -305,7 +390,9 @@ contract MCV2_Bond is MCV2_Royalty {
 
         // Collect creation fee if exists
         if (creationFee > 0) {
-            (bool success, ) = payable(protocolBeneficiary).call{value: creationFee}("");
+            (bool success, ) = payable(protocolBeneficiary).call{
+                value: creationFee
+            }("");
             if (!success) revert MCV2_Bond__CreationFeeTransactionFailed();
         }
 
@@ -338,9 +425,12 @@ contract MCV2_Bond is MCV2_Royalty {
      * @param currentSupply The current supply of the token.
      * @return The index of the current step.
      */
-    function getCurrentStep(address token, uint256 currentSupply) internal view returns (uint256) {
+    function getCurrentStep(
+        address token,
+        uint256 currentSupply
+    ) internal view returns (uint256) {
         Bond storage bond = tokenBond[token];
-        for(uint256 i = 0; i < bond.steps.length; ++i) {
+        for (uint256 i = 0; i < bond.steps.length; ++i) {
             if (currentSupply <= bond.steps[i].rangeTo) {
                 return i;
             }
@@ -355,7 +445,13 @@ contract MCV2_Bond is MCV2_Royalty {
      * @return reserveAmount The reserve amount required to mint the specified number of tokens.
      * @return royalty The royalty amount to be added to the reserve amount.
      */
-    function getReserveForToken(address token, uint256 tokensToMint) public view _checkBondExists(token)
+    function getReserveForToken(
+        address token,
+        uint256 tokensToMint
+    )
+        public
+        view
+        _checkBondExists(token)
         returns (uint256 reserveAmount, uint256 royalty)
     {
         if (tokensToMint == 0) revert MCV2_Bond__InvalidTokenAmount();
@@ -370,24 +466,34 @@ contract MCV2_Bond is MCV2_Royalty {
 
         if (newSupply > maxSupply(token)) revert MCV2_Bond__ExceedMaxSupply();
 
-        uint256 multiFactor = 10**t.decimals(); // 1 or 18
+        uint256 multiFactor = 10 ** t.decimals(); // 1 or 18
         uint256 tokensLeft = tokensToMint;
         uint256 reserveToBond = 0;
         uint256 supplyLeft;
-        for (uint256 i = getCurrentStep(token, currentSupply); i < steps.length; ++i) {
+        for (
+            uint256 i = getCurrentStep(token, currentSupply);
+            i < steps.length;
+            ++i
+        ) {
             BondStep memory step = steps[i];
             supplyLeft = step.rangeTo - currentSupply;
 
             if (supplyLeft < tokensLeft) {
-                if(supplyLeft == 0) continue;
+                if (supplyLeft == 0) continue;
 
                 // ensure reserve is calculated with ceiling
-                reserveToBond += Math.ceilDiv(supplyLeft * step.price, multiFactor);
+                reserveToBond += Math.ceilDiv(
+                    supplyLeft * step.price,
+                    multiFactor
+                );
                 currentSupply += supplyLeft;
                 tokensLeft -= supplyLeft;
             } else {
                 // ensure reserve is calculated with ceiling
-                reserveToBond += Math.ceilDiv(tokensLeft * step.price, multiFactor);
+                reserveToBond += Math.ceilDiv(
+                    tokensLeft * step.price,
+                    multiFactor
+                );
                 tokensLeft = 0;
                 break;
             }
@@ -395,7 +501,8 @@ contract MCV2_Bond is MCV2_Royalty {
 
         // tokensLeft > 0 -> can never happen
         // reserveToBond == 0 -> can happen if a user tries to mint within the free minting range, which is prohibited by design.
-        if (reserveToBond == 0 || tokensLeft > 0) revert MCV2_Bond__InvalidTokenAmount();
+        if (reserveToBond == 0 || tokensLeft > 0)
+            revert MCV2_Bond__InvalidTokenAmount();
 
         royalty = _getRoyalty(reserveToBond, bond.mintRoyalty);
         reserveAmount = reserveToBond + royalty;
@@ -408,11 +515,20 @@ contract MCV2_Bond is MCV2_Royalty {
      * @param maxReserveAmount The maximum reserve amount allowed for the minting operation.
      * @param receiver The address to receive the minted tokens.
      */
-    function mint(address token, uint256 tokensToMint, uint256 maxReserveAmount, address receiver) external returns (uint256) {
+    function mint(
+        address token,
+        uint256 tokensToMint,
+        uint256 maxReserveAmount,
+        address receiver
+    ) external returns (uint256) {
         if (receiver == address(0)) revert MCV2_Bond__InvalidReceiver();
 
-        (uint256 reserveAmount, uint256 royalty) = getReserveForToken(token, tokensToMint);
-        if (reserveAmount > maxReserveAmount) revert MCV2_Bond__SlippageLimitExceeded();
+        (uint256 reserveAmount, uint256 royalty) = getReserveForToken(
+            token,
+            tokensToMint
+        );
+        if (reserveAmount > maxReserveAmount)
+            revert MCV2_Bond__SlippageLimitExceeded();
 
         Bond storage bond = tokenBond[token];
         address user = _msgSender();
@@ -428,7 +544,14 @@ contract MCV2_Bond is MCV2_Royalty {
         // Transfer reserve tokens from the user
         reserveToken.safeTransferFrom(user, address(this), reserveAmount);
 
-        emit Mint(token, user, receiver, tokensToMint, bond.reserveToken, reserveAmount);
+        emit Mint(
+            token,
+            user,
+            receiver,
+            tokensToMint,
+            bond.reserveToken,
+            reserveAmount
+        );
 
         return reserveAmount;
     }
@@ -442,7 +565,13 @@ contract MCV2_Bond is MCV2_Royalty {
      * @return refundAmount The amount to be refunded.
      * @return royalty The royalty amount.
      */
-    function getRefundForTokens(address token, uint256 tokensToBurn) public view _checkBondExists(token)
+    function getRefundForTokens(
+        address token,
+        uint256 tokensToBurn
+    )
+        public
+        view
+        _checkBondExists(token)
         returns (uint256 refundAmount, uint256 royalty)
     {
         if (tokensToBurn == 0) revert MCV2_Bond__InvalidTokenAmount();
@@ -456,15 +585,20 @@ contract MCV2_Bond is MCV2_Royalty {
 
         if (tokensToBurn > currentSupply) revert MCV2_Bond__ExceedTotalSupply();
 
-        uint256 multiFactor = 10**t.decimals();
+        uint256 multiFactor = 10 ** t.decimals();
         uint256 reserveFromBond;
         uint256 tokensLeft = tokensToBurn;
         uint256 i = getCurrentStep(token, currentSupply);
         while (tokensLeft > 0) {
-            uint256 supplyLeft = i == 0 ? currentSupply : currentSupply - steps[i - 1].rangeTo;
+            uint256 supplyLeft = i == 0
+                ? currentSupply
+                : currentSupply - steps[i - 1].rangeTo;
 
-            uint256 tokensToProcess = tokensLeft < supplyLeft ? tokensLeft : supplyLeft;
-            reserveFromBond += ((tokensToProcess * steps[i].price) / multiFactor);
+            uint256 tokensToProcess = tokensLeft < supplyLeft
+                ? tokensLeft
+                : supplyLeft;
+            reserveFromBond += ((tokensToProcess * steps[i].price) /
+                multiFactor);
 
             tokensLeft -= tokensToProcess;
             currentSupply -= tokensToProcess;
@@ -487,10 +621,18 @@ contract MCV2_Bond is MCV2_Royalty {
      * @param minRefund The minimum refund amount required.
      * @param receiver The address to receive the refund.
      */
-    function burn(address token, uint256 tokensToBurn, uint256 minRefund, address receiver) external returns (uint256) {
+    function burn(
+        address token,
+        uint256 tokensToBurn,
+        uint256 minRefund,
+        address receiver
+    ) external returns (uint256) {
         if (receiver == address(0)) revert MCV2_Bond__InvalidReceiver();
 
-        (uint256 refundAmount, uint256 royalty) = getRefundForTokens(token, tokensToBurn);
+        (uint256 refundAmount, uint256 royalty) = getRefundForTokens(
+            token,
+            tokensToBurn
+        );
         if (refundAmount < minRefund) revert MCV2_Bond__SlippageLimitExceeded();
 
         Bond storage bond = tokenBond[token];
@@ -507,7 +649,14 @@ contract MCV2_Bond is MCV2_Royalty {
         IERC20 reserveToken = IERC20(bond.reserveToken);
         reserveToken.safeTransfer(receiver, refundAmount);
 
-        emit Burn(token, user, receiver, tokensToBurn, bond.reserveToken, refundAmount);
+        emit Burn(
+            token,
+            user,
+            receiver,
+            tokensToBurn,
+            bond.reserveToken,
+            refundAmount
+        );
 
         return refundAmount;
     }
@@ -562,7 +711,8 @@ contract MCV2_Bond is MCV2_Royalty {
      * @return The maximum supply of the token in the bond.
      */
     function maxSupply(address token) public view returns (uint128) {
-        return tokenBond[token].steps[tokenBond[token].steps.length - 1].rangeTo;
+        return
+            tokenBond[token].steps[tokenBond[token].steps.length - 1].rangeTo;
     }
 
     struct BondInfo {
@@ -581,7 +731,10 @@ contract MCV2_Bond is MCV2_Royalty {
         string reserveName;
         uint256 reserveBalance;
     }
-    function _getBondInfo(address token) private view returns(BondInfo memory info) {
+
+    function _getBondInfo(
+        address token
+    ) private view returns (BondInfo memory info) {
         MCV2_ICommonToken t = MCV2_ICommonToken(token);
         Bond memory bond = tokenBond[token];
         IERC20Metadata r = IERC20Metadata(bond.reserveToken);
@@ -603,14 +756,19 @@ contract MCV2_Bond is MCV2_Royalty {
             reserveBalance: bond.reserveBalance
         });
     }
+
     /**
      * @dev Get all tokens and their bond parameters in the range where start <= id < stop.
      * @param start The starting index of the range.
      * @param stop The ending index of the range.
      * @return info An array of BondInfo structs containing the bond parameters for each token in the range.
      */
-    function getList(uint256 start, uint256 stop) external view returns(BondInfo[] memory info) {
-        if (start >= stop || stop - start > 1000) revert MCV2_BOND__InvalidPaginationParameters();
+    function getList(
+        uint256 start,
+        uint256 stop
+    ) external view returns (BondInfo[] memory info) {
+        if (start >= stop || stop - start > 1000)
+            revert MCV2_BOND__InvalidPaginationParameters();
 
         unchecked {
             uint256 tokensLength = tokens.length;
@@ -634,12 +792,15 @@ contract MCV2_Bond is MCV2_Royalty {
         BondInfo info;
         BondStep[] steps;
     }
+
     /**
      * @dev Retrieves the details of a bond token.
      * @param token The address of the bond token.
      * @return detail The BondDetail struct containing the royalty, bond info, and steps of the bond token.
      */
-    function getDetail(address token) external view returns(BondDetail memory detail) {
+    function getDetail(
+        address token
+    ) external view returns (BondDetail memory detail) {
         Bond memory bond = tokenBond[token];
         detail = BondDetail({
             mintRoyalty: bond.mintRoyalty,
@@ -656,8 +817,13 @@ contract MCV2_Bond is MCV2_Royalty {
      * @param stop The ending index of the range
      * @return addresses An array of addresses representing the filtered tokens
      */
-    function getTokensByReserveToken(address reserveToken, uint256 start, uint256 stop) external view returns (address[] memory addresses) {
-        if (start >= stop || stop - start > 10000) revert MCV2_BOND__InvalidPaginationParameters();
+    function getTokensByReserveToken(
+        address reserveToken,
+        uint256 start,
+        uint256 stop
+    ) external view returns (address[] memory addresses) {
+        if (start >= stop || stop - start > 10000)
+            revert MCV2_BOND__InvalidPaginationParameters();
 
         unchecked {
             uint256 tokensLength = tokens.length;
@@ -673,7 +839,7 @@ contract MCV2_Bond is MCV2_Royalty {
 
             uint256 j = 0;
             for (uint256 i = start; i < stop; ++i) {
-                if (tokenBond[tokens[i]].reserveToken == reserveToken){
+                if (tokenBond[tokens[i]].reserveToken == reserveToken) {
                     addresses[j++] = tokens[i];
                     if (j == count) break;
                 }
@@ -688,8 +854,13 @@ contract MCV2_Bond is MCV2_Royalty {
      * @param stop The ending index of the range (exclusive)
      * @return addresses An array of token addresses filtered by creator address
      */
-    function getTokensByCreator(address creator, uint256 start, uint256 stop) external view returns (address[] memory addresses) {
-        if (start >= stop || stop - start > 10000) revert MCV2_BOND__InvalidPaginationParameters();
+    function getTokensByCreator(
+        address creator,
+        uint256 start,
+        uint256 stop
+    ) external view returns (address[] memory addresses) {
+        if (start >= stop || stop - start > 10000)
+            revert MCV2_BOND__InvalidPaginationParameters();
 
         unchecked {
             uint256 tokensLength = tokens.length;
