@@ -29,6 +29,7 @@ exports.getCreationFee = function (network) {
     apechain: 10n ** 18n, // 1.0 APE (~$1.6)
     shibarium: 5n * 10n ** 18n, // 5 BONE (~$2)
     hashkey: 10n ** 18n, // 1 HSK (~$2)
+    abstractMainnet: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     // Testnets
     sepolia: 7n * 10n ** 14n, // 0.007 ETH - testnet
     baseSepolia: 0n, // 0 ETH - testnet
@@ -38,6 +39,7 @@ exports.getCreationFee = function (network) {
     cyberTestnet: 0n, // 0 ETH - testnet
     overTestnet: 0n, // 0 ETH - testnet
     puppynet: 0n, // 0 BONE - testnet
+    abstractTestnet: 0n, // 0 ETH - testnet
   };
 
   if (CREATION_FEE[network] === undefined) {
@@ -65,6 +67,8 @@ exports.getWETHAddress = function (network) {
     apechain: "0x48b62137EdfA95a428D35C09E44256a739F6B557", // WAPE
     shibarium: "0xC76F4c819D820369Fb2d7C1531aB3Bb18e6fE8d8", // WBONE
     hashkey: "0xB210D2120d57b758EE163cFfb43e73728c471Cf1", // WHSK
+    abstractMainnet: "0x3439153EB7AF838Ad19d56E1571FBD09333C2809", // WETH
+
     // Testnets
     sepolia: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14", // WETH
     baseSepolia: "0x4200000000000000000000000000000000000006", // WETH
@@ -74,6 +78,7 @@ exports.getWETHAddress = function (network) {
     cyberTestnet: "0xf760686C2b40F7C526D040b979641293D2F55816", // WETH - TODO: double check
     overTestnet: "0x2eFE8DBa880813F1d988208Ad35c184593559a9D", // Wrapped OVER
     puppynet: "0x41c3F37587EBcD46C0F85eF43E38BcfE1E70Ab56", // WBONE
+    abstractTestnet: "0x9EDCde0257F2386Ce177C3a7FCdd97787F0D841d", // WETH
   };
 
   if (!WETH_ADDRESS[network]) {
@@ -102,6 +107,7 @@ exports.getMaxSteps = function (network) {
     apechain: 1000n, // 1T gas limit??
     shibarium: 1000n, // 20M gas limit
     hashkey: 1000n, // 30M gas limit
+    abstractMainnet: 1000n, // 30M gas limit
     // Testnets
     sepolia: 1000n, // 30M gas limit
     baseSepolia: 1000n, // 30M gas limit
@@ -111,6 +117,7 @@ exports.getMaxSteps = function (network) {
     cyberTestnet: 1000n, // ? gas limit
     overTestnet: 1000n, // ? gas limit
     puppynet: 1000n, // ? gas limit
+    abstractTestnet: 1000n, // 30M gas limit
   };
   if (!MAX_STEPS[network]) {
     throw new Error(`MAX_STEPS is not defined for ${network}`);
