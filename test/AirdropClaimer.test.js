@@ -1,3 +1,19 @@
+/*
+
+I realized that the MerkleDistributor contract is checking if the caller is an EOA or a contract.
+Thus this AirdropClaimer contract cannot be implemented without changing the MerkleDistributor contract.
+
+MerkleDistributor.sol
+```solidity
+if (distribution.merkleRoot == bytes32(0)) { // Public airdrop
+            // NOTE: Block contracts from claiming tokens to prevent abuse during a public airdrop.
+            // This won't completely eliminate bot claiming but will make it more challenging.
+            // Caveat: ERC4337-based wallets will also be unable to claim; however, they can use an EOA to do so.
+            if(tx.origin != msg.sender) revert MerkleDistributor__InvalidCaller();
+        } else { // Whitelist only
+```
+*/
+
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 const { time } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect } = require("chai");
