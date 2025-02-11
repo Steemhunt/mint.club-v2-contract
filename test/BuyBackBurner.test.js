@@ -87,21 +87,14 @@ describe("MCV2_BuyBackBurner", function () {
     });
   });
 
-  describe("Set Premium Price", function () {
-    it("should allow the owner to set the premium price", async function () {
-      const key =
-        "token-page-customization-8453-nft-0x475f8E3eE5457f7B4AAca7E989D35418657AdF2a";
-      await BuyBackBurner.setPremiumPrice(key, wei(50)); // 50 CREATOR
-      expect(await BuyBackBurner.premiumPrice(key)).to.equal(wei(50));
-    });
-
-    it("should not allow non-owners to set the premium price", async function () {
-      await expect(
-        BuyBackBurner.connect(alice).setPremiumPrice("abcd", wei(50))
-      ).to.be.revertedWithCustomError(
-        BuyBackBurner,
-        "OwnableUnauthorizedAccount"
+  describe("Contract initialization", function () {
+    it("should have approved V1_BOND contract for max MINT tokens", async function () {
+      const V1_BOND_ADDRESS = "0x8BBac0C7583Cc146244a18863E708bFFbbF19975";
+      const allowance = await MintToken.allowance(
+        BuyBackBurner.target,
+        V1_BOND_ADDRESS
       );
+      expect(allowance).to.equal(ethers.MaxUint256);
     });
   });
 
@@ -119,132 +112,16 @@ describe("MCV2_BuyBackBurner", function () {
         "OwnableUnauthorizedAccount"
       );
     });
-  });
 
-  describe("Purchase Premium", function () {
-    beforeEach(async function () {
-      await BuyBackBurner.setPremiumPrice("abcd", wei(50)); // 50 CREATOR
-
-      this.creatorRequired = await BuyBackBurner.premiumPrice("abcd");
-      this.estimatedMintRequired = await BuyBackBurner.estimateReserveAmountV1(
-        CREATOR,
-        this.creatorRequired
-      );
-      this.initialCreatorOnDeadAddress = await CreatorToken.balanceOf(
-        DEAD_ADDRESS
-      );
-      this.initialMintTokenBalance = await MintToken.balanceOf(
-        burningAccount.address
+    it("should revert when setting zero address as OP fund address", async function () {
+      await expect(
+        BuyBackBurner.setOpFundAddress(ethers.ZeroAddress)
+      ).to.be.revertedWithCustomError(
+        BuyBackBurner,
+        "MCV2_BuyBackBurner__InvalidAddress"
       );
     });
-
-    describe("Normal flow", async function () {
-      it("initial state should be false", async function () {
-        expect(await BuyBackBurner.premiumEnabled("abcd")).to.be.false;
-      });
-
-      describe("After purchase", async function () {
-        beforeEach(async function () {
-          this.initialPremiumPurchasedCount =
-            await BuyBackBurner.premiumPurchasedCount();
-          await BuyBackBurner.connect(burningAccount).purchasePremium(
-            "abcd",
-            burningAccount.address,
-            this.estimatedMintRequired
-          );
-        });
-
-        it("should enable premium feature", async function () {
-          expect(await BuyBackBurner.premiumEnabled("abcd")).to.be.true;
-        });
-
-        it("should deduct the correct amount of MINT tokens", async function () {
-          expect(await MintToken.balanceOf(burningAccount.address)).to.equal(
-            this.initialMintTokenBalance - this.estimatedMintRequired
-          );
-        });
-
-        it("should burn the correct amount of CREATOR tokens", async function () {
-          expect(await CreatorToken.balanceOf(DEAD_ADDRESS)).to.equal(
-            this.initialCreatorOnDeadAddress + this.creatorRequired
-          );
-        });
-
-        it("should increment premiumPurchasedCount", async function () {
-          expect(await BuyBackBurner.premiumPurchasedCount()).to.equal(
-            this.initialPremiumPurchasedCount + 1n
-          );
-        });
-      }); // After purchase
-    }); // Normal flow
-
-    it("should emit PurchasePremium event", async function () {
-      const latestBlock = await ethers.provider.getBlock("latest");
-      const timestamp = latestBlock.timestamp;
-
-      expect(
-        await BuyBackBurner.connect(burningAccount).purchasePremium(
-          "abcd",
-          burningAccount.address,
-          this.estimatedMintRequired
-        )
-      )
-        .to.emit(BuyBackBurner, "PurchasePremium")
-        .withArgs(
-          "abcd",
-          this.estimatedMintRequired,
-          this.creatorRequired,
-          burningAccount.address,
-          timestamp
-        );
-    });
-
-    describe("Edge cases", function () {
-      it("should revert if premium price is not set", async function () {
-        await expect(
-          BuyBackBurner.connect(burningAccount).purchasePremium(
-            "zzzzz",
-            burningAccount.address,
-            this.estimatedMintRequired
-          )
-        ).to.be.revertedWithCustomError(
-          BuyBackBurner,
-          "MCV2_BuyBackBurner__PremiumPriceNotSet"
-        );
-      });
-
-      it("should revert if premium is already purchased", async function () {
-        await BuyBackBurner.connect(burningAccount).purchasePremium(
-          "abcd",
-          burningAccount.address,
-          this.estimatedMintRequired
-        );
-        await expect(
-          BuyBackBurner.connect(burningAccount).purchasePremium(
-            "abcd",
-            burningAccount.address,
-            this.estimatedMintRequired
-          )
-        ).to.be.revertedWithCustomError(
-          BuyBackBurner,
-          "MCV2_BuyBackBurner__PremiumAlreadyPurchased"
-        );
-      });
-
-      it("should revert if mint required is more than maxMintTokenAmount", async function () {
-        await expect(
-          BuyBackBurner.connect(burningAccount).purchasePremium(
-            "abcd",
-            burningAccount.address,
-            this.estimatedMintRequired - 1n
-          )
-        ).to.be.revertedWithCustomError(
-          BuyBackBurner,
-          "MCV2_BuyBackBurner__SlippageExceeded"
-        );
-      });
-    }); // Edge cases
-  }); // Purchase Premium
+  }); // Set OP Fund Address
 
   describe("Buy back GRANT", function () {
     beforeEach(async function () {
@@ -258,8 +135,7 @@ describe("MCV2_BuyBackBurner", function () {
         burningAccount.address
       );
 
-      this.initialTotalGrantPurchased =
-        await BuyBackBurner.totalGrantPurchased();
+      this.initialStats = await BuyBackBurner.stats();
     });
 
     describe("Normal flow", function () {
@@ -282,12 +158,25 @@ describe("MCV2_BuyBackBurner", function () {
         );
       });
 
-      it("should increase totalGrantPurchased", async function () {
-        expect(await BuyBackBurner.totalGrantPurchased()).to.equal(
-          this.initialTotalGrantPurchased + this.estimatedGrantAmount
+      it("should update stats correctly", async function () {
+        const newStats = await BuyBackBurner.stats();
+        expect(newStats.mintTokenSpent).to.equal(
+          this.initialStats.mintTokenSpent + BigInt(this.mintAmount)
+        );
+        expect(newStats.grantPurchased).to.equal(
+          this.initialStats.grantPurchased + BigInt(this.estimatedGrantAmount)
         );
       });
-    }); // Normal flow
+
+      it("should record history correctly", async function () {
+        const historyIndex = (await BuyBackBurner.getHistoryCount()) - 1n;
+        const lastHistory = await BuyBackBurner.history(historyIndex);
+
+        expect(lastHistory.mintTokenAmount).to.equal(this.mintAmount);
+        expect(lastHistory.tokenAmount).to.equal(this.estimatedGrantAmount);
+        expect(lastHistory.token).to.equal(GRANT);
+      });
+    });
 
     it("should emit BuyBackGrant event", async function () {
       const latestBlock = await ethers.provider.getBlock("latest");
@@ -340,6 +229,7 @@ describe("MCV2_BuyBackBurner", function () {
       this.initialMintTokenBalance = await MintToken.balanceOf(
         burningAccount.address
       );
+      this.initialStats = await BuyBackBurner.stats();
     });
 
     describe("Normal flow", function () {
@@ -359,6 +249,16 @@ describe("MCV2_BuyBackBurner", function () {
       it("should deduct MINT tokens from the purchasing account", async function () {
         expect(await MintToken.balanceOf(burningAccount.address)).to.equal(
           this.initialMintTokenBalance - this.mintAmount
+        );
+      });
+
+      it("should update stats correctly", async function () {
+        const newStats = await BuyBackBurner.stats();
+        expect(newStats.mintTokenSpent).to.equal(
+          this.initialStats.mintTokenSpent + BigInt(this.mintAmount)
+        );
+        expect(newStats.mintDaoBurned).to.equal(
+          this.initialStats.mintDaoBurned + BigInt(this.estimatedMintDaoAmount)
         );
       });
     }); // Normal flow
@@ -403,19 +303,189 @@ describe("MCV2_BuyBackBurner", function () {
     }); // Edge cases
   }); // Buy back and burn MINTDAO
 
+  describe("Buy back and burn CREATOR", function () {
+    beforeEach(async function () {
+      this.mintAmount = wei(10000000);
+      this.initialCreatorOnDeadAddress = await CreatorToken.balanceOf(
+        DEAD_ADDRESS
+      );
+      this.estimatedCreatorAmount = await BuyBackBurner.estimateTokenAmountV1(
+        CREATOR,
+        this.mintAmount
+      );
+      this.initialMintTokenBalance = await MintToken.balanceOf(
+        burningAccount.address
+      );
+      this.initialStats = await BuyBackBurner.stats();
+    });
+
+    describe("Normal flow", function () {
+      beforeEach(async function () {
+        await BuyBackBurner.connect(burningAccount).buyBackBurnCreator(
+          this.mintAmount,
+          this.estimatedCreatorAmount
+        );
+      });
+
+      it("should burn CREATOR tokens", async function () {
+        expect(await CreatorToken.balanceOf(DEAD_ADDRESS)).to.equal(
+          this.initialCreatorOnDeadAddress + this.estimatedCreatorAmount
+        );
+      });
+
+      it("should deduct MINT tokens from the purchasing account", async function () {
+        expect(await MintToken.balanceOf(burningAccount.address)).to.equal(
+          this.initialMintTokenBalance - this.mintAmount
+        );
+      });
+
+      it("should update stats correctly", async function () {
+        const newStats = await BuyBackBurner.stats();
+        expect(newStats.mintTokenSpent).to.equal(
+          this.initialStats.mintTokenSpent + BigInt(this.mintAmount)
+        );
+        expect(newStats.creatorBurned).to.equal(
+          this.initialStats.creatorBurned + BigInt(this.estimatedCreatorAmount)
+        );
+      });
+    });
+
+    it("should emit BuyBackBurnCreator event", async function () {
+      const latestBlock = await ethers.provider.getBlock("latest");
+      const timestamp = latestBlock.timestamp;
+      expect(
+        await BuyBackBurner.connect(burningAccount).buyBackBurnCreator(
+          this.mintAmount,
+          this.estimatedCreatorAmount
+        )
+      )
+        .to.emit(BuyBackBurner, "BuyBackBurnCreator")
+        .withArgs(this.mintAmount, this.estimatedCreatorAmount, timestamp);
+    });
+
+    describe("Edge cases", function () {
+      it("should revert if mint amount is 0", async function () {
+        await expect(
+          BuyBackBurner.connect(burningAccount).buyBackBurnCreator(
+            0,
+            this.estimatedCreatorAmount
+          )
+        ).to.be.revertedWithCustomError(
+          BuyBackBurner,
+          "MCV2_BuyBackBurner__InvalidAmount"
+        );
+      });
+
+      it("should revert if mint amount is less than estimated creator amount", async function () {
+        await expect(
+          BuyBackBurner.connect(burningAccount).buyBackBurnCreator(
+            this.mintAmount,
+            this.estimatedCreatorAmount + 1n
+          )
+        ).to.be.revertedWithCustomError(
+          BuyBackBurner,
+          "MCV2_BuyBackBurner__SlippageExceeded"
+        );
+      });
+    }); // Edge cases
+  }); // Buy back and burn CREATOR
+
   describe("Utility functions", function () {
-    it("should return the total amount of CREATOR and MINTDAO tokens burned", async function () {
-      const creatorBalance =
+    it("should return the burned balances correctly", async function () {
+      const { creatorBurnedBalance, mintDaoBurnedBalance } =
+        await BuyBackBurner.getBurnedBalances();
+
+      const expectedCreatorBurned =
         (await CreatorToken.balanceOf(CREATOR)) +
         (await CreatorToken.balanceOf(DEAD_ADDRESS));
-      const mintDaoBalance =
+      const expectedMintDaoBurned =
         (await MintDaoToken.balanceOf(MINTDAO)) +
         (await MintDaoToken.balanceOf(DEAD_ADDRESS));
-      const { totalCreatorBurned, totalMintDaoBurned } =
-        await BuyBackBurner.getBurnedStats();
 
-      expect(totalCreatorBurned).to.equal(creatorBalance);
-      expect(totalMintDaoBurned).to.equal(mintDaoBalance);
+      expect(creatorBurnedBalance).to.equal(expectedCreatorBurned);
+      expect(mintDaoBurnedBalance).to.equal(expectedMintDaoBurned);
     });
   }); // Utility functions
+
+  describe("History functions", function () {
+    beforeEach(async function () {
+      this.mintAmount = wei(1000000);
+      // Create some history by performing operations
+      await BuyBackBurner.connect(burningAccount).buyBackGrant(
+        this.mintAmount,
+        await BuyBackBurner.estimateTokenAmountV1(GRANT, this.mintAmount)
+      );
+      await BuyBackBurner.connect(burningAccount).buyBackBurnMintDao(
+        this.mintAmount,
+        await BuyBackBurner.estimateTokenAmountV1(MINTDAO, this.mintAmount)
+      );
+      await BuyBackBurner.connect(burningAccount).buyBackBurnCreator(
+        this.mintAmount,
+        await BuyBackBurner.estimateTokenAmountV1(CREATOR, this.mintAmount)
+      );
+    });
+
+    it("should return correct history count", async function () {
+      const count = await BuyBackBurner.getHistoryCount();
+      expect(count).to.equal(3);
+    });
+
+    it("should return correct history slice", async function () {
+      const historySlice = await BuyBackBurner.getHistory(0, 2);
+      expect(historySlice.length).to.equal(2);
+
+      // Verify first entry
+      expect(historySlice[0].token).to.equal(GRANT);
+      expect(historySlice[0].mintTokenAmount).to.equal(this.mintAmount);
+
+      // Verify second entry
+      expect(historySlice[1].token).to.equal(MINTDAO);
+      expect(historySlice[1].mintTokenAmount).to.equal(this.mintAmount);
+    });
+
+    it("should handle out of bounds indices gracefully", async function () {
+      const historySlice = await BuyBackBurner.getHistory(0, 999);
+      expect(historySlice.length).to.equal(3); // Should return all entries
+    });
+
+    it("should revert with InvalidRange for invalid range", async function () {
+      await expect(
+        BuyBackBurner.getHistory(2, 1)
+      ).to.be.revertedWithCustomError(
+        BuyBackBurner,
+        "MCV2_BuyBackBurner__InvalidRange"
+      );
+    });
+  });
+
+  describe("Stats tracking", function () {
+    it("should track cumulative stats correctly across multiple operations", async function () {
+      const mintAmount = wei(1000000);
+      const initialStats = await BuyBackBurner.stats();
+
+      // Perform multiple operations
+      await BuyBackBurner.connect(burningAccount).buyBackGrant(
+        mintAmount,
+        await BuyBackBurner.estimateTokenAmountV1(GRANT, mintAmount)
+      );
+      await BuyBackBurner.connect(burningAccount).buyBackBurnMintDao(
+        mintAmount,
+        await BuyBackBurner.estimateTokenAmountV1(MINTDAO, mintAmount)
+      );
+      await BuyBackBurner.connect(burningAccount).buyBackBurnCreator(
+        mintAmount,
+        await BuyBackBurner.estimateTokenAmountV1(CREATOR, mintAmount)
+      );
+
+      const finalStats = await BuyBackBurner.stats();
+
+      // Verify stats are accumulated correctly
+      expect(finalStats.mintTokenSpent).to.equal(
+        initialStats.mintTokenSpent + BigInt(mintAmount) * 3n
+      );
+      expect(finalStats.mintDaoBurned).to.be.gt(initialStats.mintDaoBurned);
+      expect(finalStats.creatorBurned).to.be.gt(initialStats.creatorBurned);
+      expect(finalStats.grantPurchased).to.be.gt(initialStats.grantPurchased);
+    });
+  }); // History functions
 }); // MCV2_BuyBackBurner

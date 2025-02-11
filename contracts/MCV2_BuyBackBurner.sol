@@ -12,12 +12,11 @@ import {IMintClubBond} from "./interfaces/IMintClubBond.sol";
  */
 
 contract MCV2_BuyBackBurner is Ownable {
-    error MCV2_BuyBackBurner__PremiumPriceNotSet();
-    error MCV2_BuyBackBurner__PremiumAlreadyPurchased();
     error MCV2_BuyBackBurner__SlippageExceeded();
-    error MCV2_BuyBackBurner__PremiumPurchaseFailed();
     error MCV2_BuyBackBurner__InvalidAddress();
     error MCV2_BuyBackBurner__InvalidAmount();
+    error MCV2_BuyBackBurner__InvalidToken();
+    error MCV2_BuyBackBurner__InvalidRange();
 
     IMintClubBond public constant V1_BOND =
         IMintClubBond(0x8BBac0C7583Cc146244a18863E708bFFbbF19975);
@@ -34,28 +33,36 @@ contract MCV2_BuyBackBurner is Ownable {
     address public constant DEAD_ADDRESS =
         address(0x000000000000000000000000000000000000dEaD);
 
-    // Key mappings for premium features (e.g. "token-page-customization-{chainId}-{tokenAddress}" => true/false)
-    mapping(string => uint256) public premiumPrice;
-    mapping(string => bool) public premiumEnabled;
+    struct Stats {
+        uint104 mintTokenSpent;
+        uint80 mintDaoBurned;
+        uint80 creatorBurned;
+        uint80 grantPurchased;
+    }
+    Stats public stats;
 
-    uint256 public premiumPurchasedCount;
-    uint256 public totalGrantPurchased;
+    struct History {
+        uint104 mintTokenAmount;
+        uint80 tokenAmount;
+        uint40 blockNumber;
+        uint40 timestamp;
+        address token; // CREATOR, MINTDAO, GRANT
+    }
+    History[] public history;
 
-    event PurchasePremium(
-        string key,
+    event BuyBackBurnMintDao(
+        uint256 mintTokenAmount,
+        uint256 mintDaoAmount,
+        uint256 timestamp
+    );
+    event BuyBackBurnCreator(
         uint256 mintTokenAmount,
         uint256 creatorAmount,
-        address indexed purchaser,
         uint256 timestamp
     );
     event BuyBackGrant(
         uint256 mintTokenAmount,
         uint256 grantAmount,
-        uint256 timestamp
-    );
-    event BuyBackBurnMintDao(
-        uint256 mintTokenAmount,
-        uint256 mintDaoAmount,
         uint256 timestamp
     );
 
@@ -64,19 +71,8 @@ contract MCV2_BuyBackBurner is Ownable {
         // This is done so that we don't have to approve within the `_buyBack` function
         IERC20 mintToken = IERC20(MINT);
         mintToken.approve(address(V1_BOND), type(uint256).max);
-    }
 
-    /**
-     * @notice Set the price for a premium feature
-     * @param key The key for the premium feature
-     * @param price The price of the premium feature
-     */
-    function setPremiumPrice(
-        string calldata key,
-        uint256 price
-    ) external onlyOwner {
-        // setting it to zero will disable new premium purchases
-        premiumPrice[key] = price;
+        // TODO: Add previous history before this contract was deployed
     }
 
     /**
@@ -90,87 +86,63 @@ contract MCV2_BuyBackBurner is Ownable {
     }
 
     /**
-     * @notice Purchase premium features for a given key
-     * @param key The key to purchase premium features for
-     * @param purchaser The wallet address of the purchaser
-     * @param maxMintTokenToSpend The maximum amount of MINT tokens to spend on the purchase to prevent frontrunning
-     */
-    function purchasePremium(
-        string calldata key,
-        address purchaser,
-        uint256 maxMintTokenToSpend
-    ) external returns (uint256 burned) {
-        if (premiumPrice[key] == 0)
-            revert MCV2_BuyBackBurner__PremiumPriceNotSet();
-        if (premiumEnabled[key])
-            revert MCV2_BuyBackBurner__PremiumAlreadyPurchased();
-
-        uint256 creatorPrice = premiumPrice[key];
-        uint256 mintTokenRequired = estimateReserveAmountV1(
-            CREATOR,
-            creatorPrice
-        );
-        if (mintTokenRequired > maxMintTokenToSpend)
-            revert MCV2_BuyBackBurner__SlippageExceeded();
-
-        // Purchase CREATOR tokens and burn them by sending them to the the token contract address
-        burned = _buyBack(CREATOR, mintTokenRequired);
-        if (burned != creatorPrice)
-            revert MCV2_BuyBackBurner__PremiumPurchaseFailed();
-
-        premiumEnabled[key] = true;
-        premiumPurchasedCount++;
-        IERC20(CREATOR).transfer(DEAD_ADDRESS, burned);
-
-        emit PurchasePremium(
-            key,
-            mintTokenRequired,
-            creatorPrice,
-            purchaser,
-            block.timestamp
-        );
-    }
-
-    /**
-     * @notice Buy back GRANT tokens and send them to the OP fund address
+     * @notice Buy back MINTDAO tokens and send them DEAD_ADDRESS for burning
      * @param mintTokenAmount The amount of MINT tokens to spend on the buy back
-     */
-    function buyBackGrant(
-        uint256 mintTokenAmount,
-        uint256 minGrantToBuyBack
-    ) external returns (uint256 purchased) {
-        if (mintTokenAmount == 0) revert MCV2_BuyBackBurner__InvalidAmount();
-
-        // Buy back GRANT tokens and send them to the OP fund address
-        purchased = _buyBack(GRANT, mintTokenAmount);
-
-        if (purchased < minGrantToBuyBack)
-            revert MCV2_BuyBackBurner__SlippageExceeded();
-
-        totalGrantPurchased += purchased;
-        IERC20(GRANT).transfer(OP_FUND_ADDRESS, purchased);
-
-        emit BuyBackGrant(mintTokenAmount, purchased, block.timestamp);
-    }
-
-    /**
-     * @notice Buy back MINTDAO tokens and send them to its contract address to be burned
-     * @param mintTokenAmount The amount of MINT tokens to spend on the buy back
+     * @param minMintDaoToBurn The minimum amount of MINTDAO tokens to burn (for slippage)
      */
     function buyBackBurnMintDao(
         uint256 mintTokenAmount,
         uint256 minMintDaoToBurn
     ) external returns (uint256 burned) {
-        if (mintTokenAmount == 0) revert MCV2_BuyBackBurner__InvalidAmount();
-
-        // Buy back MINTDAO tokens and send them to its contract address to be burned
         burned = _buyBack(MINTDAO, mintTokenAmount);
         if (burned < minMintDaoToBurn)
             revert MCV2_BuyBackBurner__SlippageExceeded();
 
-        IERC20(MINTDAO).transfer(DEAD_ADDRESS, burned);
+        _recordStatsAndHistory(mintTokenAmount, burned, MINTDAO);
+
+        IERC20(MINTDAO).transfer(DEAD_ADDRESS, burned); // burn
 
         emit BuyBackBurnMintDao(mintTokenAmount, burned, block.timestamp);
+    }
+
+    /**
+     * @notice Buy back CREATOR tokens and send them DEAD_ADDRESS for burning
+     * @param mintTokenAmount The amount of MINT tokens to spend on the buy back
+     * @param minCreatorToBurn The minimum amount of CREATOR tokens to burn (for slippage)
+     */
+    function buyBackBurnCreator(
+        uint256 mintTokenAmount,
+        uint256 minCreatorToBurn
+    ) external returns (uint256 burned) {
+        burned = _buyBack(CREATOR, mintTokenAmount);
+        if (burned < minCreatorToBurn)
+            revert MCV2_BuyBackBurner__SlippageExceeded();
+
+        _recordStatsAndHistory(mintTokenAmount, burned, CREATOR);
+
+        IERC20(CREATOR).transfer(DEAD_ADDRESS, burned); // burn
+
+        emit BuyBackBurnCreator(mintTokenAmount, burned, block.timestamp);
+    }
+
+    /**
+     * @notice Buy back GRANT tokens and send them to the OP fund address
+     * @param mintTokenAmount The amount of MINT tokens to spend on the buy back
+     * @param minGrantToBuyBack The minimum amount of GRANT tokens to buy back (for slippage)
+     */
+    function buyBackGrant(
+        uint256 mintTokenAmount,
+        uint256 minGrantToBuyBack
+    ) external returns (uint256 purchased) {
+        purchased = _buyBack(GRANT, mintTokenAmount);
+        if (purchased < minGrantToBuyBack)
+            revert MCV2_BuyBackBurner__SlippageExceeded();
+
+        _recordStatsAndHistory(mintTokenAmount, purchased, GRANT);
+
+        IERC20(GRANT).transfer(OP_FUND_ADDRESS, purchased); // send to the OP fund
+
+        emit BuyBackGrant(mintTokenAmount, purchased, block.timestamp);
     }
 
     /**
@@ -181,7 +153,7 @@ contract MCV2_BuyBackBurner is Ownable {
     function estimateReserveAmountV1(
         address tokenAddress,
         uint256 tokensToBuy
-    ) public view returns (uint256 reserveRequired) {
+    ) external view returns (uint256 reserveRequired) {
         IERC20 token = IERC20(tokenAddress);
 
         uint256 currentSupply = token.totalSupply();
@@ -200,9 +172,11 @@ contract MCV2_BuyBackBurner is Ownable {
     function estimateTokenAmountV1(
         address tokenAddress,
         uint256 mintTokenAmount
-    ) public view returns (uint256 tokenAmount) {
+    ) external view returns (uint256 tokenAmount) {
         (tokenAmount, ) = V1_BOND.getMintReward(tokenAddress, mintTokenAmount);
     }
+
+    // MARK: - Internal functions
 
     /**
      * @notice Buy back tokens and send them to the specified address
@@ -213,6 +187,8 @@ contract MCV2_BuyBackBurner is Ownable {
         address tokenAddress,
         uint256 mintTokenAmount
     ) private returns (uint256 purchasedAmount) {
+        if (mintTokenAmount == 0) revert MCV2_BuyBackBurner__InvalidAmount();
+
         // Transfer MINT tokens from the caller to this contract
         IERC20 mintToken = IERC20(MINT);
         mintToken.transferFrom(_msgSender(), address(this), mintTokenAmount);
@@ -225,23 +201,96 @@ contract MCV2_BuyBackBurner is Ownable {
         uint256 balanceAfter = token.balanceOf(address(this));
 
         purchasedAmount = balanceAfter - balanceBefore;
+        assert(purchasedAmount > 0);
     }
 
     /**
-     * @notice Get the total amount of CREATOR and MINTDAO tokens burned (including the amount before this contract was deployed)
-     * @return totalCreatorBurned The total amount of CREATOR tokens burned
-     * @return totalMintDaoBurned The total amount of MINTDAO tokens burned
+     * @notice Record the stats and history of the buy back (and burn)
+     * @param mintTokenAmount The amount of MINT tokens spent on the buy back
+     * @param tokenAmount The amount of tokens purchased
+     * @param token The token that was bought
      */
-    function getBurnedStats()
+    function _recordStatsAndHistory(
+        uint256 mintTokenAmount,
+        uint256 tokenAmount,
+        address token
+    ) private {
+        stats.mintTokenSpent += uint104(mintTokenAmount);
+
+        if (token == GRANT) {
+            stats.grantPurchased += uint80(tokenAmount);
+        } else if (token == MINTDAO) {
+            stats.mintDaoBurned += uint80(tokenAmount);
+        } else if (token == CREATOR) {
+            stats.creatorBurned += uint80(tokenAmount);
+        } else {
+            revert MCV2_BuyBackBurner__InvalidToken();
+        }
+
+        history.push(
+            History({
+                mintTokenAmount: uint104(mintTokenAmount),
+                tokenAmount: uint80(tokenAmount),
+                blockNumber: uint40(block.number),
+                timestamp: uint40(block.timestamp),
+                token: token
+            })
+        );
+    }
+
+    // MARK: - Utility functions
+
+    /**
+     * @notice Get the balances of the tokens that have been burned (including the ones in the contract address and DEAD_ADDRESS)
+     * @return creatorBurnedBalance The balance of the CREATOR tokens that have been burned
+     * @return mintDaoBurnedBalance The balance of the MINTDAO tokens that have been burned
+     */
+    function getBurnedBalances()
         external
         view
-        returns (uint256 totalCreatorBurned, uint256 totalMintDaoBurned)
+        returns (uint256 creatorBurnedBalance, uint256 mintDaoBurnedBalance)
     {
-        totalCreatorBurned =
+        creatorBurnedBalance =
             IERC20(CREATOR).balanceOf(CREATOR) +
             IERC20(CREATOR).balanceOf(DEAD_ADDRESS);
-        totalMintDaoBurned =
+        mintDaoBurnedBalance =
             IERC20(MINTDAO).balanceOf(MINTDAO) +
             IERC20(MINTDAO).balanceOf(DEAD_ADDRESS);
+    }
+
+    /**
+     * @notice Get the number of history entries
+     * @return The number of history entries
+     */
+    function getHistoryCount() external view returns (uint256) {
+        return history.length;
+    }
+
+    /**
+     * @notice Get a slice of the history array
+     * @param start The start index of the slice
+     * @param stopBefore The end index of the slice (exclusive)
+     * @return The slice of the history
+     */
+    function getHistory(
+        uint256 start,
+        uint256 stopBefore
+    ) external view returns (History[] memory) {
+        if (start >= stopBefore) revert MCV2_BuyBackBurner__InvalidRange();
+
+        if (stopBefore >= history.length) {
+            stopBefore = history.length;
+        }
+
+        unchecked {
+            uint256 arrayLength = stopBefore - start;
+            History[] memory historySlice = new History[](arrayLength);
+
+            uint256 j;
+            for (uint256 i = start; i < stopBefore; ++i) {
+                historySlice[j++] = history[i];
+            }
+            return historySlice;
+        }
     }
 }
