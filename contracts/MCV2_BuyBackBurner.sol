@@ -31,6 +31,8 @@ contract MCV2_BuyBackBurner is Ownable {
         address(0x58764cE77f0140F9678bA6dED9D9697c979F4E0f);
     address public OP_FUND_ADDRESS =
         address(0x5e74f8CC57a3A2d9718Cc98eD7f60D72b0159a14);
+    address public constant DEAD_ADDRESS =
+        address(0x000000000000000000000000000000000000dEaD);
 
     // Key mappings for premium features (e.g. "token-page-customization-{chainId}-{tokenAddress}" => true/false)
     mapping(string => uint256) public premiumPrice;
@@ -118,7 +120,7 @@ contract MCV2_BuyBackBurner is Ownable {
 
         premiumEnabled[key] = true;
         premiumPurchasedCount++;
-        IERC20(CREATOR).transfer(CREATOR, burned);
+        IERC20(CREATOR).transfer(DEAD_ADDRESS, burned);
 
         emit PurchasePremium(
             key,
@@ -166,7 +168,7 @@ contract MCV2_BuyBackBurner is Ownable {
         if (burned < minMintDaoToBurn)
             revert MCV2_BuyBackBurner__SlippageExceeded();
 
-        IERC20(MINTDAO).transfer(MINTDAO, burned);
+        IERC20(MINTDAO).transfer(DEAD_ADDRESS, burned);
 
         emit BuyBackBurnMintDao(mintTokenAmount, burned, block.timestamp);
     }
@@ -235,7 +237,11 @@ contract MCV2_BuyBackBurner is Ownable {
         view
         returns (uint256 totalCreatorBurned, uint256 totalMintDaoBurned)
     {
-        totalCreatorBurned = IERC20(CREATOR).balanceOf(CREATOR);
-        totalMintDaoBurned = IERC20(MINTDAO).balanceOf(MINTDAO);
+        totalCreatorBurned =
+            IERC20(CREATOR).balanceOf(CREATOR) +
+            IERC20(CREATOR).balanceOf(DEAD_ADDRESS);
+        totalMintDaoBurned =
+            IERC20(MINTDAO).balanceOf(MINTDAO) +
+            IERC20(MINTDAO).balanceOf(DEAD_ADDRESS);
     }
 }

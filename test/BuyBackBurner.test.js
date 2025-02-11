@@ -10,6 +10,7 @@ const CREATOR = "0x9f3C60dC06f66b3e0ea1Eb05866F9c1A74d43D67";
 const MINTDAO = "0x558810B46101DE82b579DD1950E9C717dCc28338";
 const GRANT = "0x58764cE77f0140F9678bA6dED9D9697c979F4E0f";
 const OP_FUND_ADDRESS = "0x5e74f8CC57a3A2d9718Cc98eD7f60D72b0159a14";
+const DEAD_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 
 describe("MCV2_BuyBackBurner", function () {
   async function deployFixtures() {
@@ -129,7 +130,9 @@ describe("MCV2_BuyBackBurner", function () {
         CREATOR,
         this.creatorRequired
       );
-      this.initialCreatorBurned = await CreatorToken.balanceOf(CREATOR);
+      this.initialCreatorOnDeadAddress = await CreatorToken.balanceOf(
+        DEAD_ADDRESS
+      );
       this.initialMintTokenBalance = await MintToken.balanceOf(
         burningAccount.address
       );
@@ -162,8 +165,8 @@ describe("MCV2_BuyBackBurner", function () {
         });
 
         it("should burn the correct amount of CREATOR tokens", async function () {
-          expect(await CreatorToken.balanceOf(CREATOR)).to.equal(
-            this.initialCreatorBurned + this.creatorRequired
+          expect(await CreatorToken.balanceOf(DEAD_ADDRESS)).to.equal(
+            this.initialCreatorOnDeadAddress + this.creatorRequired
           );
         });
 
@@ -329,7 +332,7 @@ describe("MCV2_BuyBackBurner", function () {
   describe("Buy back and burn MINTDAO", function () {
     beforeEach(async function () {
       this.mintAmount = wei(10000000);
-      this.initialMintDaoBurned = await MintDaoToken.balanceOf(MINTDAO);
+      this.initialDaoOnDeadAddress = await MintDaoToken.balanceOf(DEAD_ADDRESS);
       this.estimatedMintDaoAmount = await BuyBackBurner.estimateTokenAmountV1(
         MINTDAO,
         this.mintAmount
@@ -348,8 +351,8 @@ describe("MCV2_BuyBackBurner", function () {
       });
 
       it("should burn MINTDAO tokens", async function () {
-        expect(await MintDaoToken.balanceOf(MINTDAO)).to.equal(
-          this.initialMintDaoBurned + this.estimatedMintDaoAmount
+        expect(await MintDaoToken.balanceOf(DEAD_ADDRESS)).to.equal(
+          this.initialDaoOnDeadAddress + this.estimatedMintDaoAmount
         );
       });
 
@@ -400,10 +403,14 @@ describe("MCV2_BuyBackBurner", function () {
     }); // Edge cases
   }); // Buy back and burn MINTDAO
 
-  describe.only("Utility functions", function () {
+  describe("Utility functions", function () {
     it("should return the total amount of CREATOR and MINTDAO tokens burned", async function () {
-      const creatorBalance = await CreatorToken.balanceOf(CREATOR);
-      const mintDaoBalance = await MintDaoToken.balanceOf(MINTDAO);
+      const creatorBalance =
+        (await CreatorToken.balanceOf(CREATOR)) +
+        (await CreatorToken.balanceOf(DEAD_ADDRESS));
+      const mintDaoBalance =
+        (await MintDaoToken.balanceOf(MINTDAO)) +
+        (await MintDaoToken.balanceOf(DEAD_ADDRESS));
       const { totalCreatorBurned, totalMintDaoBurned } =
         await BuyBackBurner.getBurnedStats();
 
