@@ -121,6 +121,11 @@ module.exports = {
       chainId: 177,
       accounts: [process.env.MAINNET_PRIVATE_KEY],
     },
+    unichain: {
+      url: "https://mainnet.unichain.org",
+      chainId: 130,
+      accounts: [process.env.MAINNET_PRIVATE_KEY],
+    },
     // Testnets
     sepolia: {
       url: process.env.RPC_SEPOLIA,
@@ -189,6 +194,9 @@ module.exports = {
       cyber: "unnecessary",
       ham: "unnecessary",
       apechain: process.env.APESCAN_API_KEY,
+      hashkey: "unnecessary",
+      unichain: process.env.UNICHAINSCAN_API_KEY,
+
       sepolia: process.env.ETHERSCAN_API_KEY,
       baseSepolia: process.env.BASESCAN_API_KEY,
       blastSepolia: "unnecessary",
@@ -197,7 +205,6 @@ module.exports = {
       overTestnet: "unnecessary",
       shibarium: "unnecessary",
       puppynet: "unnecessary",
-      hashkey: "unnecessary",
     },
     customChains: [
       {
@@ -271,6 +278,14 @@ module.exports = {
         urls: {
           apiURL: "https://explorer.hsk.xyz/api",
           browserURL: "https://explorer.hsk.xyz",
+        },
+      },
+      {
+        network: "unichain",
+        chainId: 130,
+        urls: {
+          apiURL: "https://api.uniscan.xyz/api",
+          browserURL: "https://uniscan.xyz",
         },
       },
       {

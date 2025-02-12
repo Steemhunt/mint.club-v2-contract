@@ -199,6 +199,7 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
          <th><a href="https://apescan.io/">APEChain</a></th>
          <th><a href="https://shibariumscan.io/">Shibarium</a></th>
          <th><a href="https://explorer.hsk.xyz/">HashKey</a></th>
+         <th><a href="https://uniscan.xyz/">Unichain</a></th>
       </tr>
    </thead>
    <tbody>
@@ -408,6 +409,10 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       <tr>
          <td>HashKey</td>
          <td><a href="https://explorer.hsk.xyz/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4?tab=contract">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</a></td>
+      </tr>
+      <tr>
+         <td>Unichain</td>
+         <td><a href="https://uniscan.xyz/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4?tab=contract">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</a></td>
       </tr>
       <tr>
          <td>Sepolia</td>
