@@ -4,7 +4,6 @@ pragma solidity =0.8.20;
 
 import {IMCV2_Bond} from "./interfaces/IMCV2_Bond.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {console} from "hardhat/console.sol";
 
 /**
  * @title Mint Club V2 Buy-back & Burner Contract
@@ -30,6 +29,8 @@ contract MCV2_BuyBackBurner {
         IERC20(0xFf45161474C39cB00699070Dd49582e417b57a7E);
     address public constant DEAD_ADDRESS =
         address(0x000000000000000000000000000000000000dEaD);
+
+    uint256 public constant MIN_MT_BURN_AMOUNT = 1e19;
 
     struct Stats {
         uint128 totalHuntSpent;
@@ -63,7 +64,9 @@ contract MCV2_BuyBackBurner {
         uint96 mtAmount,
         uint64 fromChainId
     ) external returns (uint96) {
-        if (mtAmount == 0) revert MCV2_BuyBackBurner__InvalidParams();
+        // Minimum threashold = 10 MT to prevent spamming
+        if (mtAmount < MIN_MT_BURN_AMOUNT)
+            revert MCV2_BuyBackBurner__InvalidParams();
 
         // Estimate MT burn amount using the reverse calculation helper
         (uint256 huntRequired, ) = BOND.getReserveForToken(
@@ -74,14 +77,10 @@ contract MCV2_BuyBackBurner {
 
         HUNT.transferFrom(msg.sender, address(this), huntRequired);
 
-        console.log("HUNT balance before mint", HUNT.balanceOf(address(this)));
-
         // Mint MT and send it to the dead address straight away
         uint96 huntSpent = uint96(
             BOND.mint(address(MT), mtAmount, huntRequired, DEAD_ADDRESS)
         );
-
-        console.log("HUNT balance after mint", HUNT.balanceOf(address(this)));
 
         if (huntSpent != huntRequired || HUNT.balanceOf(address(this)) != 0) {
             revert MCV2_BuyBackBurner__InvalidSwap();

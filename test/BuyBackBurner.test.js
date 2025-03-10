@@ -88,7 +88,7 @@ describe("MCV2_BuyBackBurner", function () {
         );
       });
 
-      it.only("should burn MT tokens", async function () {
+      it("should burn MT tokens", async function () {
         expect(await MtToken.balanceOf(DEAD_ADDRESS)).to.equal(
           this.initialMtOnDeadAddress + this.mtAmount
         );
@@ -132,42 +132,57 @@ describe("MCV2_BuyBackBurner", function () {
         );
       });
 
-      it("should revert if MT amount to burn is 0", async function () {
-        // Mock a scenario where getTokensForReserve returns 0
-        const mockBuyBackBurner = await ethers.deployContract(
-          "MockBuyBackBurner",
-          {
-            returnZeroAmount: true,
-          }
-        );
+      it("should revert if mt amount is below minimum threshold", async function () {
+        const minMtBurnAmount = await BuyBackBurner.MIN_MT_BURN_AMOUNT();
+        const belowMinAmount = minMtBurnAmount - 1n;
 
         await expect(
-          mockBuyBackBurner
-            .connect(burningAccount)
-            .buyBackBurn(this.mtAmount, this.fromChainId)
+          BuyBackBurner.connect(burningAccount).buyBackBurn(
+            belowMinAmount,
+            this.fromChainId
+          )
         ).to.be.revertedWithCustomError(
-          mockBuyBackBurner,
-          "MCV2_BuyBackBurner__ZeroAmount"
+          BuyBackBurner,
+          "MCV2_BuyBackBurner__InvalidParams"
         );
       });
 
-      it("should revert if swap is invalid", async function () {
-        // Mock a scenario where HUNT balance is not 0 after swap
-        const mockBuyBackBurner = await ethers.deployContract(
-          "MockBuyBackBurner",
-          {
-            invalidSwap: true,
-          }
+      it("should succeed if mt amount equals minimum threshold", async function () {
+        const minMtBurnAmount = await BuyBackBurner.MIN_MT_BURN_AMOUNT();
+
+        await expect(
+          BuyBackBurner.connect(burningAccount).buyBackBurn(
+            minMtBurnAmount,
+            this.fromChainId
+          )
+        ).to.not.be.reverted;
+      });
+
+      it("should revert if user has insufficient HUNT balance", async function () {
+        // Get a large MT amount that would require more HUNT than the user has
+        const largeMtAmount = wei(1000000000); // Very large amount
+
+        await expect(
+          BuyBackBurner.connect(alice).buyBackBurn(
+            largeMtAmount,
+            this.fromChainId
+          )
+        ).to.be.reverted; // Will revert with ERC20 transfer error
+      });
+
+      it("should revert if user has insufficient allowance", async function () {
+        // Reset approval to 0
+        await HuntToken.connect(burningAccount).approve(
+          BuyBackBurner.target,
+          0
         );
 
         await expect(
-          mockBuyBackBurner
-            .connect(burningAccount)
-            .buyBackBurn(this.mtAmount, this.fromChainId)
-        ).to.be.revertedWithCustomError(
-          mockBuyBackBurner,
-          "MCV2_BuyBackBurner__InvalidSwap"
-        );
+          BuyBackBurner.connect(burningAccount).buyBackBurn(
+            this.mtAmount,
+            this.fromChainId
+          )
+        ).to.be.reverted; // Will revert with ERC20 allowance error
       });
     }); // Edge cases
   }); // Buy back and burn MT
