@@ -126,6 +126,11 @@ module.exports = {
       chainId: 130,
       accounts: [process.env.MAINNET_PRIVATE_KEY],
     },
+    over: {
+      url: "https://rpc.overprotocol.com",
+      chainId: 54176,
+      accounts: [process.env.MAINNET_PRIVATE_KEY],
+    },
     // Testnets
     sepolia: {
       url: process.env.RPC_SEPOLIA,
@@ -286,6 +291,14 @@ module.exports = {
         urls: {
           apiURL: "https://api.uniscan.xyz/api",
           browserURL: "https://uniscan.xyz",
+        },
+      },
+      {
+        network: "over",
+        chainId: 54176,
+        urls: {
+          apiURL: "https://scan.over.network",
+          browserURL: "https://scan.over.network",
         },
       },
       {

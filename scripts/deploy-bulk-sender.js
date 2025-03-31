@@ -62,5 +62,6 @@ npx hardhat compile && npx hardhat run --network apechain scripts/deploy-bulk-se
 npx hardhat compile && npx hardhat run --network shibarium scripts/deploy-bulk-sender.js
 npx hardhat compile && npx hardhat run --network hashkey scripts/deploy-bulk-sender.js
 npx hardhat compile && npx hardhat run --network unichain scripts/deploy-bulk-sender.js
+npx hardhat compile && npx hardhat run --network over scripts/deploy-bulk-sender.js
 
 */
