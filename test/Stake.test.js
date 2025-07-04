@@ -346,7 +346,7 @@ describe("Stake Contract", function () {
         it("should reject zero stake amount", async function () {
           await expect(stakeTokens(Stake, StakingToken, alice, poolId, 0))
             .to.be.revertedWithCustomError(Stake, "Stake__InvalidAmount")
-            .withArgs("amount cannot be zero");
+            .withArgs("Stake amount too small");
         });
 
         it("should reject staking in inactive pool", async function () {
@@ -354,6 +354,23 @@ describe("Stake Contract", function () {
           await expect(
             stakeTokens(Stake, StakingToken, alice, poolId, STAKE_AMOUNT)
           ).to.be.revertedWithCustomError(Stake, "Stake__PoolNotFound");
+        });
+
+        it("should reject staking below minimum amount", async function () {
+          const minStakeAmount = 1000; // MIN_STAKE_AMOUNT from contract
+          await expect(
+            stakeTokens(Stake, StakingToken, alice, poolId, minStakeAmount - 1)
+          )
+            .to.be.revertedWithCustomError(Stake, "Stake__InvalidAmount")
+            .withArgs("Stake amount too small");
+        });
+
+        it("should accept staking at minimum amount", async function () {
+          const minStakeAmount = 1000; // MIN_STAKE_AMOUNT from contract
+          await stakeTokens(Stake, StakingToken, alice, poolId, minStakeAmount);
+
+          const userInfo = await Stake.getUserInfo(poolId, alice.address);
+          expect(userInfo.stakedAmount).to.equal(minStakeAmount);
         });
       });
     });
@@ -676,7 +693,10 @@ describe("Stake Contract", function () {
     it("should prevent non-creator from deactivating pool", async function () {
       await expect(
         Stake.connect(alice).deactivatePool(poolId)
-      ).to.be.revertedWith("Only creator can deactivate pool");
+      ).to.be.revertedWithCustomError(
+        Stake,
+        "Stake__UnauthorizedPoolDeactivation"
+      );
     });
   });
 
@@ -707,6 +727,167 @@ describe("Stake Contract", function () {
       const [claimable] = await Stake.claimableReward(poolId, alice.address);
       expect(claimable).to.be.lte(REWARD_AMOUNT);
       expect(claimable).to.be.closeTo(REWARD_AMOUNT, wei(100));
+    });
+  });
+
+  describe("Calculation Overflow Protection", function () {
+    let Stake, StakingToken, RewardToken, alice, bob;
+
+    beforeEach(async function () {
+      ({ Stake, StakingToken, RewardToken, alice, bob } = await loadFixture(
+        deployStakeFixture
+      ));
+    });
+
+    it("should prevent overflow in reward calculations", async function () {
+      // Create a pool with extreme conditions that could cause overflow
+      const largeRewardAmount = wei(1000000); // 1M tokens
+      const shortDuration = 3600; // 1 hour
+
+      await RewardToken.approve(Stake.target, largeRewardAmount);
+      const poolId = await createPool(
+        Stake,
+        StakingToken,
+        RewardToken,
+        largeRewardAmount,
+        shortDuration
+      );
+
+      // Setup tokens for users
+      await setupUserTokens(StakingToken, [alice, bob]);
+
+      // Stake tiny amount to create high accRewardPerShare
+      await stakeTokens(Stake, StakingToken, alice, poolId, 1000); // MIN_STAKE_AMOUNT
+
+      // Fast forward to accumulate massive rewards per share
+      await time.increase(shortDuration + 1000);
+
+      // Update pool to accumulate rewards
+      await StakingToken.connect(bob).approve(Stake.target, 1000);
+      await Stake.connect(bob).stake(poolId, 1000);
+
+      // Try to claim rewards - should not overflow
+      const [claimable] = await Stake.claimableReward(poolId, alice.address);
+      expect(claimable).to.be.lte(largeRewardAmount);
+    });
+
+    it("should handle maximum possible staking amounts", async function () {
+      const poolId = await createPool(Stake, StakingToken, RewardToken);
+
+      // Transfer large amount to alice (within available balance)
+      const maxStakeAmount = wei(100000000); // 100M tokens (within 200M original balance)
+      await StakingToken.transfer(alice.address, maxStakeAmount);
+
+      // This should not overflow even with large amounts
+      await stakeTokens(Stake, StakingToken, alice, poolId, maxStakeAmount);
+
+      const userInfo = await Stake.getUserInfo(poolId, alice.address);
+      expect(userInfo.stakedAmount).to.equal(maxStakeAmount);
+    });
+
+    it("should handle zero division edge cases", async function () {
+      const poolId = await createPool(Stake, StakingToken, RewardToken);
+
+      // Test with zero staked amount
+      const [claimable] = await Stake.claimableReward(poolId, alice.address);
+      expect(claimable).to.equal(0);
+
+      // Test with zero accRewardPerShare (no time passed)
+      await setupUserTokens(StakingToken, [alice]);
+      await stakeTokens(Stake, StakingToken, alice, poolId, STAKE_AMOUNT);
+
+      const [claimableNoTime] = await Stake.claimableReward(
+        poolId,
+        alice.address
+      );
+      expect(claimableNoTime).to.equal(0);
+    });
+  });
+
+  describe("Minimum Stake Amount Validation", function () {
+    let Stake, StakingToken, RewardToken, alice, poolId;
+
+    beforeEach(async function () {
+      ({ Stake, StakingToken, RewardToken, alice, poolId } = await loadFixture(
+        deployStakeWithPoolFixture
+      ));
+      await setupUserTokens(StakingToken, [alice]);
+    });
+
+    it("should reject staking amounts below minimum", async function () {
+      const minStakeAmount = 1000; // MIN_STAKE_AMOUNT from contract
+
+      for (let amount = 1; amount < minStakeAmount; amount += 100) {
+        await expect(stakeTokens(Stake, StakingToken, alice, poolId, amount))
+          .to.be.revertedWithCustomError(Stake, "Stake__InvalidAmount")
+          .withArgs("Stake amount too small");
+      }
+    });
+
+    it("should accept staking amounts at or above minimum", async function () {
+      const minStakeAmount = 1000; // MIN_STAKE_AMOUNT from contract
+      const testAmounts = [
+        minStakeAmount,
+        minStakeAmount + 1,
+        minStakeAmount * 2,
+        STAKE_AMOUNT,
+      ];
+
+      for (const amount of testAmounts) {
+        await stakeTokens(Stake, StakingToken, alice, poolId, amount);
+
+        const userInfo = await Stake.getUserInfo(poolId, alice.address);
+        expect(userInfo.stakedAmount).to.be.gte(amount);
+      }
+    });
+
+    it("should prevent dust attacks with minimum stake requirement", async function () {
+      // Try to create a dust attack scenario
+      const dustAmount = 1; // Far below minimum
+
+      await expect(stakeTokens(Stake, StakingToken, alice, poolId, dustAmount))
+        .to.be.revertedWithCustomError(Stake, "Stake__InvalidAmount")
+        .withArgs("Stake amount too small");
+    });
+  });
+
+  describe("Authorization Tests", function () {
+    let Stake, StakingToken, RewardToken, owner, alice, bob, poolId;
+
+    beforeEach(async function () {
+      ({ Stake, StakingToken, RewardToken, owner, alice, bob, poolId } =
+        await loadFixture(deployStakeWithPoolFixture));
+    });
+
+    it("should allow only creator to deactivate pool", async function () {
+      // Owner (creator) should be able to deactivate
+      await expect(Stake.connect(owner).deactivatePool(poolId))
+        .to.emit(Stake, "PoolDeactivated")
+        .withArgs(poolId);
+    });
+
+    it("should reject deactivation from non-creator", async function () {
+      // Non-creator should not be able to deactivate
+      await expect(
+        Stake.connect(alice).deactivatePool(poolId)
+      ).to.be.revertedWithCustomError(
+        Stake,
+        "Stake__UnauthorizedPoolDeactivation"
+      );
+
+      await expect(
+        Stake.connect(bob).deactivatePool(poolId)
+      ).to.be.revertedWithCustomError(
+        Stake,
+        "Stake__UnauthorizedPoolDeactivation"
+      );
+    });
+
+    it("should reject deactivation of non-existent pool", async function () {
+      const nonExistentPoolId = 999;
+      await expect(
+        Stake.connect(owner).deactivatePool(nonExistentPoolId)
+      ).to.be.revertedWithCustomError(Stake, "Stake__PoolNotFound");
     });
   });
 });

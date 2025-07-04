@@ -22,11 +22,14 @@ contract Stake {
     error Stake__InsufficientBalance();
     error Stake__NoRewardsToClaim();
     error Stake__InvalidPaginationParameters();
+    error Stake__CalculationOverflow();
+    error Stake__UnauthorizedPoolDeactivation();
 
     uint256 private constant REWARD_PRECISION = 1e18;
     uint256 private constant MIN_REWARD_DURATION = 3600; // 1 hour in seconds
     uint256 private constant MAX_REWARD_DURATION =
         MIN_REWARD_DURATION * 24 * 365 * 10; // 10 years
+    uint256 private constant MIN_STAKE_AMOUNT = 1000; // Prevent dust stakes to avoid Stake__CalculationOverflow
 
     // Gas optimized struct packing - fits in 6 storage slots
     struct Pool {
@@ -107,10 +110,9 @@ contract Stake {
             return 0;
         }
 
-        // Check for multiplication overflow
-        if (amount > type(uint256).max / accRewardPerShare) {
-            return 0; // Return 0 instead of reverting to handle gracefully
-        }
+        // Revert on overflow
+        if (amount > type(uint256).max / accRewardPerShare)
+            revert Stake__CalculationOverflow();
 
         return (amount * accRewardPerShare) / REWARD_PRECISION;
     }
@@ -140,9 +142,7 @@ contract Stake {
         if (
             rewardDuration < MIN_REWARD_DURATION ||
             rewardDuration > MAX_REWARD_DURATION
-        ) {
-            revert Stake__InvalidDuration("rewardDuration out of range");
-        }
+        ) revert Stake__InvalidDuration("rewardDuration out of range");
 
         poolId = poolCount++;
         uint40 currentTime = uint40(block.timestamp);
@@ -221,7 +221,8 @@ contract Stake {
         uint256 poolId,
         uint128 amount
     ) external _checkPoolExists(poolId) _checkPoolActive(poolId) {
-        if (amount == 0) revert Stake__InvalidAmount("amount cannot be zero");
+        if (amount < MIN_STAKE_AMOUNT)
+            revert Stake__InvalidAmount("Stake amount too small");
 
         Pool storage pool = pools[poolId];
         UserInfo storage user = userInfo[poolId][msg.sender];
@@ -485,7 +486,8 @@ contract Stake {
      */
     function deactivatePool(uint256 poolId) external _checkPoolExists(poolId) {
         Pool storage pool = pools[poolId];
-        require(msg.sender == pool.creator, "Only creator can deactivate pool");
+        if (msg.sender != pool.creator)
+            revert Stake__UnauthorizedPoolDeactivation();
 
         pool.active = false;
         emit PoolDeactivated(poolId);
