@@ -22,7 +22,6 @@ contract Stake {
     error Stake__InsufficientBalance();
     error Stake__NoRewardsToClaim();
     error Stake__InvalidPaginationParameters();
-    error Stake__SameTokenNotAllowed();
 
     uint256 private constant REWARD_PRECISION = 1e18;
     uint256 private constant MIN_REWARD_DURATION = 3600; // 1 hour in seconds
@@ -136,7 +135,6 @@ contract Stake {
             revert Stake__InvalidToken("stakingToken cannot be zero");
         if (rewardToken == address(0))
             revert Stake__InvalidToken("rewardToken cannot be zero");
-        if (stakingToken == rewardToken) revert Stake__SameTokenNotAllowed();
         if (rewardAmount == 0)
             revert Stake__InvalidAmount("rewardAmount cannot be zero");
         if (

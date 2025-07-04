@@ -132,7 +132,8 @@ describe("Stake", function () {
           .withArgs("rewardToken cannot be zero");
       });
 
-      it("should revert if staking and reward tokens are the same", async function () {
+      it("should allow staking and reward tokens to be the same", async function () {
+        await StakingToken.approve(Stake.target, REWARD_AMOUNT);
         await expect(
           Stake.createPool(
             StakingToken.target,
@@ -140,7 +141,13 @@ describe("Stake", function () {
             REWARD_AMOUNT,
             REWARD_DURATION
           )
-        ).to.be.revertedWithCustomError(Stake, "Stake__SameTokenNotAllowed");
+        ).to.not.be.reverted;
+
+        const pool = await Stake.pools(1);
+        expect(pool.stakingToken).to.equal(StakingToken.target);
+        expect(pool.rewardToken).to.equal(StakingToken.target);
+        expect(pool.rewardAmount).to.equal(REWARD_AMOUNT);
+        expect(pool.active).to.equal(true);
       });
 
       it("should revert if reward amount is zero", async function () {
@@ -183,6 +190,134 @@ describe("Stake", function () {
           .withArgs("rewardDuration out of range");
       });
     }); // Edge Cases
+
+    describe("Same Token Staking", function () {
+      beforeEach(async function () {
+        await StakingToken.approve(Stake.target, REWARD_AMOUNT);
+        await Stake.createPool(
+          StakingToken.target,
+          StakingToken.target,
+          REWARD_AMOUNT,
+          REWARD_DURATION
+        );
+
+        // Transfer staking tokens to alice and bob
+        await StakingToken.transfer(alice.address, STAKE_AMOUNT * 3n);
+        await StakingToken.transfer(bob.address, STAKE_AMOUNT * 3n);
+      });
+
+      it("should allow staking when staking and reward tokens are the same", async function () {
+        await StakingToken.connect(alice).approve(Stake.target, STAKE_AMOUNT);
+        await expect(Stake.connect(alice).stake(1, STAKE_AMOUNT))
+          .to.emit(Stake, "Staked")
+          .withArgs(1, alice.address, STAKE_AMOUNT);
+
+        const userInfo = await Stake.getUserInfo(1, alice.address);
+        expect(userInfo.stakedAmount).to.equal(STAKE_AMOUNT);
+
+        const pool = await Stake.pools(1);
+        expect(pool.totalStaked).to.equal(STAKE_AMOUNT);
+      });
+
+      it("should allow unstaking when staking and reward tokens are the same", async function () {
+        await StakingToken.connect(alice).approve(Stake.target, STAKE_AMOUNT);
+        await Stake.connect(alice).stake(1, STAKE_AMOUNT);
+
+        await expect(Stake.connect(alice).unstake(1, STAKE_AMOUNT / 2n))
+          .to.emit(Stake, "Unstaked")
+          .withArgs(1, alice.address, STAKE_AMOUNT / 2n);
+
+        const userInfo = await Stake.getUserInfo(1, alice.address);
+        expect(userInfo.stakedAmount).to.equal(STAKE_AMOUNT / 2n);
+      });
+
+      it("should calculate rewards correctly for same token pools", async function () {
+        await StakingToken.connect(alice).approve(Stake.target, STAKE_AMOUNT);
+        await Stake.connect(alice).stake(1, STAKE_AMOUNT);
+
+        // Fast forward 360 seconds (10% of reward duration)
+        await time.increase(360);
+
+        const [claimable, claimed] = await Stake.claimableReward(
+          1,
+          alice.address
+        );
+
+        // Expected reward: (10000 * 360) / 3600 = 1000 tokens
+        expect(claimable).to.be.closeTo(wei(1000), wei(1));
+        expect(claimed).to.equal(0);
+      });
+
+      it("should allow claiming rewards from same token pools", async function () {
+        await StakingToken.connect(alice).approve(Stake.target, STAKE_AMOUNT);
+        await Stake.connect(alice).stake(1, STAKE_AMOUNT);
+
+        // Fast forward to accumulate rewards
+        await time.increase(360);
+
+        const initialBalance = await StakingToken.balanceOf(alice.address);
+
+        const tx = await Stake.connect(alice).claim(1);
+        const receipt = await tx.wait();
+
+        // Check that RewardClaimed event was emitted
+        const event = receipt.logs.find(
+          (log) => log.fragment?.name === "RewardClaimed"
+        );
+        expect(event).to.not.be.undefined;
+        expect(event.args[0]).to.equal(1); // poolId
+        expect(event.args[1]).to.equal(alice.address); // staker
+        expect(event.args[2]).to.be.closeTo(wei(1000), wei(50)); // reward amount with tolerance
+
+        const finalBalance = await StakingToken.balanceOf(alice.address);
+        expect(finalBalance).to.be.gt(initialBalance);
+      });
+
+      it("should handle multiple users in same token pools", async function () {
+        // Alice stakes first
+        await StakingToken.connect(alice).approve(Stake.target, STAKE_AMOUNT);
+        await Stake.connect(alice).stake(1, STAKE_AMOUNT);
+
+        // Bob stakes the same amount
+        await StakingToken.connect(bob).approve(Stake.target, STAKE_AMOUNT);
+        await Stake.connect(bob).stake(1, STAKE_AMOUNT);
+
+        // Fast forward
+        await time.increase(360);
+
+        const [aliceClaimable] = await Stake.claimableReward(1, alice.address);
+        const [bobClaimable] = await Stake.claimableReward(1, bob.address);
+
+        // Alice should have more rewards since she staked earlier
+        expect(aliceClaimable).to.be.gt(bobClaimable);
+
+        // Total rewards should be approximately correct
+        expect(aliceClaimable + bobClaimable).to.be.closeTo(wei(1000), wei(50));
+      });
+
+      it("should handle token balance correctly in same token pools", async function () {
+        const initialContractBalance = await StakingToken.balanceOf(
+          Stake.target
+        );
+
+        await StakingToken.connect(alice).approve(Stake.target, STAKE_AMOUNT);
+        await Stake.connect(alice).stake(1, STAKE_AMOUNT);
+
+        // Contract should have initial reward amount plus staked amount
+        const afterStakeBalance = await StakingToken.balanceOf(Stake.target);
+        expect(afterStakeBalance).to.equal(
+          initialContractBalance + STAKE_AMOUNT
+        );
+
+        // Fast forward and claim
+        await time.increase(360);
+        await Stake.connect(alice).claim(1);
+
+        // Balance should be reduced by claimed amount
+        const afterClaimBalance = await StakingToken.balanceOf(Stake.target);
+        expect(afterClaimBalance).to.be.lt(afterStakeBalance);
+      });
+    }); // Same Token Staking
   }); // Create Pool
 
   describe("Staking", function () {
