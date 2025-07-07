@@ -44,7 +44,7 @@ contract Stake {
         uint128 rewardAmount; // 128 bits - slot 3 - immutable
         uint32 rewardDuration; // 32 bits - slot 3 (up to ~136 years in seconds) - immutable
         uint40 rewardCreatedAt; // 40 bits - slot 3 (until year 36,812) - immutable
-        bool cancelled; // 8 bits - slot 3 - default false
+        uint40 cancelledAt; // 40 bits - slot 3 - default 0 (not cancelled)
         uint128 totalStaked; // 128 bits - slot 4
         uint32 activeStakerCount; // 32 bits - slot 4 - number of unique active stakers
         uint40 lastRewardTime; // 40 bits - slot 4
@@ -93,7 +93,7 @@ contract Stake {
         address indexed staker,
         uint128 reward
     );
-    event PoolCancelled(uint256 indexed poolId);
+    event PoolCancelled(uint256 indexed poolId, uint256 leftoverRewards);
 
     // MARK: - Modifiers
 
@@ -105,7 +105,7 @@ contract Stake {
     modifier _checkPoolActive(uint256 poolId) {
         Pool memory pool = pools[poolId];
         uint256 endTime = pool.rewardCreatedAt + pool.rewardDuration;
-        if (pool.cancelled || block.timestamp > endTime)
+        if (pool.cancelledAt > 0 || block.timestamp > endTime)
             revert Stake__PoolNotActive();
         _;
     }
@@ -146,6 +146,10 @@ contract Stake {
         uint40 currentTime = uint40(block.timestamp);
         if (currentTime > pool.lastRewardTime && pool.totalStaked > 0) {
             uint256 endTime = pool.rewardCreatedAt + pool.rewardDuration;
+            // If pool is cancelled, use cancellation time as end time
+            if (pool.cancelledAt > 0 && pool.cancelledAt < endTime) {
+                endTime = pool.cancelledAt;
+            }
             uint256 toTime = currentTime > endTime ? endTime : currentTime;
             uint256 timePassed = toTime - pool.lastRewardTime;
 
@@ -230,6 +234,10 @@ contract Stake {
         }
 
         uint256 endTime = pool.rewardCreatedAt + pool.rewardDuration;
+        // If pool is cancelled, use cancellation time as end time
+        if (pool.cancelledAt > 0 && pool.cancelledAt < endTime) {
+            endTime = pool.cancelledAt;
+        }
         uint256 toTime = currentTime > endTime ? endTime : currentTime;
         uint256 timePassed = toTime - pool.lastRewardTime;
 
@@ -283,7 +291,7 @@ contract Stake {
             rewardAmount: rewardAmount,
             rewardDuration: rewardDuration,
             rewardCreatedAt: currentTime,
-            cancelled: false,
+            cancelledAt: 0,
             totalStaked: 0,
             activeStakerCount: 0,
             lastRewardTime: currentTime,
@@ -315,9 +323,34 @@ contract Stake {
         Pool storage pool = pools[poolId];
         if (msg.sender != pool.creator)
             revert Stake__UnauthorizedPoolDeactivation();
+        if (pool.cancelledAt > 0) revert Stake__PoolNotActive(); // Already cancelled
 
-        pool.cancelled = true;
-        emit PoolCancelled(poolId);
+        // Update pool rewards up to cancellation time
+        _updatePool(poolId);
+
+        uint40 currentTime = uint40(block.timestamp);
+        uint256 endTime = pool.rewardCreatedAt + pool.rewardDuration;
+
+        // Calculate leftover rewards to return to creator
+        uint256 leftoverRewards = 0;
+        if (currentTime < endTime) {
+            uint256 remainingTime = endTime - currentTime;
+            uint256 rewardPerSecond = pool.rewardAmount / pool.rewardDuration;
+            leftoverRewards = remainingTime * rewardPerSecond;
+        }
+
+        // Set cancellation time
+        pool.cancelledAt = currentTime;
+
+        // Return leftover rewards to creator if any
+        if (leftoverRewards > 0) {
+            IERC20(pool.rewardToken).safeTransfer(
+                pool.creator,
+                leftoverRewards
+            );
+        }
+
+        emit PoolCancelled(poolId, leftoverRewards);
     }
 
     // MARK: - Staking Operations

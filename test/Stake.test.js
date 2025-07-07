@@ -157,7 +157,7 @@ describe("Stake Contract", function () {
         expect(this.pool.rewardAmount).to.equal(REWARD_AMOUNT);
         expect(this.pool.rewardDuration).to.equal(REWARD_DURATION);
         expect(this.pool.creator).to.equal(owner.address);
-        expect(this.pool.cancelled).to.equal(false);
+        expect(this.pool.cancelledAt).to.equal(0);
         expect(this.pool.totalStaked).to.equal(0);
       });
 
@@ -212,7 +212,7 @@ describe("Stake Contract", function () {
         expect(pool.stakingToken).to.equal(StakingToken.target);
         expect(pool.rewardToken).to.equal(StakingToken.target);
         expect(pool.rewardAmount).to.equal(REWARD_AMOUNT);
-        expect(pool.cancelled).to.equal(false);
+        expect(pool.cancelledAt).to.equal(0);
       });
     });
 
@@ -958,12 +958,18 @@ describe("Stake Contract", function () {
     });
 
     it("should allow creator to cancel pool", async function () {
-      await expect(Stake.cancelPool(poolId))
-        .to.emit(Stake, "PoolCancelled")
-        .withArgs(poolId);
+      const tx = await Stake.cancelPool(poolId);
+      const receipt = await tx.wait();
+
+      // Extract leftover rewards from event
+      const event = await getEventFromReceipt(receipt, "PoolCancelled");
+      const leftoverRewards = event.args[1];
+
+      // Should be close to full reward amount since no stakers
+      expect(leftoverRewards).to.be.closeTo(REWARD_AMOUNT, wei(100));
 
       const pool = await Stake.pools(poolId);
-      expect(pool.cancelled).to.be.true;
+      expect(pool.cancelledAt).to.be.gt(0);
     });
 
     it("should prevent non-creator from cancelling pool", async function () {
@@ -973,6 +979,241 @@ describe("Stake Contract", function () {
         Stake,
         "Stake__UnauthorizedPoolDeactivation"
       );
+    });
+
+    it("should reject cancellation of non-existent pool", async function () {
+      const nonExistentPoolId = 999;
+      await expect(
+        Stake.connect(owner).cancelPool(nonExistentPoolId)
+      ).to.be.revertedWithCustomError(Stake, "Stake__PoolNotFound");
+    });
+
+    it("should prevent double cancellation", async function () {
+      // First cancellation should succeed
+      await Stake.connect(owner).cancelPool(poolId);
+
+      // Second cancellation should fail
+      await expect(
+        Stake.connect(owner).cancelPool(poolId)
+      ).to.be.revertedWithCustomError(Stake, "Stake__PoolNotActive");
+    });
+  });
+
+  describe("Pool Cancellation", function () {
+    let Stake, StakingToken, RewardToken, owner, alice, bob, poolId;
+
+    beforeEach(async function () {
+      ({ Stake, StakingToken, RewardToken, owner, alice, bob, poolId } =
+        await loadFixture(deployStakeWithPoolFixture));
+      await setupUserTokens(StakingToken, [alice, bob]);
+    });
+
+    it("should return all rewards when cancelled immediately", async function () {
+      const creatorInitialBalance = await RewardToken.balanceOf(owner.address);
+
+      const tx = await Stake.cancelPool(poolId);
+      const receipt = await tx.wait();
+
+      // Extract leftover rewards from event
+      const event = await getEventFromReceipt(receipt, "PoolCancelled");
+      const leftoverRewards = event.args[1];
+
+      // Should be close to full reward amount since no stakers
+      expect(leftoverRewards).to.be.closeTo(REWARD_AMOUNT, wei(100));
+
+      const creatorFinalBalance = await RewardToken.balanceOf(owner.address);
+      expect(creatorFinalBalance).to.be.closeTo(
+        creatorInitialBalance + REWARD_AMOUNT,
+        wei(100)
+      );
+    });
+
+    it("should return partial rewards when cancelled mid-period", async function () {
+      // Stake some tokens
+      await stakeTokens(Stake, StakingToken, alice, poolId, STAKE_AMOUNT);
+
+      // Wait for half the reward period
+      await time.increase(REWARD_DURATION / 2);
+
+      const creatorInitialBalance = await RewardToken.balanceOf(owner.address);
+
+      const tx = await Stake.cancelPool(poolId);
+      const receipt = await tx.wait();
+
+      // Extract leftover rewards from event
+      const event = await getEventFromReceipt(receipt, "PoolCancelled");
+      const leftoverRewards = event.args[1];
+
+      // Should be approximately half the original reward amount
+      expect(leftoverRewards).to.be.closeTo(REWARD_AMOUNT / 2n, wei(100));
+
+      // Creator should receive the leftover rewards
+      const creatorFinalBalance = await RewardToken.balanceOf(owner.address);
+      expect(creatorFinalBalance).to.equal(
+        creatorInitialBalance + leftoverRewards
+      );
+    });
+
+    it("should return zero rewards when cancelled after period ends", async function () {
+      // Stake some tokens
+      await stakeTokens(Stake, StakingToken, alice, poolId, STAKE_AMOUNT);
+
+      // Wait for the reward period to end
+      await time.increase(REWARD_DURATION + 100);
+
+      const creatorInitialBalance = await RewardToken.balanceOf(owner.address);
+
+      await expect(Stake.cancelPool(poolId))
+        .to.emit(Stake, "PoolCancelled")
+        .withArgs(poolId, 0); // No leftover rewards
+
+      const creatorFinalBalance = await RewardToken.balanceOf(owner.address);
+      expect(creatorFinalBalance).to.equal(creatorInitialBalance); // No change
+    });
+
+    it("should allow stakers to unstake after cancellation", async function () {
+      // Alice stakes tokens
+      await stakeTokens(Stake, StakingToken, alice, poolId, STAKE_AMOUNT);
+
+      // Wait for some time to accumulate rewards
+      await time.increase(REWARD_DURATION / 4);
+
+      // Cancel the pool
+      await Stake.cancelPool(poolId);
+
+      // Alice should still be able to unstake
+      const aliceInitialBalance = await StakingToken.balanceOf(alice.address);
+      await Stake.connect(alice).unstake(poolId, STAKE_AMOUNT);
+
+      const aliceFinalBalance = await StakingToken.balanceOf(alice.address);
+      expect(aliceFinalBalance).to.equal(aliceInitialBalance + STAKE_AMOUNT);
+
+      // Check that Alice's stake is now zero
+      const userStake = await Stake.userPoolStake(alice.address, poolId);
+      expect(userStake.stakedAmount).to.equal(0);
+    });
+
+    it("should allow stakers to claim rewards earned before cancellation", async function () {
+      // Alice stakes tokens
+      await stakeTokens(Stake, StakingToken, alice, poolId, STAKE_AMOUNT);
+
+      // Wait for some time to accumulate rewards
+      await time.increase(REWARD_DURATION / 4);
+
+      // Cancel the pool
+      await Stake.cancelPool(poolId);
+
+      // Alice should still be able to claim rewards earned before cancellation
+      const aliceInitialBalance = await RewardToken.balanceOf(alice.address);
+      const [claimableBefore] = await Stake.claimableReward(
+        poolId,
+        alice.address
+      );
+
+      expect(claimableBefore).to.be.gt(0);
+      expect(claimableBefore).to.be.closeTo(REWARD_AMOUNT / 4n, wei(100));
+
+      await Stake.connect(alice).claim(poolId);
+
+      const aliceFinalBalance = await RewardToken.balanceOf(alice.address);
+      expect(aliceFinalBalance).to.be.closeTo(
+        aliceInitialBalance + claimableBefore,
+        wei(50)
+      );
+    });
+
+    it("should prevent new staking after cancellation", async function () {
+      // Cancel the pool
+      await Stake.cancelPool(poolId);
+
+      // Trying to stake should fail
+      await expect(
+        stakeTokens(Stake, StakingToken, alice, poolId, STAKE_AMOUNT)
+      ).to.be.revertedWithCustomError(Stake, "Stake__PoolNotActive");
+    });
+
+    it("should handle cancellation with no stakers", async function () {
+      const creatorInitialBalance = await RewardToken.balanceOf(owner.address);
+
+      const tx = await Stake.cancelPool(poolId);
+      const receipt = await tx.wait();
+
+      // Extract leftover rewards from event
+      const event = await getEventFromReceipt(receipt, "PoolCancelled");
+      const leftoverRewards = event.args[1];
+
+      // Should be close to full reward amount since no stakers
+      expect(leftoverRewards).to.be.closeTo(REWARD_AMOUNT, wei(100));
+
+      // All rewards should be returned to creator
+      const creatorFinalBalance = await RewardToken.balanceOf(owner.address);
+      expect(creatorFinalBalance).to.be.closeTo(
+        creatorInitialBalance + REWARD_AMOUNT,
+        wei(100)
+      );
+    });
+
+    it("should handle cancellation with multiple stakers", async function () {
+      // Both Alice and Bob stake
+      await stakeTokens(Stake, StakingToken, alice, poolId, STAKE_AMOUNT);
+      await stakeTokens(Stake, StakingToken, bob, poolId, STAKE_AMOUNT);
+
+      // Wait for some time
+      await time.increase(REWARD_DURATION / 3);
+
+      // Cancel the pool
+      const tx = await Stake.cancelPool(poolId);
+      const receipt = await tx.wait();
+
+      // Extract leftover rewards from event
+      const event = await getEventFromReceipt(receipt, "PoolCancelled");
+      const leftoverRewards = event.args[1];
+
+      // Should be approximately 2/3 of the original reward amount
+      expect(leftoverRewards).to.be.closeTo(
+        (REWARD_AMOUNT * 2n) / 3n,
+        wei(200)
+      );
+
+      // Both stakers should be able to unstake and claim their rewards
+      const [aliceClaimable] = await Stake.claimableReward(
+        poolId,
+        alice.address
+      );
+      const [bobClaimable] = await Stake.claimableReward(poolId, bob.address);
+
+      expect(aliceClaimable).to.be.gt(0);
+      expect(bobClaimable).to.be.gt(0);
+
+      // Combined claimed rewards + leftover rewards should equal original reward amount
+      expect(aliceClaimable + bobClaimable + leftoverRewards).to.be.closeTo(
+        REWARD_AMOUNT,
+        wei(100)
+      );
+    });
+
+    it("should correctly calculate rewards up to cancellation time", async function () {
+      // Alice stakes tokens
+      await stakeTokens(Stake, StakingToken, alice, poolId, STAKE_AMOUNT);
+
+      // Wait for 1/4 of the reward period
+      await time.increase(REWARD_DURATION / 4);
+
+      // Check rewards before cancellation
+      const [rewardsBefore] = await Stake.claimableReward(
+        poolId,
+        alice.address
+      );
+
+      // Cancel the pool
+      await Stake.cancelPool(poolId);
+
+      // Wait additional time after cancellation
+      await time.increase(REWARD_DURATION / 4);
+
+      // Rewards should not have increased after cancellation
+      const [rewardsAfter] = await Stake.claimableReward(poolId, alice.address);
+      expect(rewardsAfter).to.be.closeTo(rewardsBefore, wei(50));
     });
   });
 
@@ -1145,9 +1386,15 @@ describe("Stake Contract", function () {
 
     it("should allow only creator to cancel pool", async function () {
       // Owner (creator) should be able to cancel
-      await expect(Stake.connect(owner).cancelPool(poolId))
-        .to.emit(Stake, "PoolCancelled")
-        .withArgs(poolId);
+      const tx = await Stake.connect(owner).cancelPool(poolId);
+      const receipt = await tx.wait();
+
+      // Extract leftover rewards from event
+      const event = await getEventFromReceipt(receipt, "PoolCancelled");
+      const leftoverRewards = event.args[1];
+
+      // Should be close to full reward amount since no stakers
+      expect(leftoverRewards).to.be.closeTo(REWARD_AMOUNT, wei(100));
     });
 
     it("should reject cancellation from non-creator", async function () {
