@@ -804,15 +804,6 @@ describe("Stake Contract", function () {
       });
     });
 
-    describe("Pool Status", function () {
-      it("should return active status correctly", async function () {
-        expect(await Stake.isPoolActive(0)).to.be.true;
-
-        await time.increase(REWARD_DURATION + 1);
-        expect(await Stake.isPoolActive(0)).to.be.false;
-      });
-    });
-
     describe("User Engaged Pools Tracking", function () {
       it("should track user engaged pools correctly", async function () {
         // Create multiple pools

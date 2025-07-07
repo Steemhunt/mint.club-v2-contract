@@ -14,6 +14,14 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 contract Stake {
     using SafeERC20 for IERC20;
 
+    // MARK: - Constants & Errors
+
+    uint256 private constant REWARD_PRECISION = 1e18;
+    uint256 private constant MIN_REWARD_DURATION = 3600; // 1 hour in seconds
+    uint256 private constant MAX_REWARD_DURATION =
+        MIN_REWARD_DURATION * 24 * 365 * 10; // 10 years
+    uint256 private constant MIN_STAKE_AMOUNT = 1000; // Prevent dust stakes to avoid Stake__CalculationOverflow
+
     // Error messages
     error Stake__InvalidToken(string reason);
     error Stake__InvalidAmount(string reason);
@@ -26,11 +34,7 @@ contract Stake {
     error Stake__CalculationOverflow();
     error Stake__UnauthorizedPoolDeactivation();
 
-    uint256 private constant REWARD_PRECISION = 1e18;
-    uint256 private constant MIN_REWARD_DURATION = 3600; // 1 hour in seconds
-    uint256 private constant MAX_REWARD_DURATION =
-        MIN_REWARD_DURATION * 24 * 365 * 10; // 10 years
-    uint256 private constant MIN_STAKE_AMOUNT = 1000; // Prevent dust stakes to avoid Stake__CalculationOverflow
+    // MARK: - Structs
 
     // Gas optimized struct packing - fits in 6 storage slots
     struct Pool {
@@ -54,6 +58,8 @@ contract Stake {
         uint256 rewardDebt; // 256 bits - slot 1
     }
 
+    // MARK: - State Variables
+
     // poolId => Pool
     mapping(uint256 => Pool) public pools;
 
@@ -61,6 +67,8 @@ contract Stake {
     mapping(address => mapping(uint256 => UserStake)) public userPoolStake;
 
     uint256 public poolCount;
+
+    // MARK: - Events
 
     event PoolCreated(
         uint256 indexed poolId,
@@ -87,17 +95,22 @@ contract Stake {
     );
     event PoolCancelled(uint256 indexed poolId);
 
+    // MARK: - Modifiers
+
     modifier _checkPoolExists(uint256 poolId) {
         if (poolId >= poolCount) revert Stake__PoolNotFound();
         _;
     }
 
     modifier _checkPoolActive(uint256 poolId) {
-        if (!isPoolActive(poolId)) revert Stake__PoolNotActive();
+        Pool memory pool = pools[poolId];
+        uint256 endTime = pool.rewardCreatedAt + pool.rewardDuration;
+        if (pool.cancelled || block.timestamp > endTime)
+            revert Stake__PoolNotActive();
         _;
     }
 
-    constructor() {}
+    // MARK: - Internal Helper Functions
 
     /**
      * @dev Safe calculation of accumulated reward amount with overflow protection
@@ -119,82 +132,6 @@ contract Stake {
 
         return (amount * accRewardPerShare) / REWARD_PRECISION;
     }
-
-    // MARK: - Pool Creation
-
-    /**
-     * @dev Creates a new staking pool with timestamp-based rewards
-     * @param stakingToken The address of the token to be staked
-     * @param rewardToken The address of the reward token
-     * @param rewardAmount The total amount of rewards to be distributed
-     * @param rewardDuration The duration in seconds over which rewards are distributed
-     * @return poolId The ID of the newly created pool
-     */
-    function createPool(
-        address stakingToken,
-        address rewardToken,
-        uint128 rewardAmount,
-        uint32 rewardDuration
-    ) external returns (uint256 poolId) {
-        if (stakingToken == address(0))
-            revert Stake__InvalidToken("stakingToken cannot be zero");
-        if (rewardToken == address(0))
-            revert Stake__InvalidToken("rewardToken cannot be zero");
-        if (rewardAmount == 0)
-            revert Stake__InvalidAmount("rewardAmount cannot be zero");
-        if (
-            rewardDuration < MIN_REWARD_DURATION ||
-            rewardDuration > MAX_REWARD_DURATION
-        ) revert Stake__InvalidDuration("rewardDuration out of range");
-
-        poolId = poolCount++;
-        uint40 currentTime = uint40(block.timestamp);
-
-        pools[poolId] = Pool({
-            stakingToken: stakingToken,
-            rewardToken: rewardToken,
-            creator: msg.sender,
-            rewardAmount: rewardAmount,
-            rewardDuration: rewardDuration,
-            rewardCreatedAt: currentTime,
-            cancelled: false,
-            totalStaked: 0,
-            activeStakerCount: 0,
-            lastRewardTime: currentTime,
-            accRewardPerShare: 0
-        });
-
-        // Transfer reward tokens from creator to contract
-        IERC20(rewardToken).safeTransferFrom(
-            msg.sender,
-            address(this),
-            rewardAmount
-        );
-
-        emit PoolCreated(
-            poolId,
-            msg.sender,
-            stakingToken,
-            rewardToken,
-            rewardAmount,
-            rewardDuration
-        );
-    }
-
-    /**
-     * @dev Cancels a pool (only pool creator can call)
-     * @param poolId The ID of the pool to cancel
-     */
-    function cancelPool(uint256 poolId) external _checkPoolExists(poolId) {
-        Pool storage pool = pools[poolId];
-        if (msg.sender != pool.creator)
-            revert Stake__UnauthorizedPoolDeactivation();
-
-        pool.cancelled = true;
-        emit PoolCancelled(poolId);
-    }
-
-    // MARK: - Internal Helper Functions
 
     /**
      * @dev Calculates up-to-date accRewardPerShare for a pool without modifying state
@@ -275,13 +212,11 @@ contract Stake {
         }
     }
 
-    // MARK: - Staking Functions
-
     /**
      * @dev Updates the reward variables for a pool based on timestamp
      * @param poolId The ID of the pool to update
      */
-    function updatePool(uint256 poolId) internal {
+    function _updatePool(uint256 poolId) internal {
         Pool storage pool = pools[poolId];
         uint40 currentTime = uint40(block.timestamp);
 
@@ -310,6 +245,83 @@ contract Stake {
         pool.lastRewardTime = currentTime;
     }
 
+    // MARK: - Pool Management
+
+    /**
+     * @dev Creates a new staking pool with timestamp-based rewards
+     * @param stakingToken The address of the token to be staked
+     * @param rewardToken The address of the reward token
+     * @param rewardAmount The total amount of rewards to be distributed
+     * @param rewardDuration The duration in seconds over which rewards are distributed
+     * @return poolId The ID of the newly created pool
+     */
+    function createPool(
+        address stakingToken,
+        address rewardToken,
+        uint128 rewardAmount,
+        uint32 rewardDuration
+    ) external returns (uint256 poolId) {
+        if (stakingToken == address(0))
+            revert Stake__InvalidToken("stakingToken cannot be zero");
+        if (rewardToken == address(0))
+            revert Stake__InvalidToken("rewardToken cannot be zero");
+        if (rewardAmount == 0)
+            revert Stake__InvalidAmount("rewardAmount cannot be zero");
+        if (
+            rewardDuration < MIN_REWARD_DURATION ||
+            rewardDuration > MAX_REWARD_DURATION
+        ) revert Stake__InvalidDuration("rewardDuration out of range");
+
+        poolId = poolCount;
+        poolCount = poolId + 1;
+        uint40 currentTime = uint40(block.timestamp);
+
+        pools[poolId] = Pool({
+            stakingToken: stakingToken,
+            rewardToken: rewardToken,
+            creator: msg.sender,
+            rewardAmount: rewardAmount,
+            rewardDuration: rewardDuration,
+            rewardCreatedAt: currentTime,
+            cancelled: false,
+            totalStaked: 0,
+            activeStakerCount: 0,
+            lastRewardTime: currentTime,
+            accRewardPerShare: 0
+        });
+
+        // Transfer reward tokens from creator to contract
+        IERC20(rewardToken).safeTransferFrom(
+            msg.sender,
+            address(this),
+            rewardAmount
+        );
+
+        emit PoolCreated(
+            poolId,
+            msg.sender,
+            stakingToken,
+            rewardToken,
+            rewardAmount,
+            rewardDuration
+        );
+    }
+
+    /**
+     * @dev Cancels a pool (only pool creator can call)
+     * @param poolId The ID of the pool to cancel
+     */
+    function cancelPool(uint256 poolId) external _checkPoolExists(poolId) {
+        Pool storage pool = pools[poolId];
+        if (msg.sender != pool.creator)
+            revert Stake__UnauthorizedPoolDeactivation();
+
+        pool.cancelled = true;
+        emit PoolCancelled(poolId);
+    }
+
+    // MARK: - Staking Operations
+
     /**
      * @dev Stakes tokens in a pool
      * @param poolId The ID of the pool to stake in
@@ -325,7 +337,7 @@ contract Stake {
         Pool storage pool = pools[poolId];
         UserStake storage userStake = userPoolStake[msg.sender][poolId];
 
-        updatePool(poolId);
+        _updatePool(poolId);
 
         // If user has existing stake, accumulate pending rewards
         if (userStake.stakedAmount > 0) {
@@ -379,7 +391,7 @@ contract Stake {
         if (userStake.stakedAmount < amount)
             revert Stake__InsufficientBalance();
 
-        updatePool(poolId);
+        _updatePool(poolId);
 
         // Automatically claim all pending rewards before unstaking
         _claimRewards(poolId, msg.sender);
@@ -412,7 +424,7 @@ contract Stake {
      * @param poolId The ID of the pool to claim rewards from
      */
     function claim(uint256 poolId) external _checkPoolExists(poolId) {
-        updatePool(poolId);
+        _updatePool(poolId);
 
         uint256 claimedAmount = _claimRewards(poolId, msg.sender);
 
@@ -420,19 +432,6 @@ contract Stake {
     }
 
     // MARK: - View Functions
-
-    /**
-     * @dev Returns whether a pool is still active (distributing rewards)
-     * @param poolId The ID of the pool
-     * @return active Whether the pool is active
-     */
-    function isPoolActive(
-        uint256 poolId
-    ) public view _checkPoolExists(poolId) returns (bool active) {
-        Pool memory pool = pools[poolId];
-        uint256 endTime = pool.rewardCreatedAt + pool.rewardDuration;
-        active = !pool.cancelled && block.timestamp <= endTime;
-    }
 
     /**
      * @dev Returns claimable reward for a user in a specific pool
@@ -477,18 +476,20 @@ contract Stake {
             revert Stake__InvalidPaginationParameters();
         }
 
-        uint256 length = poolIdTo - poolIdFrom;
-        results = new uint256[3][](length);
+        unchecked {
+            uint256 length = poolIdTo - poolIdFrom;
+            results = new uint256[3][](length);
 
-        for (uint256 i = 0; i < length; i++) {
-            uint256 poolId = poolIdFrom + i;
-            if (poolId >= poolCount) break;
+            for (uint256 i = 0; i < length; ++i) {
+                uint256 poolId = poolIdFrom + i;
+                if (poolId >= poolCount) break;
 
-            (uint256 claimable, uint256 claimed) = this.claimableReward(
-                poolId,
-                staker
-            );
-            results[i] = [poolId, claimable, claimed];
+                (uint256 claimable, uint256 claimed) = this.claimableReward(
+                    poolId,
+                    staker
+                );
+                results[i] = [poolId, claimable, claimed];
+            }
         }
     }
 
@@ -506,13 +507,15 @@ contract Stake {
             revert Stake__InvalidPaginationParameters();
         }
 
-        uint256 length = poolIdTo > poolCount
-            ? poolCount - poolIdFrom
-            : poolIdTo - poolIdFrom;
-        poolList = new Pool[](length);
+        unchecked {
+            uint256 length = poolIdTo > poolCount
+                ? poolCount - poolIdFrom
+                : poolIdTo - poolIdFrom;
+            poolList = new Pool[](length);
 
-        for (uint256 i = 0; i < length; i++) {
-            poolList[i] = pools[poolIdFrom + i];
+            for (uint256 i = 0; i < length; ++i) {
+                poolList[i] = pools[poolIdFrom + i];
+            }
         }
     }
 
@@ -532,29 +535,35 @@ contract Stake {
             return new uint256[](0);
         }
 
-        // Limit search to actual pool count
-        uint256 searchTo = poolIdTo > poolCount ? poolCount : poolIdTo;
-        if (poolIdFrom >= searchTo) {
-            return new uint256[](0);
-        }
-
-        // Count engaged pools first
-        uint256 engagedCount = 0;
-        for (uint256 i = poolIdFrom; i < searchTo; i++) {
-            UserStake memory userStake = userPoolStake[staker][i];
-            if (userStake.stakedAmount > 0 || userStake.claimedRewards > 0) {
-                engagedCount++;
+        unchecked {
+            // Limit search to actual pool count
+            uint256 searchTo = poolIdTo > poolCount ? poolCount : poolIdTo;
+            if (poolIdFrom >= searchTo) {
+                return new uint256[](0);
             }
-        }
 
-        // Create array with exact size
-        poolIds = new uint256[](engagedCount);
-        uint256 index = 0;
-        for (uint256 i = poolIdFrom; i < searchTo; i++) {
-            UserStake memory userStake = userPoolStake[staker][i];
-            if (userStake.stakedAmount > 0 || userStake.claimedRewards > 0) {
-                poolIds[index] = i;
-                index++;
+            // Count engaged pools first
+            uint256 engagedCount = 0;
+            for (uint256 i = poolIdFrom; i < searchTo; ++i) {
+                UserStake memory userStake = userPoolStake[staker][i];
+                if (
+                    userStake.stakedAmount > 0 || userStake.claimedRewards > 0
+                ) {
+                    ++engagedCount;
+                }
+            }
+
+            // Create array with exact size
+            poolIds = new uint256[](engagedCount);
+            uint256 index = 0;
+            for (uint256 i = poolIdFrom; i < searchTo; ++i) {
+                UserStake memory userStake = userPoolStake[staker][i];
+                if (
+                    userStake.stakedAmount > 0 || userStake.claimedRewards > 0
+                ) {
+                    poolIds[index] = i;
+                    ++index;
+                }
             }
         }
     }
