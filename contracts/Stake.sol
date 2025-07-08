@@ -17,10 +17,17 @@ contract Stake {
     // MARK: - Constants & Errors
 
     uint256 private constant REWARD_PRECISION = 1e18;
-    uint256 private constant MIN_REWARD_DURATION = 3600; // 1 hour in seconds
-    uint256 private constant MAX_REWARD_DURATION =
+    uint256 public constant MIN_REWARD_DURATION = 3600; // 1 hour in seconds
+    uint256 public constant MAX_REWARD_DURATION =
         MIN_REWARD_DURATION * 24 * 365 * 10; // 10 years
-    uint256 private constant MIN_STAKE_AMOUNT = 1000; // Prevent dust stakes for gas efficiency and to avoid state bloat
+    uint256 public constant MIN_STAKE_AMOUNT = 1000; // Prevent dust stakes for gas efficiency and to avoid state bloat
+
+    // Maximum safe reward amount to prevent overflow in calculations
+    // Calculation: MAX_SAFE_REWARD_AMOUNT = (type(uint256).max * MIN_STAKE_AMOUNT) / (type(uint104).max * REWARD_PRECISION)
+    // This ensures that even with maximum stake amounts, accRewardPerShare calculations won't overflow
+    uint256 public constant MAX_SAFE_REWARD_AMOUNT =
+        ((type(uint256).max / type(uint104).max) * MIN_STAKE_AMOUNT) /
+            REWARD_PRECISION; // ~ 5.7T tokens with 18 decimals
 
     // Error messages
     error Stake__InvalidToken(string reason);
@@ -32,7 +39,6 @@ contract Stake {
     error Stake__InsufficientBalance();
     error Stake__NoRewardsToClaim();
     error Stake__InvalidPaginationParameters();
-    error Stake__CalculationOverflow();
     error Stake__UnauthorizedPoolDeactivation();
 
     // MARK: - Structs
@@ -42,7 +48,7 @@ contract Stake {
         address stakingToken; // 160 bits - slot 0 - immutable
         address rewardToken; // 160 bits - slot 1 - immutable
         address creator; // 160 bits - slot 2 - immutable
-        uint128 rewardAmount; // 128 bits - slot 3 - immutable
+        uint104 rewardAmount; // 104 bits - slot 3 - immutable
         uint32 rewardDuration; // 32 bits - slot 3 (up to ~136 years in seconds) - immutable
         uint40 rewardStartedAt; // 40 bits - slot 3 (until year 36,812) - 0 until first stake
         uint40 cancelledAt; // 40 bits - slot 3 - default 0 (not cancelled)
@@ -54,8 +60,8 @@ contract Stake {
 
     // Gas optimized struct packing - fits in 2 storage slots
     struct UserStake {
-        uint128 stakedAmount; // 128 bits - slot 0
-        uint128 claimedRewards; // 128 bits - slot 0
+        uint104 stakedAmount; // 104 bits - slot 0
+        uint104 claimedRewards; // 104 bits - slot 0
         uint256 rewardDebt; // 256 bits - slot 1
     }
 
@@ -76,23 +82,23 @@ contract Stake {
         address indexed creator,
         address indexed stakingToken,
         address rewardToken,
-        uint128 rewardAmount,
+        uint104 rewardAmount,
         uint32 rewardDuration
     );
     event Staked(
         uint256 indexed poolId,
         address indexed staker,
-        uint128 amount
+        uint104 amount
     );
     event Unstaked(
         uint256 indexed poolId,
         address indexed staker,
-        uint128 amount
+        uint104 amount
     );
     event RewardClaimed(
         uint256 indexed poolId,
         address indexed staker,
-        uint128 reward
+        uint104 reward
     );
     event PoolCancelled(uint256 indexed poolId, uint256 leftoverRewards);
 
@@ -106,10 +112,10 @@ contract Stake {
     // MARK: - Internal Helper Functions
 
     /**
-     * @dev Safe calculation of accumulated reward amount with overflow protection
+     * @dev Safe calculation of accumulated reward amount
      * @param amount The staked amount
      * @param accRewardPerShare The accumulated reward per share
-     * @return The calculated reward amount, or 0 if overflow would occur
+     * @return The calculated reward amount
      */
     function _safeCalculateReward(
         uint256 amount,
@@ -118,10 +124,6 @@ contract Stake {
         if (amount == 0 || accRewardPerShare == 0) {
             return 0;
         }
-
-        // Revert on overflow
-        if (amount > type(uint256).max / accRewardPerShare)
-            revert Stake__CalculationOverflow();
 
         return (amount * accRewardPerShare) / REWARD_PRECISION;
     }
@@ -154,6 +156,7 @@ contract Stake {
             if (timePassed > 0) {
                 uint256 totalReward = (timePassed * pool.rewardAmount) /
                     pool.rewardDuration;
+
                 accRewardPerShare +=
                     (totalReward * REWARD_PRECISION) /
                     pool.totalStaked;
@@ -204,12 +207,12 @@ contract Stake {
                 userStake.stakedAmount,
                 pool.accRewardPerShare
             );
-            userStake.claimedRewards += uint128(claimedAmount);
+            userStake.claimedRewards += uint104(claimedAmount);
 
             // Transfer reward tokens to user
             IERC20(pool.rewardToken).safeTransfer(user, claimedAmount);
 
-            emit RewardClaimed(poolId, user, uint128(claimedAmount));
+            emit RewardClaimed(poolId, user, uint104(claimedAmount));
         }
     }
 
@@ -260,7 +263,7 @@ contract Stake {
     function createPool(
         address stakingToken,
         address rewardToken,
-        uint128 rewardAmount,
+        uint104 rewardAmount,
         uint32 rewardDuration
     ) external returns (uint256 poolId) {
         if (stakingToken == address(0))
@@ -269,6 +272,10 @@ contract Stake {
             revert Stake__InvalidToken("rewardToken cannot be zero");
         if (rewardAmount == 0)
             revert Stake__InvalidAmount("rewardAmount cannot be zero");
+        if (rewardAmount > MAX_SAFE_REWARD_AMOUNT)
+            revert Stake__InvalidAmount(
+                "rewardAmount too large - would cause overflow"
+            );
         if (
             rewardDuration < MIN_REWARD_DURATION ||
             rewardDuration > MAX_REWARD_DURATION
@@ -352,16 +359,16 @@ contract Stake {
         emit PoolCancelled(poolId, leftoverRewards);
     }
 
-    // MARK: - Staking Operations
+    // MARK: - Stake Operations
 
     /**
-     * @dev Stakes tokens in a pool
+     * @dev Stakes tokens into a pool to earn rewards
      * @param poolId The ID of the pool to stake in
      * @param amount The amount of tokens to stake
      */
     function stake(
         uint256 poolId,
-        uint128 amount
+        uint104 amount
     ) external _checkPoolExists(poolId) {
         if (amount < MIN_STAKE_AMOUNT)
             revert Stake__InvalidAmount("Stake amount too small");
@@ -422,7 +429,7 @@ contract Stake {
      */
     function unstake(
         uint256 poolId,
-        uint128 amount
+        uint104 amount
     ) external _checkPoolExists(poolId) {
         if (amount == 0) revert Stake__InvalidAmount("amount cannot be zero");
 
