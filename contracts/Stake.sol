@@ -372,16 +372,9 @@ contract Stake {
 
         _updatePool(poolId);
 
-        // If user has existing stake, accumulate pending rewards
+        // If user has existing stake, claim pending rewards first to preserve them
         if (userStake.stakedAmount > 0) {
-            uint256 accRewardAmount = _safeCalculateReward(
-                userStake.stakedAmount,
-                pool.accRewardPerShare
-            );
-            if (accRewardAmount > userStake.rewardDebt) {
-                // Add pending rewards to claimable amount (stored in rewardDebt temporarily)
-                userStake.rewardDebt = accRewardAmount;
-            }
+            _claimRewards(poolId, msg.sender);
         } else {
             // First time staking in this pool
             pool.activeStakerCount++;

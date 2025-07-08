@@ -4,7 +4,7 @@
   "description": "Mint Club V2",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npx hardhat test"
   },
   "repository": {
     "type": "git",
