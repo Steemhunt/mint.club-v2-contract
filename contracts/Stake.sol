@@ -20,14 +20,15 @@ contract Stake {
     uint256 private constant MIN_REWARD_DURATION = 3600; // 1 hour in seconds
     uint256 private constant MAX_REWARD_DURATION =
         MIN_REWARD_DURATION * 24 * 365 * 10; // 10 years
-    uint256 private constant MIN_STAKE_AMOUNT = 1000; // Prevent dust stakes to avoid Stake__CalculationOverflow
+    uint256 private constant MIN_STAKE_AMOUNT = 1000; // Prevent dust stakes for gas efficiency and to avoid state bloat
 
     // Error messages
     error Stake__InvalidToken(string reason);
     error Stake__InvalidAmount(string reason);
     error Stake__InvalidDuration(string reason);
     error Stake__PoolNotFound();
-    error Stake__PoolNotActive();
+    error Stake__PoolCancelled();
+    error Stake__PoolFinished();
     error Stake__InsufficientBalance();
     error Stake__NoRewardsToClaim();
     error Stake__InvalidPaginationParameters();
@@ -43,7 +44,7 @@ contract Stake {
         address creator; // 160 bits - slot 2 - immutable
         uint128 rewardAmount; // 128 bits - slot 3 - immutable
         uint32 rewardDuration; // 32 bits - slot 3 (up to ~136 years in seconds) - immutable
-        uint40 rewardCreatedAt; // 40 bits - slot 3 (until year 36,812) - immutable
+        uint40 rewardStartedAt; // 40 bits - slot 3 (until year 36,812) - 0 until first stake
         uint40 cancelledAt; // 40 bits - slot 3 - default 0 (not cancelled)
         uint128 totalStaked; // 128 bits - slot 4
         uint32 activeStakerCount; // 32 bits - slot 4 - number of unique active stakers
@@ -102,14 +103,6 @@ contract Stake {
         _;
     }
 
-    modifier _checkPoolActive(uint256 poolId) {
-        Pool memory pool = pools[poolId];
-        uint256 endTime = pool.rewardCreatedAt + pool.rewardDuration;
-        if (pool.cancelledAt > 0 || block.timestamp > endTime)
-            revert Stake__PoolNotActive();
-        _;
-    }
-
     // MARK: - Internal Helper Functions
 
     /**
@@ -143,9 +136,14 @@ contract Stake {
     ) internal view returns (uint256 accRewardPerShare) {
         accRewardPerShare = pool.accRewardPerShare;
 
+        // If rewards haven't started yet, no rewards to distribute
+        if (pool.rewardStartedAt == 0) {
+            return accRewardPerShare;
+        }
+
         uint40 currentTime = uint40(block.timestamp);
         if (currentTime > pool.lastRewardTime && pool.totalStaked > 0) {
-            uint256 endTime = pool.rewardCreatedAt + pool.rewardDuration;
+            uint256 endTime = pool.rewardStartedAt + pool.rewardDuration;
             // If pool is cancelled, use cancellation time as end time
             if (pool.cancelledAt > 0 && pool.cancelledAt < endTime) {
                 endTime = pool.cancelledAt;
@@ -154,9 +152,8 @@ contract Stake {
             uint256 timePassed = toTime - pool.lastRewardTime;
 
             if (timePassed > 0) {
-                uint256 rewardPerSecond = pool.rewardAmount /
+                uint256 totalReward = (timePassed * pool.rewardAmount) /
                     pool.rewardDuration;
-                uint256 totalReward = timePassed * rewardPerSecond;
                 accRewardPerShare +=
                     (totalReward * REWARD_PRECISION) /
                     pool.totalStaked;
@@ -222,35 +219,32 @@ contract Stake {
      */
     function _updatePool(uint256 poolId) internal {
         Pool storage pool = pools[poolId];
+
+        // If rewards haven't started yet, no need to update
+        if (pool.rewardStartedAt == 0) {
+            return;
+        }
+
         uint40 currentTime = uint40(block.timestamp);
 
         if (currentTime <= pool.lastRewardTime) {
             return;
         }
 
+        pool.accRewardPerShare = _getUpdatedAccRewardPerShare(pool);
+
+        // Update lastRewardTime appropriately
         if (pool.totalStaked == 0) {
             pool.lastRewardTime = currentTime;
-            return;
+        } else {
+            uint256 endTime = pool.rewardStartedAt + pool.rewardDuration;
+            // If pool is cancelled, use cancellation time as end time
+            if (pool.cancelledAt > 0 && pool.cancelledAt < endTime) {
+                endTime = pool.cancelledAt;
+            }
+            uint256 toTime = currentTime > endTime ? endTime : currentTime;
+            pool.lastRewardTime = uint40(toTime);
         }
-
-        uint256 endTime = pool.rewardCreatedAt + pool.rewardDuration;
-        // If pool is cancelled, use cancellation time as end time
-        if (pool.cancelledAt > 0 && pool.cancelledAt < endTime) {
-            endTime = pool.cancelledAt;
-        }
-        uint256 toTime = currentTime > endTime ? endTime : currentTime;
-        uint256 timePassed = toTime - pool.lastRewardTime;
-
-        if (timePassed > 0) {
-            uint256 rewardPerSecond = pool.rewardAmount / pool.rewardDuration;
-            uint256 totalReward = timePassed * rewardPerSecond;
-            uint256 rewardPerShare = (totalReward * REWARD_PRECISION) /
-                pool.totalStaked;
-
-            pool.accRewardPerShare += rewardPerShare;
-        }
-
-        pool.lastRewardTime = currentTime;
     }
 
     // MARK: - Pool Management
@@ -282,7 +276,6 @@ contract Stake {
 
         poolId = poolCount;
         poolCount = poolId + 1;
-        uint40 currentTime = uint40(block.timestamp);
 
         pools[poolId] = Pool({
             stakingToken: stakingToken,
@@ -290,11 +283,11 @@ contract Stake {
             creator: msg.sender,
             rewardAmount: rewardAmount,
             rewardDuration: rewardDuration,
-            rewardCreatedAt: currentTime,
+            rewardStartedAt: 0, // Will be set on first stake
             cancelledAt: 0,
             totalStaked: 0,
             activeStakerCount: 0,
-            lastRewardTime: currentTime,
+            lastRewardTime: 0, // Will be set on first stake
             accRewardPerShare: 0
         });
 
@@ -323,20 +316,26 @@ contract Stake {
         Pool storage pool = pools[poolId];
         if (msg.sender != pool.creator)
             revert Stake__UnauthorizedPoolDeactivation();
-        if (pool.cancelledAt > 0) revert Stake__PoolNotActive(); // Already cancelled
+        if (pool.cancelledAt > 0) revert Stake__PoolCancelled(); // Already cancelled
 
         // Update pool rewards up to cancellation time
         _updatePool(poolId);
 
         uint40 currentTime = uint40(block.timestamp);
-        uint256 endTime = pool.rewardCreatedAt + pool.rewardDuration;
 
         // Calculate leftover rewards to return to creator
         uint256 leftoverRewards = 0;
-        if (currentTime < endTime) {
-            uint256 remainingTime = endTime - currentTime;
-            uint256 rewardPerSecond = pool.rewardAmount / pool.rewardDuration;
-            leftoverRewards = remainingTime * rewardPerSecond;
+        if (pool.rewardStartedAt == 0) {
+            // Pool never started, return all rewards
+            leftoverRewards = pool.rewardAmount;
+        } else {
+            uint256 endTime = pool.rewardStartedAt + pool.rewardDuration;
+            if (currentTime < endTime) {
+                uint256 remainingTime = endTime - currentTime;
+                leftoverRewards =
+                    (remainingTime * pool.rewardAmount) /
+                    pool.rewardDuration;
+            }
         }
 
         // Set cancellation time
@@ -363,12 +362,28 @@ contract Stake {
     function stake(
         uint256 poolId,
         uint128 amount
-    ) external _checkPoolExists(poolId) _checkPoolActive(poolId) {
+    ) external _checkPoolExists(poolId) {
         if (amount < MIN_STAKE_AMOUNT)
             revert Stake__InvalidAmount("Stake amount too small");
 
+        // Check if pool is active
         Pool storage pool = pools[poolId];
+        if (pool.cancelledAt > 0) revert Stake__PoolCancelled();
+
+        // If rewards haven't started yet, pool is still active
+        if (pool.rewardStartedAt != 0) {
+            uint256 endTime = pool.rewardStartedAt + pool.rewardDuration;
+            if (block.timestamp > endTime) revert Stake__PoolFinished();
+        }
+
         UserStake storage userStake = userPoolStake[msg.sender][poolId];
+
+        // If this is the first stake in the pool, start the reward clock
+        if (pool.totalStaked == 0) {
+            uint40 currentTime = uint40(block.timestamp);
+            pool.rewardStartedAt = currentTime;
+            pool.lastRewardTime = currentTime;
+        }
 
         _updatePool(poolId);
 
@@ -557,8 +572,8 @@ contract Stake {
         uint256 poolIdFrom,
         uint256 poolIdTo
     ) external view returns (uint256[] memory poolIds) {
-        if (poolIdFrom >= poolIdTo) {
-            return new uint256[](0);
+        if (poolIdFrom >= poolIdTo || poolIdTo - poolIdFrom > 1000) {
+            revert Stake__InvalidPaginationParameters();
         }
 
         unchecked {

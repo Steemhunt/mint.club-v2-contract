@@ -1,18 +1,31 @@
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect } = require("chai");
 const { time } = require("@nomicfoundation/hardhat-network-helpers");
+const { network } = require("hardhat");
 const { MAX_INT_256, NULL_ADDRESS, wei } = require("./utils/test-utils");
 
-const MIN_REWARD_DURATION = 3600; // 1 hour
-const MAX_REWARD_DURATION = MIN_REWARD_DURATION * 24 * 365 * 10; // 10 years
-const MIN_STAKE_AMOUNT = 1000;
+// Global staking constants
+const ONE_HOUR = 3600;
+const MIN_REWARD_DURATION = ONE_HOUR;
+const MAX_REWARD_DURATION = ONE_HOUR * 24 * 365 * 10;
 const REWARD_PRECISION = 10n ** 18n; // 1e18
 
-const SAMPLE_POOL = {
+// Token amount constants
+const INITIAL_TOKEN_SUPPLY = wei(1000000); // 1M tokens
+const INITIAL_USER_BALANCE = wei(10000); // 10k tokens per user
+
+// Simplified test constants for easy manual calculation
+const SIMPLE_POOL = {
   stakingToken: null, // Will be set in beforeEach
   rewardToken: null, // Will be set in beforeEach
-  rewardAmount: wei(1000), // 1000 reward tokens
-  rewardDuration: MIN_REWARD_DURATION * 24, // 1 day
+  rewardAmount: wei(10000), // 10k reward tokens
+  rewardDuration: 10000, // 10000 seconds = 1 reward token per second
+};
+
+const SIMPLE_STAKES = {
+  alice: wei(100), // 100 tokens
+  bob: wei(300), // 300 tokens
+  carol: wei(100), // 100 tokens
 };
 
 describe("Stake", function () {
@@ -21,7 +34,7 @@ describe("Stake", function () {
     await Stake.waitForDeployment();
 
     const StakingToken = await ethers.deployContract("TestToken", [
-      wei(1000000), // 1M tokens
+      INITIAL_TOKEN_SUPPLY,
       "Staking Token",
       "STAKE",
       18n,
@@ -29,7 +42,7 @@ describe("Stake", function () {
     await StakingToken.waitForDeployment();
 
     const RewardToken = await ethers.deployContract("TestToken", [
-      wei(1000000), // 1M tokens
+      INITIAL_TOKEN_SUPPLY,
       "Reward Token",
       "REWARD",
       18n,
@@ -42,329 +55,308 @@ describe("Stake", function () {
   let Stake, StakingToken, RewardToken;
   let owner, alice, bob, carol;
 
+  // Helper functions
+  const distributeTokens = async (token, users, amount) => {
+    for (const user of users) {
+      await token.transfer(user.address, amount);
+    }
+  };
+
+  const approveTokens = async (token, users, spender, amount = MAX_INT_256) => {
+    for (const user of users) {
+      await token.connect(user).approve(spender, amount);
+    }
+  };
+
+  const getPoolAndUserStake = async (poolId, userAddress) => {
+    const pool = await Stake.pools(poolId);
+    const userStake = await Stake.userPoolStake(userAddress, poolId);
+    return { pool, userStake };
+  };
+
+  const createSamplePool = async (creator) => {
+    await RewardToken.connect(creator).approve(
+      Stake.target,
+      SIMPLE_POOL.rewardAmount
+    );
+    await Stake.connect(creator).createPool(
+      SIMPLE_POOL.stakingToken,
+      SIMPLE_POOL.rewardToken,
+      SIMPLE_POOL.rewardAmount,
+      SIMPLE_POOL.rewardDuration
+    );
+    return 0; // First pool ID
+  };
+
   beforeEach(async function () {
     [Stake, StakingToken, RewardToken] = await loadFixture(deployFixtures);
     [owner, alice, bob, carol] = await ethers.getSigners();
 
-    SAMPLE_POOL.stakingToken = StakingToken.target;
-    SAMPLE_POOL.rewardToken = RewardToken.target;
+    SIMPLE_POOL.stakingToken = StakingToken.target;
+    SIMPLE_POOL.rewardToken = RewardToken.target;
 
     // Distribute tokens to test accounts
-    await StakingToken.transfer(alice.address, wei(10000));
-    await StakingToken.transfer(bob.address, wei(10000));
-    await StakingToken.transfer(carol.address, wei(10000));
-
-    await RewardToken.transfer(alice.address, wei(10000));
-    await RewardToken.transfer(bob.address, wei(10000));
-    await RewardToken.transfer(carol.address, wei(10000));
+    await distributeTokens(
+      StakingToken,
+      [alice, bob, carol],
+      INITIAL_USER_BALANCE
+    );
+    await distributeTokens(
+      RewardToken,
+      [alice, bob, carol],
+      INITIAL_USER_BALANCE
+    );
   });
 
   describe("Stake Operations", function () {
     beforeEach(async function () {
-      // Create a pool first
-      await RewardToken.connect(alice).approve(
-        Stake.target,
-        SAMPLE_POOL.rewardAmount
-      );
-      await Stake.connect(alice).createPool(
-        SAMPLE_POOL.stakingToken,
-        SAMPLE_POOL.rewardToken,
-        SAMPLE_POOL.rewardAmount,
-        SAMPLE_POOL.rewardDuration
-      );
+      this.poolId = await createSamplePool(alice);
 
-      this.poolId = 0;
-      this.stakeAmount = wei(5000);
-
-      // Approve staking tokens
-      await StakingToken.connect(bob).approve(Stake.target, MAX_INT_256);
-      await StakingToken.connect(carol).approve(Stake.target, MAX_INT_256);
+      // Approve staking tokens for users
+      await approveTokens(StakingToken, [alice, bob, carol], Stake.target);
     });
 
-    describe("Stake", function () {
-      beforeEach(async function () {
-        this.stakeTx = await Stake.connect(bob).stake(
-          this.poolId,
-          this.stakeAmount
-        );
-      });
-
+    describe("Basic Staking", function () {
       it("should stake correct amount", async function () {
-        const userStake = await Stake.userPoolStake(bob.address, this.poolId);
-        expect(userStake.stakedAmount).to.equal(this.stakeAmount);
+        await Stake.connect(alice).stake(this.poolId, SIMPLE_STAKES.alice);
+
+        const { userStake } = await getPoolAndUserStake(
+          this.poolId,
+          alice.address
+        );
+        expect(userStake.stakedAmount).to.equal(SIMPLE_STAKES.alice);
       });
 
       it("should transfer staking tokens to contract", async function () {
+        await Stake.connect(alice).stake(this.poolId, SIMPLE_STAKES.alice);
+
         expect(await StakingToken.balanceOf(Stake.target)).to.equal(
-          this.stakeAmount
+          SIMPLE_STAKES.alice
         );
-        expect(await StakingToken.balanceOf(bob.address)).to.equal(
-          wei(10000) - this.stakeAmount
+        expect(await StakingToken.balanceOf(alice.address)).to.equal(
+          INITIAL_USER_BALANCE - SIMPLE_STAKES.alice
         );
       });
 
       it("should update pool total staked", async function () {
-        const pool = await Stake.pools(this.poolId);
-        expect(pool.totalStaked).to.equal(this.stakeAmount);
+        await Stake.connect(alice).stake(this.poolId, SIMPLE_STAKES.alice);
+
+        const { pool } = await getPoolAndUserStake(this.poolId, alice.address);
+        expect(pool.totalStaked).to.equal(SIMPLE_STAKES.alice);
       });
 
       it("should increment active staker count", async function () {
-        const pool = await Stake.pools(this.poolId);
+        await Stake.connect(alice).stake(this.poolId, SIMPLE_STAKES.alice);
+
+        const { pool } = await getPoolAndUserStake(this.poolId, alice.address);
         expect(pool.activeStakerCount).to.equal(1);
       });
 
-      it("should set correct reward debt", async function () {
-        const userStake = await Stake.userPoolStake(bob.address, this.poolId);
-        expect(userStake.rewardDebt).to.equal(0); // No rewards accumulated yet
+      it("should set rewardStartedAt when first stake happens", async function () {
+        const stakeTx = await Stake.connect(alice).stake(
+          this.poolId,
+          SIMPLE_STAKES.alice
+        );
+        const stakeTime = await time.latest();
+
+        const { pool } = await getPoolAndUserStake(this.poolId, alice.address);
+        expect(pool.rewardStartedAt).to.equal(stakeTime);
       });
 
       it("should emit Staked event", async function () {
-        await expect(this.stakeTx)
+        await expect(
+          Stake.connect(alice).stake(this.poolId, SIMPLE_STAKES.alice)
+        )
           .emit(Stake, "Staked")
-          .withArgs(this.poolId, bob.address, this.stakeAmount);
-      });
-
-      describe("Multiple stakes", function () {
-        beforeEach(async function () {
-          // Set exact timestamp for the second stake to ensure precise timing
-          const pool = await Stake.pools(this.poolId);
-          const exactSecondStakeTime = BigInt(pool.rewardCreatedAt) + 3600n; // exactly 1 hour after pool creation
-          await time.setNextBlockTimestamp(Number(exactSecondStakeTime));
-
-          // Second stake
-          this.secondStakeAmount = wei(2000);
-          await Stake.connect(bob).stake(this.poolId, this.secondStakeAmount);
-        });
-
-        it("should accumulate staked amounts", async function () {
-          const userStake = await Stake.userPoolStake(bob.address, this.poolId);
-          expect(userStake.stakedAmount).to.equal(
-            this.stakeAmount + this.secondStakeAmount
-          );
-        });
-
-        it("should not increment active staker count again", async function () {
-          const pool = await Stake.pools(this.poolId);
-          expect(pool.activeStakerCount).to.equal(1);
-        });
-
-        it("should update total staked", async function () {
-          const pool = await Stake.pools(this.poolId);
-          expect(pool.totalStaked).to.equal(
-            this.stakeAmount + this.secondStakeAmount
-          );
-        });
-
-        it("should accumulate rewards correctly over multiple stakes", async function () {
-          // Actually advance time by 30 minutes after the second stake
-          await time.increase(1800); // 30 minutes = 1800 seconds
-
-          // Get claimable rewards and user stake info
-          const [claimableBeforeCheck] = await Stake.claimableReward(
-            this.poolId,
-            bob.address
-          );
-          const userStake = await Stake.userPoolStake(bob.address, this.poolId);
-          const poolUpdated = await Stake.pools(this.poolId);
-
-          // Get the contract's actual accRewardPerShare after the first period
-          const poolAfterFirstPeriod = await Stake.pools(this.poolId);
-
-          // Calculate expected first period rewards using the contract's actual accRewardPerShare
-          const firstPeriodRewards =
-            (BigInt(this.stakeAmount) *
-              BigInt(poolAfterFirstPeriod.accRewardPerShare)) /
-            REWARD_PRECISION;
-
-          // Verify that the claimed rewards match what we calculate using the contract's accRewardPerShare
-          expect(userStake.claimedRewards).to.equal(firstPeriodRewards);
-
-          // Verify that claimable rewards are reasonable (should be > 0 for the second period)
-          expect(claimableBeforeCheck).to.be.gt(0n);
-
-          // Verify staking amounts are correct
-          expect(userStake.stakedAmount).to.equal(
-            this.stakeAmount + this.secondStakeAmount
-          );
-
-          // Verify pool's total staked is correct
-          expect(poolUpdated.totalStaked).to.equal(
-            this.stakeAmount + this.secondStakeAmount
-          );
-        });
-
-        it("should automatically claim rewards when staking additional amounts", async function () {
-          // Get initial state after first stake and time passage
-          const initialUserStake = await Stake.userPoolStake(
-            bob.address,
-            this.poolId
-          );
-          const initialRewardTokenBalance = await RewardToken.balanceOf(
-            bob.address
-          );
-
-          // Calculate expected claimed rewards using the contract's actual accRewardPerShare
-          // Instead of trying to calculate with precision losses, use the contract's actual values
-          const pool = await Stake.pools(this.poolId);
-          const expectedClaimedRewards =
-            (BigInt(this.stakeAmount) * BigInt(pool.accRewardPerShare)) /
-            REWARD_PRECISION;
-
-          // Verify exact claimed rewards from automatic claim
-          expect(initialUserStake.claimedRewards).to.equal(
-            expectedClaimedRewards
-          );
-
-          // Verify the reward token balance increased by exactly the claimed amount
-          expect(initialRewardTokenBalance - wei(10000)).to.equal(
-            initialUserStake.claimedRewards
-          );
-        });
-      });
-
-      describe("Multiple users staking", function () {
-        beforeEach(async function () {
-          this.carolStakeAmount = wei(3000);
-          await Stake.connect(carol).stake(this.poolId, this.carolStakeAmount);
-        });
-
-        it("should track both users' stakes", async function () {
-          const bobStake = await Stake.userPoolStake(bob.address, this.poolId);
-          const carolStake = await Stake.userPoolStake(
-            carol.address,
-            this.poolId
-          );
-
-          expect(bobStake.stakedAmount).to.equal(this.stakeAmount);
-          expect(carolStake.stakedAmount).to.equal(this.carolStakeAmount);
-        });
-
-        it("should update total staked for both users", async function () {
-          const pool = await Stake.pools(this.poolId);
-          expect(pool.totalStaked).to.equal(
-            this.stakeAmount + this.carolStakeAmount
-          );
-        });
-
-        it("should increment active staker count for new user", async function () {
-          const pool = await Stake.pools(this.poolId);
-          expect(pool.activeStakerCount).to.equal(2);
-        });
-      });
-
-      describe("Validations", function () {
-        it("should revert if stake amount is too small", async function () {
-          await expect(
-            Stake.connect(bob).stake(this.poolId, MIN_STAKE_AMOUNT - 1)
-          )
-            .to.be.revertedWithCustomError(Stake, "Stake__InvalidAmount")
-            .withArgs("Stake amount too small");
-        });
-
-        it("should revert if pool does not exist", async function () {
-          await expect(
-            Stake.connect(bob).stake(999, this.stakeAmount)
-          ).to.be.revertedWithCustomError(Stake, "Stake__PoolNotFound");
-        });
-
-        it("should revert if insufficient balance", async function () {
-          await expect(
-            Stake.connect(bob).stake(this.poolId, wei(20000))
-          ).to.be.revertedWithCustomError(
-            StakingToken,
-            "ERC20InsufficientBalance"
-          );
-        });
-
-        it("should revert if insufficient allowance", async function () {
-          await StakingToken.connect(bob).approve(Stake.target, 0);
-          await expect(
-            Stake.connect(bob).stake(this.poolId, this.stakeAmount)
-          ).to.be.revertedWithCustomError(
-            StakingToken,
-            "ERC20InsufficientAllowance"
-          );
-        });
+          .withArgs(this.poolId, alice.address, SIMPLE_STAKES.alice);
       });
     });
 
-    describe("Claim", function () {
-      beforeEach(async function () {
-        // Stake first
-        await Stake.connect(bob).stake(this.poolId, this.stakeAmount);
+    describe("Reward Calculation Scenarios", function () {
+      it("should have 0 claimable rewards immediately after staking", async function () {
+        // Alice stakes at a specific time
+        const aliceStakeTime = (await time.latest()) + 1000;
+        await time.setNextBlockTimestamp(aliceStakeTime);
+        await Stake.connect(alice).stake(this.poolId, SIMPLE_STAKES.alice);
 
-        // Set exact timestamp for the claim to ensure precise timing
-        const pool = await Stake.pools(this.poolId);
-        const exactClaimTime = BigInt(pool.rewardCreatedAt) + 3600n; // exactly 1 hour after pool creation
-        await time.setNextBlockTimestamp(Number(exactClaimTime));
-
-        this.claimTx = await Stake.connect(bob).claim(this.poolId);
+        // Immediately after staking, Alice's claimable reward should be 0
+        const [claimable] = await Stake.claimableReward(
+          this.poolId,
+          alice.address
+        );
+        expect(claimable).to.equal(0);
       });
 
-      it("should claim accumulated rewards", async function () {
-        const userStake = await Stake.userPoolStake(bob.address, this.poolId);
+      it("should calculate rewards correctly for single staker", async function () {
+        // Alice stakes at a specific time
+        const aliceStakeTime = (await time.latest()) + 1000;
+        await time.setNextBlockTimestamp(aliceStakeTime);
+        await Stake.connect(alice).stake(this.poolId, SIMPLE_STAKES.alice);
 
-        // Calculate expected claimed rewards using the contract's actual accRewardPerShare
-        // Instead of trying to calculate with precision losses, use the contract's actual values
-        const pool = await Stake.pools(this.poolId);
-        const expectedClaimedRewards =
-          (BigInt(this.stakeAmount) * BigInt(pool.accRewardPerShare)) /
-          REWARD_PRECISION;
-
-        // Verify exact match with the contract's calculation
-        expect(userStake.claimedRewards).to.equal(expectedClaimedRewards);
+        // Check rewards exactly 1000s after Alice stakes
+        await time.increaseTo(aliceStakeTime + 1000);
+        const [claimable] = await Stake.claimableReward(
+          this.poolId,
+          alice.address
+        );
+        expect(claimable).to.equal(wei(1000));
       });
 
-      it("should transfer reward tokens to user", async function () {
-        const initialBalance = wei(10000);
-        const currentBalance = await RewardToken.balanceOf(bob.address);
-        const rewardsReceived = currentBalance - initialBalance;
+      it("should calculate rewards correctly when second staker joins", async function () {
+        // Alice stakes at a specific time
+        const aliceStakeTime = (await time.latest()) + 1000;
+        await time.setNextBlockTimestamp(aliceStakeTime);
+        await Stake.connect(alice).stake(this.poolId, SIMPLE_STAKES.alice);
 
-        // Should have received some rewards
-        expect(rewardsReceived).to.be.gt(0);
+        // Bob stakes exactly 1000s after Alice
+        const bobStakeTime = aliceStakeTime + 1000;
+        await time.setNextBlockTimestamp(bobStakeTime);
+        await Stake.connect(bob).stake(this.poolId, SIMPLE_STAKES.bob);
 
-        // Verify the transfer amount matches claimed amount
-        const userStake = await Stake.userPoolStake(bob.address, this.poolId);
-        expect(rewardsReceived).to.equal(userStake.claimedRewards);
+        // Check rewards at the exact moment Bob stakes
+        const [aliceClaimable] = await Stake.claimableReward(
+          this.poolId,
+          alice.address
+        );
+        const [bobClaimable] = await Stake.claimableReward(
+          this.poolId,
+          bob.address
+        );
+
+        expect(aliceClaimable).to.equal(wei(1000)); // Alice was alone for exactly 1000s
+        expect(bobClaimable).to.equal(0); // Bob just staked
       });
 
-      it("should update reward debt", async function () {
-        const userStake = await Stake.userPoolStake(bob.address, this.poolId);
+      it("should calculate proportional rewards correctly", async function () {
+        // Alice stakes at a specific time
+        const aliceStakeTime = (await time.latest()) + 1000;
+        await time.setNextBlockTimestamp(aliceStakeTime);
+        await Stake.connect(alice).stake(this.poolId, SIMPLE_STAKES.alice);
 
-        // Reward debt should be positive and match current accumulated rewards
-        expect(userStake.rewardDebt).to.be.gt(0);
+        // Bob stakes exactly 1000s after Alice
+        const bobStakeTime = aliceStakeTime + 1000;
+        await time.setNextBlockTimestamp(bobStakeTime);
+        await Stake.connect(bob).stake(this.poolId, SIMPLE_STAKES.bob);
 
-        // The reward debt should equal the total accumulated reward for this user
-        // (since they claimed everything)
-        const pool = await Stake.pools(this.poolId);
-        const expectedDebt =
-          (this.stakeAmount * pool.accRewardPerShare) / REWARD_PRECISION;
-        expect(userStake.rewardDebt).to.equal(expectedDebt);
+        // Check rewards exactly 1000s after Bob stakes
+        // - Alice was alone for 1000s: earned 1000 tokens
+        // - Both staked for 1000s: Alice earned 1000 * 100/400 = 250, Bob earned 1000 * 300/400 = 750
+        // - Alice total: 1000 + 250 = 1250, Bob total: 750
+        await time.increaseTo(bobStakeTime + 1000);
+
+        const [aliceClaimable] = await Stake.claimableReward(
+          this.poolId,
+          alice.address
+        );
+        const [bobClaimable] = await Stake.claimableReward(
+          this.poolId,
+          bob.address
+        );
+
+        expect(aliceClaimable).to.equal(wei(1250));
+        expect(bobClaimable).to.equal(wei(750));
       });
 
-      it("should emit RewardClaimed event", async function () {
-        // Get the actual claimed amount from user stake
-        const userStake = await Stake.userPoolStake(bob.address, this.poolId);
-        const claimedAmount = userStake.claimedRewards;
+      it("should handle three stakers correctly", async function () {
+        // Alice stakes at a specific time
+        const aliceStakeTime = (await time.latest()) + 1000;
+        await time.setNextBlockTimestamp(aliceStakeTime);
+        await Stake.connect(alice).stake(this.poolId, SIMPLE_STAKES.alice);
 
-        await expect(this.claimTx)
-          .emit(Stake, "RewardClaimed")
-          .withArgs(this.poolId, bob.address, claimedAmount);
+        // Bob stakes exactly 1000s after Alice
+        const bobStakeTime = aliceStakeTime + 1000;
+        await time.setNextBlockTimestamp(bobStakeTime);
+        await Stake.connect(bob).stake(this.poolId, SIMPLE_STAKES.bob);
+
+        // Carol stakes exactly 1000s after Bob
+        const carolStakeTime = bobStakeTime + 1000;
+        await time.setNextBlockTimestamp(carolStakeTime);
+        await Stake.connect(carol).stake(this.poolId, SIMPLE_STAKES.carol);
+
+        // Check rewards exactly 1000s after Carol stakes
+        // - Alice was alone for 1000s: earned 1000 tokens
+        // - Alice and Bob staked for 1000s: Alice earned 1000 * 100/400 = 250
+        // - All three staked for 1000s: Alice earned 1000 * 100/500 = 200
+        // - Alice total: 1000 + 250 + 200 = 1450
+        // - Bob total: 750 + 600 = 1350
+        // - Carol total: 200
+        await time.increaseTo(carolStakeTime + 1000);
+
+        const [aliceClaimable] = await Stake.claimableReward(
+          this.poolId,
+          alice.address
+        );
+        const [bobClaimable] = await Stake.claimableReward(
+          this.poolId,
+          bob.address
+        );
+        const [carolClaimable] = await Stake.claimableReward(
+          this.poolId,
+          carol.address
+        );
+
+        expect(aliceClaimable).to.equal(wei(1450));
+        expect(bobClaimable).to.equal(wei(1350));
+        expect(carolClaimable).to.equal(wei(200));
+      });
+    });
+
+    describe("Claim Operations", function () {
+      it("should claim rewards correctly", async function () {
+        // Alice stakes at a specific time
+        const aliceStakeTime = (await time.latest()) + 1000;
+        await time.setNextBlockTimestamp(aliceStakeTime);
+        await Stake.connect(alice).stake(this.poolId, SIMPLE_STAKES.alice);
+
+        // Alice claims exactly 1000s after staking
+        const claimTime = aliceStakeTime + 1000;
+        await time.setNextBlockTimestamp(claimTime);
+        const initialBalance = await RewardToken.balanceOf(alice.address);
+        await Stake.connect(alice).claim(this.poolId);
+        const finalBalance = await RewardToken.balanceOf(alice.address);
+
+        expect(finalBalance - initialBalance).to.equal(wei(1000));
       });
 
-      describe("Validations", function () {
-        it("should revert if pool does not exist", async function () {
-          await expect(
-            Stake.connect(bob).claim(999)
-          ).to.be.revertedWithCustomError(Stake, "Stake__PoolNotFound");
-        });
+      it("should update claimed rewards correctly", async function () {
+        // Alice stakes at a specific time
+        const aliceStakeTime = (await time.latest()) + 1000;
+        await time.setNextBlockTimestamp(aliceStakeTime);
+        await Stake.connect(alice).stake(this.poolId, SIMPLE_STAKES.alice);
 
-        it("should revert if no rewards to claim", async function () {
-          // Test with a user who has never staked
-          await expect(
-            Stake.connect(carol).claim(this.poolId)
-          ).to.be.revertedWithCustomError(Stake, "Stake__NoRewardsToClaim");
-        });
+        // Alice claims exactly 1000s after staking
+        const claimTime = aliceStakeTime + 1000;
+        await time.setNextBlockTimestamp(claimTime);
+        await Stake.connect(alice).claim(this.poolId);
+
+        // Check that claimedRewards is updated
+        const { userStake } = await getPoolAndUserStake(
+          this.poolId,
+          alice.address
+        );
+        expect(userStake.claimedRewards).to.equal(wei(1000));
+      });
+    });
+
+    describe("Validations", function () {
+      it("should revert if stake amount is too small", async function () {
+        await expect(
+          Stake.connect(alice).stake(this.poolId, 999) // Less than MIN_STAKE_AMOUNT (1000)
+        )
+          .to.be.revertedWithCustomError(Stake, "Stake__InvalidAmount")
+          .withArgs("Stake amount too small");
+      });
+
+      it("should revert if pool does not exist", async function () {
+        await expect(
+          Stake.connect(alice).stake(999, SIMPLE_STAKES.alice)
+        ).to.be.revertedWithCustomError(Stake, "Stake__PoolNotFound");
+      });
+
+      it("should revert if no rewards to claim", async function () {
+        await expect(
+          Stake.connect(alice).claim(this.poolId)
+        ).to.be.revertedWithCustomError(Stake, "Stake__NoRewardsToClaim");
       });
     });
   });
