@@ -219,22 +219,21 @@ contract Stake {
         pool.accRewardPerShare = _getUpdatedAccRewardPerShare(pool);
 
         // Update lastRewardUpadtedAt
+        uint256 endTime = pool.rewardStartedAt + pool.rewardDuration;
+        // If pool is cancelled, use cancellation time as end time
+        if (pool.cancelledAt > 0 && pool.cancelledAt < endTime) {
+            endTime = pool.cancelledAt;
+        }
+        uint256 toTime = currentTime > endTime ? endTime : currentTime;
+
         if (pool.totalStaked == 0) {
             // Track the skipped time to refund undistributed rewards on cancellation
             pool.totalSkippedDuration += uint32(
-                currentTime - pool.lastRewardUpadtedAt
+                toTime - pool.lastRewardUpadtedAt
             );
-            pool.lastRewardUpadtedAt = currentTime;
-        } else {
-            // TODO: REFACTOR
-            uint256 endTime = pool.rewardStartedAt + pool.rewardDuration;
-            // If pool is cancelled, use cancellation time as end time
-            if (pool.cancelledAt > 0 && pool.cancelledAt < endTime) {
-                endTime = pool.cancelledAt;
-            }
-            uint256 toTime = currentTime > endTime ? endTime : currentTime;
-            pool.lastRewardUpadtedAt = uint40(toTime);
         }
+
+        pool.lastRewardUpadtedAt = uint40(toTime);
     }
 
     // MARK: - Pool Management
@@ -354,6 +353,13 @@ contract Stake {
 
         // Return leftover rewards to creator if any
         if (leftoverRewards > 0) {
+            // Conditions that should never happen
+            assert(leftoverRewards <= pool.rewardAmount);
+            assert(
+                leftoverRewards <=
+                    IERC20(pool.rewardToken).balanceOf(address(this))
+            );
+
             IERC20(pool.rewardToken).safeTransfer(
                 pool.creator,
                 leftoverRewards
