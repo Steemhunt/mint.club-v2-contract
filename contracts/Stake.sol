@@ -6,12 +6,14 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title Stake Contract
  * @dev Allows users to create staking pools for any ERC20 tokens with timestamp-based reward distribution
  */
-contract Stake {
+contract Stake is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // MARK: - Constants & Errors
@@ -29,7 +31,8 @@ contract Stake {
         ((type(uint256).max / type(uint104).max) * MIN_STAKE_AMOUNT) /
             REWARD_PRECISION; // ~ 5.7T tokens with 18 decimals
 
-    // Error messages
+    // MARK: - Error messages
+
     error Stake__InvalidToken(string reason);
     error Stake__InvalidAmount(string reason);
     error Stake__InvalidDuration(string reason);
@@ -68,13 +71,14 @@ contract Stake {
 
     // MARK: - State Variables
 
+    address public protocolBeneficiary;
+    uint256 public creationFee;
+    uint256 public poolCount;
+
     // poolId => Pool
     mapping(uint256 => Pool) public pools;
-
     // user => poolId => UserStake
     mapping(address => mapping(uint256 => UserStake)) public userPoolStake;
-
-    uint256 public poolCount;
 
     // MARK: - Events
 
@@ -102,6 +106,19 @@ contract Stake {
         uint104 reward
     );
     event PoolCancelled(uint256 indexed poolId, uint256 leftoverRewards);
+    event ProtocolBeneficiaryUpdated(address protocolBeneficiary);
+    event CreationFeeUpdated(uint256 amount);
+
+    constructor(
+        address protocolBeneficiary_,
+        uint256 creationFee_
+    ) Ownable(msg.sender) {
+        protocolBeneficiary = protocolBeneficiary_;
+        creationFee = creationFee_;
+
+        emit ProtocolBeneficiaryUpdated(protocolBeneficiary_);
+        emit CreationFeeUpdated(creationFee_);
+    }
 
     // MARK: - Modifiers
 
@@ -251,7 +268,7 @@ contract Stake {
         address rewardToken,
         uint104 rewardAmount,
         uint32 rewardDuration
-    ) external returns (uint256 poolId) {
+    ) external payable nonReentrant returns (uint256 poolId) {
         if (stakingToken == address(0))
             revert Stake__InvalidToken("stakingToken cannot be zero");
         if (rewardToken == address(0))
@@ -266,6 +283,14 @@ contract Stake {
             rewardDuration < MIN_REWARD_DURATION ||
             rewardDuration > MAX_REWARD_DURATION
         ) revert Stake__InvalidDuration("rewardDuration out of range");
+        if (msg.value != creationFee)
+            revert Stake__InvalidAmount("Incorrect creation fee sent");
+
+        if (creationFee > 0) {
+            (bool success, ) = protocolBeneficiary.call{value: creationFee}("");
+            if (!success)
+                revert Stake__InvalidAmount("Failed to transfer creation fee");
+        }
 
         poolId = poolCount;
         poolCount = poolId + 1;
@@ -314,7 +339,9 @@ contract Stake {
      * @dev Cancels a pool (only pool creator can call)
      * @param poolId The ID of the pool to cancel
      */
-    function cancelPool(uint256 poolId) external _checkPoolExists(poolId) {
+    function cancelPool(
+        uint256 poolId
+    ) external nonReentrant _checkPoolExists(poolId) {
         Pool storage pool = pools[poolId];
         if (msg.sender != pool.creator) revert Stake__Unauthorized();
         if (pool.cancelledAt > 0) revert Stake__PoolCancelled(); // Already cancelled
@@ -379,7 +406,7 @@ contract Stake {
     function stake(
         uint256 poolId,
         uint104 amount
-    ) external _checkPoolExists(poolId) {
+    ) external nonReentrant _checkPoolExists(poolId) {
         if (amount < MIN_STAKE_AMOUNT)
             revert Stake__InvalidAmount("Stake amount too small");
 
@@ -437,7 +464,7 @@ contract Stake {
     function unstake(
         uint256 poolId,
         uint104 amount
-    ) external _checkPoolExists(poolId) {
+    ) external nonReentrant _checkPoolExists(poolId) {
         if (amount == 0) revert Stake__InvalidAmount("amount cannot be zero");
 
         Pool storage pool = pools[poolId];
@@ -475,12 +502,28 @@ contract Stake {
      * @dev Claims rewards from a pool
      * @param poolId The ID of the pool to claim rewards from
      */
-    function claim(uint256 poolId) external _checkPoolExists(poolId) {
+    function claim(
+        uint256 poolId
+    ) external nonReentrant _checkPoolExists(poolId) {
         _updatePool(poolId);
 
         uint256 claimedAmount = _claimRewards(poolId, msg.sender);
 
         if (claimedAmount == 0) revert Stake__NoRewardsToClaim();
+    }
+
+    // MARK: - Admin Functions
+
+    function updateProtocolBeneficiary(
+        address protocolBeneficiary_
+    ) external onlyOwner {
+        protocolBeneficiary = protocolBeneficiary_;
+        emit ProtocolBeneficiaryUpdated(protocolBeneficiary_);
+    }
+
+    function updateCreationFee(uint256 creationFee_) external onlyOwner {
+        creationFee = creationFee_;
+        emit CreationFeeUpdated(creationFee_);
     }
 
     // MARK: - View Functions
