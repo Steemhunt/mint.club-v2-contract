@@ -377,20 +377,18 @@ contract Stake {
         if (amount < MIN_STAKE_AMOUNT)
             revert Stake__InvalidAmount("Stake amount too small");
 
-        // Check if pool is active
         Pool storage pool = pools[poolId];
-        if (pool.cancelledAt > 0) revert Stake__PoolCancelled();
 
-        // If rewards haven't started yet, pool is still active
-        if (pool.rewardStartedAt != 0) {
-            uint256 endTime = pool.rewardStartedAt + pool.rewardDuration;
-            if (block.timestamp > endTime) revert Stake__PoolFinished();
-        }
+        if (pool.cancelledAt > 0) revert Stake__PoolCancelled();
+        if (
+            pool.rewardStartedAt > 0 &&
+            block.timestamp > pool.rewardStartedAt + pool.rewardDuration
+        ) revert Stake__PoolFinished();
 
         UserStake storage userStake = userPoolStake[msg.sender][poolId];
 
         // If this is the first stake in the pool, start the reward clock
-        if (pool.totalStaked == 0) {
+        if (pool.rewardStartedAt == 0 && pool.totalStaked == 0) {
             uint40 currentTime = uint40(block.timestamp);
             pool.rewardStartedAt = currentTime;
             pool.lastRewardUpadtedAt = currentTime;
