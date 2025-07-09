@@ -22,7 +22,11 @@ const SIMPLE_POOL = {
 
 describe("Stake", function () {
   async function deployFixtures() {
-    const Stake = await ethers.deployContract("Stake");
+    const [deployer] = await ethers.getSigners();
+    const Stake = await ethers.deployContract("Stake", [
+      deployer.address, // protocolBeneficiary (will be updated in beforeEach)
+      0, // creationFee
+    ]);
     await Stake.waitForDeployment();
 
     const StakingToken = await ethers.deployContract("TestToken", [
@@ -379,7 +383,7 @@ describe("Stake", function () {
         expect(pool.cancelledAt).to.equal(0);
         expect(pool.totalStaked).to.equal(0);
         expect(pool.activeStakerCount).to.equal(0);
-        expect(pool.lastRewardUpadtedAt).to.equal(0);
+        expect(pool.lastRewardUpdatedAt).to.equal(0);
         expect(pool.accRewardPerShare).to.equal(0);
       });
 
@@ -648,9 +652,7 @@ describe("Stake", function () {
               SIMPLE_POOL.rewardAmount,
               SIMPLE_POOL.rewardDuration
             )
-          )
-            .to.be.revertedWithCustomError(Stake, "Stake__InvalidToken")
-            .withArgs("stakingToken cannot be zero");
+          ).to.be.revertedWithCustomError(Stake, "Stake__InvalidToken");
         });
 
         it("should revert if rewardToken is zero address", async function () {
@@ -661,9 +663,7 @@ describe("Stake", function () {
               SIMPLE_POOL.rewardAmount,
               SIMPLE_POOL.rewardDuration
             )
-          )
-            .to.be.revertedWithCustomError(Stake, "Stake__InvalidToken")
-            .withArgs("rewardToken cannot be zero");
+          ).to.be.revertedWithCustomError(Stake, "Stake__InvalidToken");
         });
 
         it("should revert if rewardAmount is zero", async function () {
@@ -674,9 +674,7 @@ describe("Stake", function () {
               0,
               SIMPLE_POOL.rewardDuration
             )
-          )
-            .to.be.revertedWithCustomError(Stake, "Stake__InvalidAmount")
-            .withArgs("rewardAmount cannot be zero");
+          ).to.be.revertedWithCustomError(Stake, "Stake__ZeroAmount");
         });
 
         it("should revert if rewardDuration is too short", async function () {
@@ -687,9 +685,7 @@ describe("Stake", function () {
               SIMPLE_POOL.rewardAmount,
               MIN_REWARD_DURATION - 1n
             )
-          )
-            .to.be.revertedWithCustomError(Stake, "Stake__InvalidDuration")
-            .withArgs("rewardDuration out of range");
+          ).to.be.revertedWithCustomError(Stake, "Stake__InvalidDuration");
         });
 
         it("should revert if rewardDuration is too long", async function () {
@@ -700,9 +696,7 @@ describe("Stake", function () {
               SIMPLE_POOL.rewardAmount,
               MAX_REWARD_DURATION + 1n
             )
-          )
-            .to.be.revertedWithCustomError(Stake, "Stake__InvalidDuration")
-            .withArgs("rewardDuration out of range");
+          ).to.be.revertedWithCustomError(Stake, "Stake__InvalidDuration");
         });
 
         it("should accept minimum valid duration", async function () {
@@ -835,7 +829,7 @@ describe("Stake", function () {
           expect(pool.cancelledAt).to.equal(0);
           expect(pool.totalStaked).to.equal(0);
           expect(pool.activeStakerCount).to.equal(0);
-          expect(pool.lastRewardUpadtedAt).to.equal(0);
+          expect(pool.lastRewardUpdatedAt).to.equal(0);
           expect(pool.accRewardPerShare).to.equal(0);
         });
 
@@ -865,9 +859,7 @@ describe("Stake", function () {
               tooBigRewardAmount,
               MIN_REWARD_DURATION
             )
-          )
-            .to.be.revertedWithCustomError(Stake, "Stake__InvalidAmount")
-            .withArgs("rewardAmount too large - would cause overflow");
+          ).to.be.revertedWithCustomError(Stake, "Stake__InvalidRewardAmount");
         });
 
         it("should revert if token has transfer fees", async function () {
@@ -885,9 +877,10 @@ describe("Stake", function () {
               wei(10000),
               SIMPLE_POOL.rewardDuration
             )
-          )
-            .to.be.revertedWithCustomError(Stake, "Stake__InvalidToken")
-            .withArgs("Token has transfer fees or rebasing - not supported");
+          ).to.be.revertedWithCustomError(
+            Stake,
+            "Stake__TokenHasTransferFeesOrRebasing"
+          );
         });
       }); // Pool Creation Validations
 
@@ -895,9 +888,7 @@ describe("Stake", function () {
         it("should revert if stake amount is too small", async function () {
           await expect(
             Stake.connect(alice).stake(this.poolId, MIN_STAKE_AMOUNT - 1n)
-          )
-            .to.be.revertedWithCustomError(Stake, "Stake__InvalidAmount")
-            .withArgs("Stake amount too small");
+          ).to.be.revertedWithCustomError(Stake, "Stake__StakeTooSmall");
         });
 
         it("should revert if pool does not exist", async function () {
@@ -936,9 +927,9 @@ describe("Stake", function () {
         });
 
         it("should revert if unstake amount is zero", async function () {
-          await expect(Stake.connect(alice).unstake(this.poolId, 0))
-            .to.be.revertedWithCustomError(Stake, "Stake__InvalidAmount")
-            .withArgs("amount cannot be zero");
+          await expect(
+            Stake.connect(alice).unstake(this.poolId, 0)
+          ).to.be.revertedWithCustomError(Stake, "Stake__ZeroAmount");
         });
 
         it("should revert if insufficient balance", async function () {
@@ -1678,4 +1669,96 @@ describe("Stake", function () {
       }); // Multiple Transactions In Same Block
     }); // Edge Cases
   }); // Stake Operations
+
+  describe("Admin Functions", function () {
+    describe("updateProtocolBeneficiary", function () {
+      it("should update protocol beneficiary", async function () {
+        await expect(
+          Stake.connect(owner).updateProtocolBeneficiary(alice.address)
+        )
+          .to.emit(Stake, "ProtocolBeneficiaryUpdated")
+          .withArgs(alice.address);
+
+        expect(await Stake.protocolBeneficiary()).to.equal(alice.address);
+      });
+
+      it("should revert if called by non-owner", async function () {
+        await expect(
+          Stake.connect(alice).updateProtocolBeneficiary(alice.address)
+        ).to.be.revertedWithCustomError(Stake, "OwnableUnauthorizedAccount");
+      });
+
+      it("should revert if zero address", async function () {
+        await expect(
+          Stake.connect(owner).updateProtocolBeneficiary(ethers.ZeroAddress)
+        ).to.be.revertedWithCustomError(Stake, "Stake__InvalidAddress");
+      });
+    });
+
+    describe("updateCreationFee", function () {
+      it("should update creation fee", async function () {
+        const newFee = ethers.parseEther("0.1");
+        await expect(Stake.connect(owner).updateCreationFee(newFee))
+          .to.emit(Stake, "CreationFeeUpdated")
+          .withArgs(newFee);
+
+        expect(await Stake.creationFee()).to.equal(newFee);
+      });
+
+      it("should revert if called by non-owner", async function () {
+        await expect(
+          Stake.connect(alice).updateCreationFee(ethers.parseEther("0.1"))
+        ).to.be.revertedWithCustomError(Stake, "OwnableUnauthorizedAccount");
+      });
+    });
+  });
+
+  describe("Creation Fee", function () {
+    beforeEach(async function () {
+      await Stake.connect(owner).updateCreationFee(ethers.parseEther("0.1"));
+    });
+
+    it("should require exact creation fee", async function () {
+      await expect(
+        Stake.connect(owner).createPool(
+          StakingToken.target,
+          RewardToken.target,
+          SIMPLE_POOL.rewardAmount,
+          SIMPLE_POOL.rewardDuration,
+          { value: ethers.parseEther("0.05") }
+        )
+      ).to.be.revertedWithCustomError(Stake, "Stake__InvalidCreationFee");
+    });
+
+    it("should transfer creation fee to beneficiary", async function () {
+      await distributeTokens(RewardToken, [alice], SIMPLE_POOL.rewardAmount);
+      await approveTokens(RewardToken, [alice], Stake.target);
+
+      const initialBalance = await ethers.provider.getBalance(owner.address);
+      await Stake.connect(alice).createPool(
+        StakingToken.target,
+        RewardToken.target,
+        SIMPLE_POOL.rewardAmount,
+        SIMPLE_POOL.rewardDuration,
+        { value: ethers.parseEther("0.1") }
+      );
+      const finalBalance = await ethers.provider.getBalance(owner.address);
+
+      expect(finalBalance - initialBalance).to.equal(ethers.parseEther("0.1"));
+    });
+
+    it("should work with zero creation fee", async function () {
+      await Stake.connect(owner).updateCreationFee(0);
+
+      await expect(
+        Stake.connect(owner).createPool(
+          StakingToken.target,
+          RewardToken.target,
+          SIMPLE_POOL.rewardAmount,
+          SIMPLE_POOL.rewardDuration,
+          { value: 0 }
+        )
+      ).to.not.be.reverted;
+    });
+  });
 }); // Stake

@@ -12,6 +12,12 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 /**
  * @title Stake Contract
  * @dev Allows users to create staking pools for any ERC20 tokens with timestamp-based reward distribution
+ * NOTE:
+ *      1. We use timestamp-based reward calculation,
+ *         so it inherently carries minimal risk of timestamp manipulation (±15 seconds).
+ *         We chose this design because this contract may be deployed on various networks with differing block times,
+ *         and block times may change in the future even on the same network.
+ *      2. We use uint40 for timestamp storage, which supports up to year 36,812.
  */
 contract Stake is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -33,9 +39,12 @@ contract Stake is Ownable, ReentrancyGuard {
 
     // MARK: - Error messages
 
-    error Stake__InvalidToken(string reason);
-    error Stake__InvalidAmount(string reason);
-    error Stake__InvalidDuration(string reason);
+    error Stake__InvalidToken();
+    error Stake__TokenHasTransferFeesOrRebasing();
+    error Stake__InvalidRewardAmount();
+    error Stake__InvalidCreationFee();
+    error Stake__FeeTransferFailed();
+    error Stake__InvalidDuration();
     error Stake__PoolNotFound();
     error Stake__PoolCancelled();
     error Stake__PoolFinished();
@@ -43,6 +52,9 @@ contract Stake is Ownable, ReentrancyGuard {
     error Stake__NoRewardsToClaim();
     error Stake__InvalidPaginationParameters();
     error Stake__Unauthorized();
+    error Stake__InvalidAddress();
+    error Stake__StakeTooSmall();
+    error Stake__ZeroAmount();
 
     // MARK: - Structs
 
@@ -58,7 +70,7 @@ contract Stake is Ownable, ReentrancyGuard {
         uint40 cancelledAt; // 40 bits - slot 3 - default 0 (not cancelled)
         uint128 totalStaked; // 128 bits - slot 4
         uint32 activeStakerCount; // 32 bits - slot 4 - number of unique active stakers
-        uint40 lastRewardUpadtedAt; // 40 bits - slot 4
+        uint40 lastRewardUpdatedAt; // 40 bits - slot 4
         uint256 accRewardPerShare; // 256 bits - slot 5
     }
 
@@ -113,11 +125,8 @@ contract Stake is Ownable, ReentrancyGuard {
         address protocolBeneficiary_,
         uint256 creationFee_
     ) Ownable(msg.sender) {
-        protocolBeneficiary = protocolBeneficiary_;
-        creationFee = creationFee_;
-
-        emit ProtocolBeneficiaryUpdated(protocolBeneficiary_);
-        emit CreationFeeUpdated(creationFee_);
+        updateProtocolBeneficiary(protocolBeneficiary_);
+        updateCreationFee(creationFee_);
     }
 
     // MARK: - Modifiers
@@ -143,7 +152,7 @@ contract Stake is Ownable, ReentrancyGuard {
         if (
             pool.rewardStartedAt == 0 ||
             pool.totalStaked == 0 ||
-            currentTime <= pool.lastRewardUpadtedAt
+            currentTime <= pool.lastRewardUpdatedAt
         ) return pool.accRewardPerShare;
 
         uint256 endTime = pool.rewardStartedAt + pool.rewardDuration;
@@ -152,7 +161,7 @@ contract Stake is Ownable, ReentrancyGuard {
             endTime = pool.cancelledAt;
 
         uint256 toTime = currentTime > endTime ? endTime : currentTime;
-        uint256 timePassed = toTime - pool.lastRewardUpadtedAt;
+        uint256 timePassed = toTime - pool.lastRewardUpdatedAt;
 
         if (timePassed == 0) return pool.accRewardPerShare;
 
@@ -208,6 +217,7 @@ contract Stake is Ownable, ReentrancyGuard {
         );
 
         if (claimAmount == 0) return 0;
+        assert(claimAmount <= pool.rewardAmount);
 
         // Update user's reward debt and claimed rewards
         userStake.rewardDebt += claimAmount;
@@ -227,30 +237,37 @@ contract Stake is Ownable, ReentrancyGuard {
         Pool storage pool = pools[poolId];
         uint40 currentTime = uint40(block.timestamp);
 
+        // Cache frequently accessed storage values
+        uint40 rewardStartedAt = pool.rewardStartedAt;
+        uint40 lastRewardUpdatedAt = pool.lastRewardUpdatedAt;
+
         // If rewards haven't started yet or no time passed, no need to update
-        if (
-            pool.rewardStartedAt == 0 || currentTime <= pool.lastRewardUpadtedAt
-        ) return;
+        if (rewardStartedAt == 0 || currentTime <= lastRewardUpdatedAt) return;
 
         // Update accRewardPerShare
         pool.accRewardPerShare = _getUpdatedAccRewardPerShare(pool);
 
-        // Update lastRewardUpadtedAt
-        uint256 endTime = pool.rewardStartedAt + pool.rewardDuration;
+        // Cache more values for efficiency
+        uint32 rewardDuration = pool.rewardDuration;
+        uint40 cancelledAt = pool.cancelledAt;
+        uint256 endTime = rewardStartedAt + rewardDuration;
+
         // If pool is cancelled, use cancellation time as end time
-        if (pool.cancelledAt > 0 && pool.cancelledAt < endTime) {
-            endTime = pool.cancelledAt;
+        if (cancelledAt > 0 && cancelledAt < endTime) {
+            endTime = cancelledAt;
         }
         uint256 toTime = currentTime > endTime ? endTime : currentTime;
 
         if (pool.totalStaked == 0) {
             // Track the skipped time to refund undistributed rewards on cancellation
-            pool.totalSkippedDuration += uint32(
-                toTime - pool.lastRewardUpadtedAt
-            );
+            uint256 skippedTime = toTime - lastRewardUpdatedAt;
+            assert(skippedTime <= rewardDuration);
+            unchecked {
+                pool.totalSkippedDuration += uint32(skippedTime);
+            }
         }
 
-        pool.lastRewardUpadtedAt = uint40(toTime);
+        pool.lastRewardUpdatedAt = uint40(toTime);
     }
 
     // MARK: - Pool Management
@@ -269,27 +286,20 @@ contract Stake is Ownable, ReentrancyGuard {
         uint104 rewardAmount,
         uint32 rewardDuration
     ) external payable nonReentrant returns (uint256 poolId) {
-        if (stakingToken == address(0))
-            revert Stake__InvalidToken("stakingToken cannot be zero");
-        if (rewardToken == address(0))
-            revert Stake__InvalidToken("rewardToken cannot be zero");
-        if (rewardAmount == 0)
-            revert Stake__InvalidAmount("rewardAmount cannot be zero");
+        if (stakingToken == address(0)) revert Stake__InvalidToken();
+        if (rewardToken == address(0)) revert Stake__InvalidToken();
+        if (rewardAmount == 0) revert Stake__ZeroAmount();
         if (rewardAmount > MAX_SAFE_REWARD_AMOUNT)
-            revert Stake__InvalidAmount(
-                "rewardAmount too large - would cause overflow"
-            );
+            revert Stake__InvalidRewardAmount();
         if (
             rewardDuration < MIN_REWARD_DURATION ||
             rewardDuration > MAX_REWARD_DURATION
-        ) revert Stake__InvalidDuration("rewardDuration out of range");
-        if (msg.value != creationFee)
-            revert Stake__InvalidAmount("Incorrect creation fee sent");
+        ) revert Stake__InvalidDuration();
+        if (msg.value != creationFee) revert Stake__InvalidCreationFee();
 
         if (creationFee > 0) {
             (bool success, ) = protocolBeneficiary.call{value: creationFee}("");
-            if (!success)
-                revert Stake__InvalidAmount("Failed to transfer creation fee");
+            if (!success) revert Stake__FeeTransferFailed();
         }
 
         poolId = poolCount;
@@ -306,7 +316,7 @@ contract Stake is Ownable, ReentrancyGuard {
             cancelledAt: 0,
             totalStaked: 0,
             activeStakerCount: 0,
-            lastRewardUpadtedAt: 0, // Will be set on first stake
+            lastRewardUpdatedAt: 0, // Will be set on first stake
             accRewardPerShare: 0
         });
 
@@ -319,11 +329,8 @@ contract Stake is Ownable, ReentrancyGuard {
         );
         uint256 balanceAfter = IERC20(rewardToken).balanceOf(address(this));
 
-        if (balanceAfter - balanceBefore != rewardAmount) {
-            revert Stake__InvalidToken(
-                "Token has transfer fees or rebasing - not supported"
-            );
-        }
+        if (balanceAfter - balanceBefore != rewardAmount)
+            revert Stake__TokenHasTransferFeesOrRebasing();
 
         emit PoolCreated(
             poolId,
@@ -407,24 +414,31 @@ contract Stake is Ownable, ReentrancyGuard {
         uint256 poolId,
         uint104 amount
     ) external nonReentrant _checkPoolExists(poolId) {
-        if (amount < MIN_STAKE_AMOUNT)
-            revert Stake__InvalidAmount("Stake amount too small");
+        if (amount < MIN_STAKE_AMOUNT) revert Stake__StakeTooSmall();
 
         Pool storage pool = pools[poolId];
 
-        if (pool.cancelledAt > 0) revert Stake__PoolCancelled();
+        // Cache frequently accessed storage values for gas efficiency
+        uint40 cancelledAt = pool.cancelledAt;
+        uint40 rewardStartedAt = pool.rewardStartedAt;
+        uint32 rewardDuration = pool.rewardDuration;
+        uint128 totalStaked = pool.totalStaked;
+
+        if (cancelledAt > 0) revert Stake__PoolCancelled();
         if (
-            pool.rewardStartedAt > 0 &&
-            block.timestamp > pool.rewardStartedAt + pool.rewardDuration
-        ) revert Stake__PoolFinished();
+            rewardStartedAt > 0 &&
+            block.timestamp > rewardStartedAt + rewardDuration
+        ) {
+            revert Stake__PoolFinished();
+        }
 
         UserStake storage userStake = userPoolStake[msg.sender][poolId];
 
         // If this is the first stake in the pool, start the reward clock
-        if (pool.rewardStartedAt == 0 && pool.totalStaked == 0) {
+        if (rewardStartedAt == 0 && totalStaked == 0) {
             uint40 currentTime = uint40(block.timestamp);
             pool.rewardStartedAt = currentTime;
-            pool.lastRewardUpadtedAt = currentTime;
+            pool.lastRewardUpdatedAt = currentTime;
         }
 
         _updatePool(poolId);
@@ -465,7 +479,7 @@ contract Stake is Ownable, ReentrancyGuard {
         uint256 poolId,
         uint104 amount
     ) external nonReentrant _checkPoolExists(poolId) {
-        if (amount == 0) revert Stake__InvalidAmount("amount cannot be zero");
+        if (amount == 0) revert Stake__ZeroAmount();
 
         Pool storage pool = pools[poolId];
         UserStake storage userStake = userPoolStake[msg.sender][poolId];
@@ -479,7 +493,9 @@ contract Stake is Ownable, ReentrancyGuard {
         _claimRewards(poolId, msg.sender);
 
         // Update user's staked amount and reward debt
-        userStake.stakedAmount -= amount;
+        unchecked {
+            userStake.stakedAmount -= amount; // Safe: checked above
+        }
         userStake.rewardDebt =
             (userStake.stakedAmount * pool.accRewardPerShare) /
             REWARD_PRECISION;
@@ -490,7 +506,9 @@ contract Stake is Ownable, ReentrancyGuard {
         }
 
         // Update pool's total staked amount
-        pool.totalStaked -= amount;
+        unchecked {
+            pool.totalStaked -= amount; // Safe: total always >= user amount
+        }
 
         // Transfer tokens back to user
         IERC20(pool.stakingToken).safeTransfer(msg.sender, amount);
@@ -516,12 +534,14 @@ contract Stake is Ownable, ReentrancyGuard {
 
     function updateProtocolBeneficiary(
         address protocolBeneficiary_
-    ) external onlyOwner {
+    ) public onlyOwner {
+        if (protocolBeneficiary_ == address(0)) revert Stake__InvalidAddress();
+
         protocolBeneficiary = protocolBeneficiary_;
         emit ProtocolBeneficiaryUpdated(protocolBeneficiary_);
     }
 
-    function updateCreationFee(uint256 creationFee_) external onlyOwner {
+    function updateCreationFee(uint256 creationFee_) public onlyOwner {
         creationFee = creationFee_;
         emit CreationFeeUpdated(creationFee_);
     }
@@ -585,10 +605,16 @@ contract Stake is Ownable, ReentrancyGuard {
             uint256 validCount = 0;
 
             for (uint256 i = poolIdFrom; i < searchTo; ++i) {
-                (uint256 claimable, uint256 claimed) = this.claimableReward(
-                    i,
-                    staker
+                Pool memory pool = pools[i];
+                UserStake memory userStake = userPoolStake[staker][i];
+
+                uint256 claimable = _claimableReward(
+                    _getUpdatedAccRewardPerShare(pool),
+                    userStake.stakedAmount,
+                    userStake.rewardDebt
                 );
+                uint256 claimed = userStake.claimedRewards;
+
                 if (claimable > 0 || claimed > 0) {
                     tempResults[validCount] = [i, claimable, claimed];
                     ++validCount;
