@@ -514,11 +514,11 @@ contract Stake {
     }
 
     /**
-     * @dev Returns claimable rewards for multiple pools
+     * @dev Returns claimable rewards for multiple pools that have rewards (claimable > 0 or claimed > 0)
      * @param poolIdFrom The starting pool ID
      * @param poolIdTo The ending pool ID (exclusive)
      * @param staker The address of the staker
-     * @return results Array of [poolId, rewardClaimable, rewardClaimed]
+     * @return results Array of [poolId, rewardClaimable, rewardClaimed] for pools with rewards only
      */
     function claimableRewardBulk(
         uint256 poolIdFrom,
@@ -530,18 +530,32 @@ contract Stake {
         }
 
         unchecked {
-            uint256 length = poolIdTo - poolIdFrom;
-            results = new uint256[3][](length);
+            // Limit search to actual pool count
+            uint256 searchTo = poolIdTo > poolCount ? poolCount : poolIdTo;
+            if (poolIdFrom >= searchTo) {
+                return new uint256[3][](0);
+            }
 
-            for (uint256 i = 0; i < length; ++i) {
-                uint256 poolId = poolIdFrom + i;
-                if (poolId >= poolCount) break;
+            // Single pass: collect results in temporary array, then resize
+            uint256 maxLength = searchTo - poolIdFrom;
+            uint256[3][] memory tempResults = new uint256[3][](maxLength);
+            uint256 validCount = 0;
 
+            for (uint256 i = poolIdFrom; i < searchTo; ++i) {
                 (uint256 claimable, uint256 claimed) = this.claimableReward(
-                    poolId,
+                    i,
                     staker
                 );
-                results[i] = [poolId, claimable, claimed];
+                if (claimable > 0 || claimed > 0) {
+                    tempResults[validCount] = [i, claimable, claimed];
+                    ++validCount;
+                }
+            }
+
+            // Create final array with exact size and copy results
+            results = new uint256[3][](validCount);
+            for (uint256 i = 0; i < validCount; ++i) {
+                results[i] = tempResults[i];
             }
         }
     }
