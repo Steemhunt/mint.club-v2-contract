@@ -39,7 +39,7 @@ contract Stake {
     error Stake__InsufficientBalance();
     error Stake__NoRewardsToClaim();
     error Stake__InvalidPaginationParameters();
-    error Stake__UnauthorizedPoolDeactivation();
+    error Stake__Unauthorized();
 
     // MARK: - Structs
 
@@ -50,11 +50,12 @@ contract Stake {
         address creator; // 160 bits - slot 2 - immutable
         uint104 rewardAmount; // 104 bits - slot 3 - immutable
         uint32 rewardDuration; // 32 bits - slot 3 (up to ~136 years in seconds) - immutable
+        uint32 totalSkippedDuration; // 32 bits - slot 3 - Track time when totalStaked was 0 to refund undistributed rewards
         uint40 rewardStartedAt; // 40 bits - slot 3 (until year 36,812) - 0 until first stake
         uint40 cancelledAt; // 40 bits - slot 3 - default 0 (not cancelled)
         uint128 totalStaked; // 128 bits - slot 4
         uint32 activeStakerCount; // 32 bits - slot 4 - number of unique active stakers
-        uint40 lastRewardTime; // 40 bits - slot 4
+        uint40 lastRewardUpadtedAt; // 40 bits - slot 4
         uint256 accRewardPerShare; // 256 bits - slot 5
     }
 
@@ -112,108 +113,93 @@ contract Stake {
     // MARK: - Internal Helper Functions
 
     /**
-     * @dev Safe calculation of accumulated reward amount
-     * @param amount The staked amount
-     * @param accRewardPerShare The accumulated reward per share
-     * @return The calculated reward amount
-     */
-    function _safeCalculateReward(
-        uint256 amount,
-        uint256 accRewardPerShare
-    ) internal pure returns (uint256) {
-        if (amount == 0 || accRewardPerShare == 0) {
-            return 0;
-        }
-
-        return (amount * accRewardPerShare) / REWARD_PRECISION;
-    }
-
-    /**
      * @dev Calculates up-to-date accRewardPerShare for a pool without modifying state
      * @param pool The pool struct
-     * @return accRewardPerShare The up-to-date accumulated reward per share
+     * @return updatedAccRewardPerShare The up-to-date accumulated reward per share
      */
     function _getUpdatedAccRewardPerShare(
         Pool memory pool
-    ) internal view returns (uint256 accRewardPerShare) {
-        accRewardPerShare = pool.accRewardPerShare;
-
-        // If rewards haven't started yet, no rewards to distribute
-        if (pool.rewardStartedAt == 0) {
-            return accRewardPerShare;
-        }
-
+    ) internal view returns (uint256 updatedAccRewardPerShare) {
         uint40 currentTime = uint40(block.timestamp);
-        if (currentTime > pool.lastRewardTime && pool.totalStaked > 0) {
-            uint256 endTime = pool.rewardStartedAt + pool.rewardDuration;
-            // If pool is cancelled, use cancellation time as end time
-            if (pool.cancelledAt > 0 && pool.cancelledAt < endTime) {
-                endTime = pool.cancelledAt;
-            }
-            uint256 toTime = currentTime > endTime ? endTime : currentTime;
-            uint256 timePassed = toTime - pool.lastRewardTime;
 
-            if (timePassed > 0) {
-                uint256 totalReward = (timePassed * pool.rewardAmount) /
-                    pool.rewardDuration;
+        // If rewards haven't started yet or no staked, no rewards to distribute
+        if (
+            pool.rewardStartedAt == 0 ||
+            pool.totalStaked == 0 ||
+            currentTime <= pool.lastRewardUpadtedAt
+        ) return pool.accRewardPerShare;
 
-                accRewardPerShare +=
-                    (totalReward * REWARD_PRECISION) /
-                    pool.totalStaked;
-            }
-        }
+        uint256 endTime = pool.rewardStartedAt + pool.rewardDuration;
+        // If pool is cancelled, use cancellation time as end time
+        if (pool.cancelledAt > 0 && pool.cancelledAt < endTime)
+            endTime = pool.cancelledAt;
+
+        uint256 toTime = currentTime > endTime ? endTime : currentTime;
+        uint256 timePassed = toTime - pool.lastRewardUpadtedAt;
+
+        if (timePassed == 0) return pool.accRewardPerShare;
+
+        uint256 totalReward = (timePassed * pool.rewardAmount) /
+            pool.rewardDuration;
+
+        return
+            pool.accRewardPerShare +
+            (totalReward * REWARD_PRECISION) /
+            pool.totalStaked;
     }
 
     /**
-     * @dev Calculates claimable rewards for a user in a pool (assumes pool is updated)
-     * @param pool The pool struct
-     * @param userStake The user's stake struct
-     * @return claimableAmount The amount of rewards that can be claimed
+     * @dev Calculates claimable rewards (assumes pool is updated)
+     * @param updatedAccRewardPerShare The accumulated reward per share
+     * @param stakedAmount The amount of tokens staked
+     * @param originalRewardDebt The baseline reward amount to subtract, accounting for staking timing and already claimed rewards
+     * @return rewardClaimable The amount of rewards that can be claimed
      */
-    function _calculateClaimableReward(
-        Pool memory pool,
-        UserStake memory userStake
-    ) internal pure returns (uint256 claimableAmount) {
-        if (userStake.stakedAmount > 0) {
-            uint256 accRewardAmount = _safeCalculateReward(
-                userStake.stakedAmount,
-                pool.accRewardPerShare
-            );
-            if (accRewardAmount > userStake.rewardDebt) {
-                claimableAmount = accRewardAmount - userStake.rewardDebt;
-            }
-        }
+    function _claimableReward(
+        uint256 updatedAccRewardPerShare,
+        uint256 stakedAmount,
+        uint256 originalRewardDebt
+    ) internal pure returns (uint256 rewardClaimable) {
+        if (stakedAmount == 0) return 0;
+
+        uint256 accRewardAmount = (stakedAmount * updatedAccRewardPerShare) /
+            REWARD_PRECISION;
+
+        if (accRewardAmount <= originalRewardDebt) return 0;
+
+        return accRewardAmount - originalRewardDebt;
     }
 
     /**
      * @dev Internal function to claim rewards for a user
      * @param poolId The ID of the pool
      * @param user The address of the user
-     * @return claimedAmount The amount of rewards claimed
+     * @return claimAmount The amount of rewards claimed
      */
     function _claimRewards(
         uint256 poolId,
         address user
-    ) internal returns (uint256 claimedAmount) {
+    ) internal returns (uint256 claimAmount) {
         Pool storage pool = pools[poolId];
         UserStake storage userStake = userPoolStake[user][poolId];
 
-        // Calculate claimable rewards
-        claimedAmount = _calculateClaimableReward(pool, userStake);
+        // Use the helper function to calculate claimable rewards
+        claimAmount = _claimableReward(
+            pool.accRewardPerShare,
+            userStake.stakedAmount,
+            userStake.rewardDebt
+        );
 
-        if (claimedAmount > 0) {
-            // Update user's reward debt and claimed rewards
-            userStake.rewardDebt = _safeCalculateReward(
-                userStake.stakedAmount,
-                pool.accRewardPerShare
-            );
-            userStake.claimedRewards += uint104(claimedAmount);
+        if (claimAmount == 0) return 0;
 
-            // Transfer reward tokens to user
-            IERC20(pool.rewardToken).safeTransfer(user, claimedAmount);
+        // Update user's reward debt and claimed rewards
+        userStake.rewardDebt += claimAmount;
+        userStake.claimedRewards += uint104(claimAmount);
 
-            emit RewardClaimed(poolId, user, uint104(claimedAmount));
-        }
+        // Transfer reward tokens to user
+        IERC20(pool.rewardToken).safeTransfer(user, claimAmount);
+
+        emit RewardClaimed(poolId, user, uint104(claimAmount));
     }
 
     /**
@@ -222,31 +208,32 @@ contract Stake {
      */
     function _updatePool(uint256 poolId) internal {
         Pool storage pool = pools[poolId];
-
-        // If rewards haven't started yet, no need to update
-        if (pool.rewardStartedAt == 0) {
-            return;
-        }
-
         uint40 currentTime = uint40(block.timestamp);
 
-        if (currentTime <= pool.lastRewardTime) {
-            return;
-        }
+        // If rewards haven't started yet or no time passed, no need to update
+        if (
+            pool.rewardStartedAt == 0 || currentTime <= pool.lastRewardUpadtedAt
+        ) return;
 
+        // Update accRewardPerShare
         pool.accRewardPerShare = _getUpdatedAccRewardPerShare(pool);
 
-        // Update lastRewardTime appropriately
+        // Update lastRewardUpadtedAt
         if (pool.totalStaked == 0) {
-            pool.lastRewardTime = currentTime;
+            // Track the skipped time to refund undistributed rewards on cancellation
+            pool.totalSkippedDuration += uint32(
+                currentTime - pool.lastRewardUpadtedAt
+            );
+            pool.lastRewardUpadtedAt = currentTime;
         } else {
+            // TODO: REFACTOR
             uint256 endTime = pool.rewardStartedAt + pool.rewardDuration;
             // If pool is cancelled, use cancellation time as end time
             if (pool.cancelledAt > 0 && pool.cancelledAt < endTime) {
                 endTime = pool.cancelledAt;
             }
             uint256 toTime = currentTime > endTime ? endTime : currentTime;
-            pool.lastRewardTime = uint40(toTime);
+            pool.lastRewardUpadtedAt = uint40(toTime);
         }
     }
 
@@ -290,20 +277,29 @@ contract Stake {
             creator: msg.sender,
             rewardAmount: rewardAmount,
             rewardDuration: rewardDuration,
+            totalSkippedDuration: 0,
             rewardStartedAt: 0, // Will be set on first stake
             cancelledAt: 0,
             totalStaked: 0,
             activeStakerCount: 0,
-            lastRewardTime: 0, // Will be set on first stake
+            lastRewardUpadtedAt: 0, // Will be set on first stake
             accRewardPerShare: 0
         });
 
+        uint256 balanceBefore = IERC20(rewardToken).balanceOf(address(this));
         // Transfer reward tokens from creator to contract
         IERC20(rewardToken).safeTransferFrom(
             msg.sender,
             address(this),
             rewardAmount
         );
+        uint256 balanceAfter = IERC20(rewardToken).balanceOf(address(this));
+
+        if (balanceAfter - balanceBefore != rewardAmount) {
+            revert Stake__InvalidToken(
+                "Token has transfer fees or rebasing - not supported"
+            );
+        }
 
         emit PoolCreated(
             poolId,
@@ -321,8 +317,7 @@ contract Stake {
      */
     function cancelPool(uint256 poolId) external _checkPoolExists(poolId) {
         Pool storage pool = pools[poolId];
-        if (msg.sender != pool.creator)
-            revert Stake__UnauthorizedPoolDeactivation();
+        if (msg.sender != pool.creator) revert Stake__Unauthorized();
         if (pool.cancelledAt > 0) revert Stake__PoolCancelled(); // Already cancelled
 
         // Update pool rewards up to cancellation time
@@ -337,12 +332,21 @@ contract Stake {
             leftoverRewards = pool.rewardAmount;
         } else {
             uint256 endTime = pool.rewardStartedAt + pool.rewardDuration;
+
+            // Calculate future rewards
+            uint256 futureRewards = 0;
             if (currentTime < endTime) {
                 uint256 remainingTime = endTime - currentTime;
-                leftoverRewards =
+                futureRewards =
                     (remainingTime * pool.rewardAmount) /
                     pool.rewardDuration;
             }
+
+            // Calculate skipped rewards from past unstaked periods
+            uint256 skippedRewards = (pool.totalSkippedDuration *
+                pool.rewardAmount) / pool.rewardDuration;
+
+            leftoverRewards = futureRewards + skippedRewards;
         }
 
         // Set cancellation time
@@ -389,7 +393,7 @@ contract Stake {
         if (pool.totalStaked == 0) {
             uint40 currentTime = uint40(block.timestamp);
             pool.rewardStartedAt = currentTime;
-            pool.lastRewardTime = currentTime;
+            pool.lastRewardUpadtedAt = currentTime;
         }
 
         _updatePool(poolId);
@@ -404,10 +408,9 @@ contract Stake {
 
         // Update user's staked amount and reward debt
         userStake.stakedAmount += amount;
-        userStake.rewardDebt = _safeCalculateReward(
-            userStake.stakedAmount,
-            pool.accRewardPerShare
-        );
+        userStake.rewardDebt =
+            (userStake.stakedAmount * pool.accRewardPerShare) /
+            REWARD_PRECISION;
 
         // Update pool's total staked amount
         pool.totalStaked += amount;
@@ -446,12 +449,9 @@ contract Stake {
 
         // Update user's staked amount and reward debt
         userStake.stakedAmount -= amount;
-        userStake.rewardDebt = userStake.stakedAmount > 0
-            ? _safeCalculateReward(
-                userStake.stakedAmount,
-                pool.accRewardPerShare
-            )
-            : 0;
+        userStake.rewardDebt =
+            (userStake.stakedAmount * pool.accRewardPerShare) /
+            REWARD_PRECISION;
 
         // If user completely unstaked, decrement active staker count
         if (userStake.stakedAmount == 0) {
@@ -500,11 +500,12 @@ contract Stake {
         Pool memory pool = pools[poolId];
         UserStake memory userStake = userPoolStake[staker][poolId];
 
-        // Get up-to-date accRewardPerShare
-        pool.accRewardPerShare = _getUpdatedAccRewardPerShare(pool);
+        rewardClaimable = _claimableReward(
+            _getUpdatedAccRewardPerShare(pool),
+            userStake.stakedAmount,
+            userStake.rewardDebt
+        );
 
-        // Calculate claimable rewards using the same logic as internal functions
-        rewardClaimable = _calculateClaimableReward(pool, userStake);
         rewardClaimed = userStake.claimedRewards;
     }
 
