@@ -5,6 +5,7 @@ const { getCreationFee } = require("../test/utils/test-utils");
 async function main() {
   const PROTOCOL_BENEFICIARY = process.env.PROTOCOL_BENEFICIARY;
   const CREATION_FEE = getCreationFee(hre.network.name) * 5n; // creationFee x 5 = ~$10
+  const CLAIM_FEE = 400; // 4%
 
   const accounts = await hre.ethers.getSigners();
   const deployer = accounts[0].address;
@@ -16,6 +17,7 @@ async function main() {
   const stake = await hre.ethers.deployContract("Stake", [
     PROTOCOL_BENEFICIARY,
     CREATION_FEE,
+    CLAIM_FEE,
   ]);
   await stake.waitForDeployment();
   console.log(` -> Stake contract deployed at ${stake.target}`);
@@ -26,7 +28,7 @@ async function main() {
   console.log("```");
 
   console.log(`
-    npx hardhat verify --network ${hre.network.name} ${stake.target} "${PROTOCOL_BENEFICIARY}" "${FEE_PER_RECIPIENT}"
+    npx hardhat verify --network ${hre.network.name} ${stake.target} "${PROTOCOL_BENEFICIARY}" "${CREATION_FEE}" "${CLAIM_FEE}"
   `);
 }
 

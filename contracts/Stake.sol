@@ -1,5 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 
+/**
+ * @title Stake Contract
+ * @notice Mint Club V2 - Staking Contract
+ * @dev Allows users to create staking pools for any ERC20 tokens with timestamp-based reward distribution
+ *
+ * NOTE:
+ *      1. We use timestamp-based reward calculation,
+ *         so it inherently carries minimal risk of timestamp manipulation (±15 seconds).
+ *         We chose this design because this contract may be deployed on various networks with differing block times,
+ *         and block times may change in the future even on the same network.
+ *      2. We use uint40 for timestamp storage, which supports up to year 36,812.
+ */
+
 pragma solidity =0.8.20;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -9,16 +22,6 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-/**
- * @title Stake Contract
- * @dev Allows users to create staking pools for any ERC20 tokens with timestamp-based reward distribution
- * NOTE:
- *      1. We use timestamp-based reward calculation,
- *         so it inherently carries minimal risk of timestamp manipulation (±15 seconds).
- *         We chose this design because this contract may be deployed on various networks with differing block times,
- *         and block times may change in the future even on the same network.
- *      2. We use uint40 for timestamp storage, which supports up to year 36,812.
- */
 contract Stake is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -130,10 +133,12 @@ contract Stake is Ownable, ReentrancyGuard {
 
     constructor(
         address protocolBeneficiary_,
-        uint256 creationFee_
+        uint256 creationFee_,
+        uint256 claimFee_
     ) Ownable(msg.sender) {
         updateProtocolBeneficiary(protocolBeneficiary_);
         updateCreationFee(creationFee_);
+        updateClaimFee(claimFee_);
     }
 
     // MARK: - Modifiers

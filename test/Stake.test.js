@@ -26,6 +26,7 @@ describe("Stake", function () {
     const Stake = await ethers.deployContract("Stake", [
       deployer.address, // protocolBeneficiary (will be updated in beforeEach)
       0, // creationFee
+      0, // claimFee
     ]);
     await Stake.waitForDeployment();
 
