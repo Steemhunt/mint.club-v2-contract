@@ -166,22 +166,24 @@ describe("Stake", function () {
         await Stake.connect(alice).stake(this.poolId, wei(100));
 
         // Immediately after staking, Alice's claimable reward should be 0
-        const [claimable] = await Stake.claimableReward(
-          this.poolId,
-          alice.address
-        );
+        const [claimable, fee, claimedTotal, feeTotal] =
+          await Stake.claimableReward(this.poolId, alice.address);
         expect(claimable).to.equal(0);
+        expect(fee).to.equal(0);
+        expect(claimedTotal).to.equal(0);
+        expect(feeTotal).to.equal(0);
       });
 
       it("should calculate rewards correctly for single staker", async function () {
         await Stake.connect(alice).stake(this.poolId, wei(100));
 
         await time.increase(1234);
-        const [claimable] = await Stake.claimableReward(
-          this.poolId,
-          alice.address
-        );
+        const [claimable, fee, claimedTotal, feeTotal] =
+          await Stake.claimableReward(this.poolId, alice.address);
         expect(claimable).to.equal(wei(1234));
+        expect(fee).to.equal(0);
+        expect(claimedTotal).to.equal(0);
+        expect(feeTotal).to.equal(0);
       });
 
       it("should calculate rewards correctly when second staker joins", async function () {
@@ -191,17 +193,19 @@ describe("Stake", function () {
         await Stake.connect(bob).stake(this.poolId, wei(300));
 
         // Check rewards at the exact moment Bob stakes
-        const [aliceClaimable] = await Stake.claimableReward(
-          this.poolId,
-          alice.address
-        );
-        const [bobClaimable] = await Stake.claimableReward(
-          this.poolId,
-          bob.address
-        );
+        const [aliceClaimable, aliceFee, aliceClaimedTotal, aliceFeeTotal] =
+          await Stake.claimableReward(this.poolId, alice.address);
+        const [bobClaimable, bobFee, bobClaimedTotal, bobFeeTotal] =
+          await Stake.claimableReward(this.poolId, bob.address);
 
         expect(aliceClaimable).to.equal(wei(4567)); // Alice was alone for exactly 4567s
+        expect(aliceFee).to.equal(0); // No claim fee set
+        expect(aliceClaimedTotal).to.equal(0); // No claims yet
+        expect(aliceFeeTotal).to.equal(0); // No fees yet
         expect(bobClaimable).to.equal(0); // Bob just staked
+        expect(bobFee).to.equal(0); // No claim fee set
+        expect(bobClaimedTotal).to.equal(0); // No claims yet
+        expect(bobFeeTotal).to.equal(0); // No fees yet
       });
 
       it("should calculate proportional rewards correctly", async function () {
@@ -217,17 +221,19 @@ describe("Stake", function () {
         // - Alice total: 1000 + 250 = 1250, Bob total: 750
         await time.increase(1000);
 
-        const [aliceClaimable] = await Stake.claimableReward(
-          this.poolId,
-          alice.address
-        );
-        const [bobClaimable] = await Stake.claimableReward(
-          this.poolId,
-          bob.address
-        );
+        const [aliceClaimable, aliceFee, aliceClaimedTotal, aliceFeeTotal] =
+          await Stake.claimableReward(this.poolId, alice.address);
+        const [bobClaimable, bobFee, bobClaimedTotal, bobFeeTotal] =
+          await Stake.claimableReward(this.poolId, bob.address);
 
         expect(aliceClaimable).to.equal(wei(1250));
+        expect(aliceFee).to.equal(0); // No claim fee set
+        expect(aliceClaimedTotal).to.equal(0); // No claims yet
+        expect(aliceFeeTotal).to.equal(0); // No fees yet
         expect(bobClaimable).to.equal(wei(750));
+        expect(bobFee).to.equal(0); // No claim fee set
+        expect(bobClaimedTotal).to.equal(0); // No claims yet
+        expect(bobFeeTotal).to.equal(0); // No fees yet
       });
 
       it("should handle three stakers correctly", async function () {
@@ -250,22 +256,25 @@ describe("Stake", function () {
         // - Carol total: 200
         await time.increase(1000);
 
-        const [aliceClaimable] = await Stake.claimableReward(
-          this.poolId,
-          alice.address
-        );
-        const [bobClaimable] = await Stake.claimableReward(
-          this.poolId,
-          bob.address
-        );
-        const [carolClaimable] = await Stake.claimableReward(
-          this.poolId,
-          carol.address
-        );
+        const [aliceClaimable, aliceFee, aliceClaimedTotal, aliceFeeTotal] =
+          await Stake.claimableReward(this.poolId, alice.address);
+        const [bobClaimable, bobFee, bobClaimedTotal, bobFeeTotal] =
+          await Stake.claimableReward(this.poolId, bob.address);
+        const [carolClaimable, carolFee, carolClaimedTotal, carolFeeTotal] =
+          await Stake.claimableReward(this.poolId, carol.address);
 
         expect(aliceClaimable).to.equal(wei(1450));
+        expect(aliceFee).to.equal(0); // No claim fee set
+        expect(aliceClaimedTotal).to.equal(0); // No claims yet
+        expect(aliceFeeTotal).to.equal(0); // No fees yet
         expect(bobClaimable).to.equal(wei(1350));
+        expect(bobFee).to.equal(0); // No claim fee set
+        expect(bobClaimedTotal).to.equal(0); // No claims yet
+        expect(bobFeeTotal).to.equal(0); // No fees yet
         expect(carolClaimable).to.equal(wei(200));
+        expect(carolFee).to.equal(0); // No claim fee set
+        expect(carolClaimedTotal).to.equal(0); // No claims yet
+        expect(carolFeeTotal).to.equal(0); // No fees yet
       });
     }); // Reward Calculation Scenarios
 
@@ -287,9 +296,9 @@ describe("Stake", function () {
         await time.setNextBlockTimestamp((await time.latest()) + 3);
         await Stake.connect(alice).claim(this.poolId);
 
-        // Check that claimedRewards is updated
+        // Check that claimedTotal is updated
         const userStake = await Stake.userPoolStake(alice.address, this.poolId);
-        expect(userStake.claimedRewards).to.equal(wei(3));
+        expect(userStake.claimedTotal).to.equal(wei(3));
       });
 
       it("should emit RewardClaimed event on claim", async function () {
@@ -297,7 +306,7 @@ describe("Stake", function () {
 
         await expect(Stake.connect(alice).claim(this.poolId))
           .to.emit(Stake, "RewardClaimed")
-          .withArgs(this.poolId, alice.address, wei(100));
+          .withArgs(this.poolId, alice.address, wei(100), wei(0));
       });
     }); // Claim Operations
 
@@ -946,12 +955,6 @@ describe("Stake", function () {
       }); // Unstaking Validations
 
       describe("Claim Validations", function () {
-        it("should revert if no rewards to claim", async function () {
-          await expect(
-            Stake.connect(alice).claim(this.poolId)
-          ).to.be.revertedWithCustomError(Stake, "Stake__NoRewardsToClaim");
-        });
-
         it("should revert if pool does not exist", async function () {
           await expect(
             Stake.connect(alice).claim(999)
@@ -1012,12 +1015,16 @@ describe("Stake", function () {
           // Alice has 100 tokens, Bob has 300 tokens in pool 0
           // Alice = 1000 + 2000 * 1/4 = 1500
           expect(results[0][1]).to.equal(wei(1500)); // claimable
-          expect(results[0][2]).to.equal(0); // claimed
+          expect(results[0][2]).to.equal(0); // fee
+          expect(results[0][3]).to.equal(0); // claimedTotal
+          expect(results[0][4]).to.equal(0); // feeTotal
 
           // Verify claimable rewards are correct for pool 1
           // Alice should get 100% of rewards = 1000 tokens after 1000s
           expect(results[1][1]).to.equal(wei(1000)); // claimable
-          expect(results[1][2]).to.equal(0); // claimed
+          expect(results[1][2]).to.equal(0); // fee
+          expect(results[1][3]).to.equal(0); // claimedTotal
+          expect(results[1][4]).to.equal(0); // feeTotal
         });
 
         it("should return pools with claimed rewards > 0", async function () {
@@ -1037,7 +1044,9 @@ describe("Stake", function () {
           const pool0Result = results.find((r) => r[0] === 0n);
           expect(pool0Result).to.not.be.undefined;
           expect(pool0Result[1]).to.equal(0); // claimable = 0 (fully unstaked)
-          expect(pool0Result[2]).to.equal(wei(1500)); // claimed = 1500 (from earlier claim)
+          expect(pool0Result[2]).to.equal(0); // fee = 0 (no claim fee set)
+          expect(pool0Result[3]).to.equal(wei(1500)); // claimedTotal = 1500 (from earlier claim)
+          expect(pool0Result[4]).to.equal(0); // feeTotal = 0 (no claim fee set)
         });
 
         it("should return empty array if no pools have rewards", async function () {
@@ -1087,7 +1096,9 @@ describe("Stake", function () {
           expect(results).to.have.length(1);
           expect(results[0][0]).to.equal(1); // poolId 1
           expect(results[0][1]).to.equal(wei(1000)); // claimable
-          expect(results[0][2]).to.equal(0); // claimed
+          expect(results[0][2]).to.equal(0); // fee
+          expect(results[0][3]).to.equal(0); // claimedTotal
+          expect(results[0][4]).to.equal(0); // feeTotal
         });
 
         it("should return correct values after partial claims", async function () {
@@ -1104,15 +1115,38 @@ describe("Stake", function () {
 
           expect(results).to.have.length(2);
 
-          // Pool 0: Alice claimed 500 tokens earlier, now has 250 more claimable
+          // Pool 0: Alice claimed 1500 tokens earlier, now has 250 more claimable
           const pool0Result = results.find((r) => r[0] === 0n);
           expect(pool0Result[1]).to.equal(wei(250)); // new claimable
-          expect(pool0Result[2]).to.equal(wei(1500)); // previously claimed
+          expect(pool0Result[2]).to.equal(0); // fee (no claim fee set)
+          expect(pool0Result[3]).to.equal(wei(1500)); // previously claimedTotal
+          expect(pool0Result[4]).to.equal(0); // feeTotal (no claim fee set)
 
           // Pool 1: Alice never claimed, so has 2000 claimable (2000s after staking)
           const pool1Result = results.find((r) => r[0] === 1n);
           expect(pool1Result[1]).to.equal(wei(2000)); // claimable
-          expect(pool1Result[2]).to.equal(0); // claimed
+          expect(pool1Result[2]).to.equal(0); // fee (no claim fee set)
+          expect(pool1Result[3]).to.equal(0); // claimedTotal
+          expect(pool1Result[4]).to.equal(0); // feeTotal
+        });
+
+        it("should handle users with no staked amount correctly", async function () {
+          // Alice stakes and then completely unstakes (which claims all rewards)
+          await time.setNextBlockTimestamp((await time.latest()) + 1000);
+          await Stake.connect(alice).unstake(this.poolId, wei(100));
+
+          const results = await Stake.claimableRewardBulk(0, 3, alice.address);
+
+          // Should still return pool 0 because alice has claimed rewards > 0
+          expect(results).to.have.length(2);
+
+          // Find pool 0 result
+          const pool0Result = results.find((r) => r[0] === 0n);
+          expect(pool0Result).to.not.be.undefined;
+          expect(pool0Result[1]).to.equal(0); // claimable = 0 (no stake)
+          expect(pool0Result[2]).to.equal(0); // fee = 0 (no stake)
+          expect(pool0Result[3]).to.equal(wei(1500)); // claimedTotal = 1500 (from unstake claim)
+          expect(pool0Result[4]).to.equal(0); // feeTotal = 0 (no claim fee set)
         });
 
         it("should revert if pagination parameters are invalid", async function () {
@@ -1160,73 +1194,6 @@ describe("Stake", function () {
         });
       }); // getPools
 
-      describe("getUserEngagedPools", function () {
-        it("should return pools user has interacted with", async function () {
-          const engagedPools = await Stake.getUserEngagedPools(
-            alice.address,
-            0,
-            10
-          );
-
-          expect(engagedPools).to.have.length(2);
-          expect(engagedPools[0]).to.equal(0); // poolId 0
-          expect(engagedPools[1]).to.equal(1); // poolId 1
-        });
-
-        it("should return empty array if no engagement", async function () {
-          const engagedPools = await Stake.getUserEngagedPools(
-            carol.address,
-            0,
-            10
-          );
-
-          expect(engagedPools).to.have.length(0);
-        });
-
-        it("should return empty array if poolIdFrom >= searchTo", async function () {
-          const engagedPools = await Stake.getUserEngagedPools(
-            alice.address,
-            5,
-            10
-          );
-
-          expect(engagedPools).to.have.length(0);
-        });
-
-        it("should include pools with only claimed rewards", async function () {
-          // Move time forward and claim rewards
-          await time.increase(1000);
-          await Stake.connect(alice).claim(this.poolId);
-
-          // Unstake all tokens
-          await Stake.connect(alice).unstake(this.poolId, wei(100));
-
-          const engagedPools = await Stake.getUserEngagedPools(
-            alice.address,
-            0,
-            10
-          );
-
-          expect(engagedPools).to.include(0n); // Still engaged due to claimed rewards
-        });
-
-        it("should revert if pagination parameters are invalid", async function () {
-          await expect(
-            Stake.getUserEngagedPools(alice.address, 5, 5)
-          ).to.be.revertedWithCustomError(
-            Stake,
-            "Stake__InvalidPaginationParameters"
-          );
-
-          await expect(
-            Stake.getUserEngagedPools(alice.address, 0, 1001)
-          ).to.be.revertedWithCustomError(
-            Stake,
-            "Stake__InvalidPaginationParameters"
-          );
-        });
-      }); // getUserEngagedPools
-
       describe("version", function () {
         it("should return correct version", async function () {
           const version = await Stake.version();
@@ -1245,20 +1212,22 @@ describe("Stake", function () {
             (await time.latest()) + SIMPLE_POOL.rewardDuration
           );
 
-          const [claimable] = await Stake.claimableReward(
-            this.poolId,
-            alice.address
-          );
+          const [claimable, fee, claimedTotal, feeTotal] =
+            await Stake.claimableReward(this.poolId, alice.address);
           expect(claimable).to.equal(SIMPLE_POOL.rewardAmount); // All rewards
+          expect(fee).to.equal(0); // No claim fee set
+          expect(claimedTotal).to.equal(0);
+          expect(feeTotal).to.equal(0);
 
           // Move past end time - should not increase rewards
           await time.increase(9999);
 
-          const [claimableAfter] = await Stake.claimableReward(
-            this.poolId,
-            alice.address
-          );
+          const [claimableAfter, feeAfter, claimedTotalAfter, feeTotalAfter] =
+            await Stake.claimableReward(this.poolId, alice.address);
           expect(claimableAfter).to.equal(SIMPLE_POOL.rewardAmount); // Still all rewards
+          expect(feeAfter).to.equal(0); // No claim fee set
+          expect(claimedTotalAfter).to.equal(0);
+          expect(feeTotalAfter).to.equal(0);
         });
 
         it("should allow claiming rewards after pool expires", async function () {
@@ -1307,22 +1276,24 @@ describe("Stake", function () {
           await time.increase(9999);
 
           // Should only have rewards up to cancellation time
-          const [claimable] = await Stake.claimableReward(
-            this.poolId,
-            alice.address
-          );
+          const [claimable, fee, claimedTotal, feeTotal] =
+            await Stake.claimableReward(this.poolId, alice.address);
 
           expect(claimable).to.equal(SIMPLE_POOL.rewardAmount / 2n); // 50% of rewards
+          expect(fee).to.equal(0); // No claim fee set
+          expect(claimedTotal).to.equal(0);
+          expect(feeTotal).to.equal(0);
         });
       }); // Cancelled Pool Scenarios
 
       describe("Empty Pool Scenarios", function () {
         it("should handle empty pool (no stakes)", async function () {
-          const [claimable] = await Stake.claimableReward(
-            this.poolId,
-            alice.address
-          );
+          const [claimable, fee, claimedTotal, feeTotal] =
+            await Stake.claimableReward(this.poolId, alice.address);
           expect(claimable).to.equal(0);
+          expect(fee).to.equal(0);
+          expect(claimedTotal).to.equal(0);
+          expect(feeTotal).to.equal(0);
         });
 
         it("should handle pool with all stakes removed", async function () {
@@ -1392,11 +1363,12 @@ describe("Stake", function () {
 
           await Stake.connect(alice).stake(poolId, wei(100, 6));
           await time.increase(1000);
-          const [claimable] = await Stake.claimableReward(
-            poolId,
-            alice.address
-          );
+          const [claimable, fee, claimedTotal, feeTotal] =
+            await Stake.claimableReward(poolId, alice.address);
           expect(claimable).to.equal(wei(1000, 8)); // 1 token per second
+          expect(fee).to.equal(0); // No claim fee set
+          expect(claimedTotal).to.equal(0);
+          expect(feeTotal).to.equal(0);
         });
       }); // Token Type Edge Cases
 
@@ -1434,24 +1406,26 @@ describe("Stake", function () {
         it("may have reward rounding issues with small rewards", async function () {
           await time.increase(1000);
 
-          const [claimable] = await Stake.claimableReward(
-            this.smallPoolId,
-            alice.address
-          );
+          const [claimable, fee, claimedTotal, feeTotal] =
+            await Stake.claimableReward(this.smallPoolId, alice.address);
 
           expect(claimable).to.equal(1200n);
+          expect(fee).to.equal(0); // No claim fee set
+          expect(claimedTotal).to.equal(0);
+          expect(feeTotal).to.equal(0);
         });
 
         it("will have small dust after full duration", async function () {
           // Wait full duration
           await time.increase(this.duration);
 
-          const [claimable] = await Stake.claimableReward(
-            this.smallPoolId,
-            alice.address
-          );
+          const [claimable, fee, claimedTotal, feeTotal] =
+            await Stake.claimableReward(this.smallPoolId, alice.address);
 
           expect(claimable).to.equal(12300n);
+          expect(fee).to.equal(0); // No claim fee set
+          expect(claimedTotal).to.equal(0);
+          expect(feeTotal).to.equal(0);
 
           await Stake.connect(alice).claim(this.smallPoolId);
           expect(await RewardToken.balanceOf(Stake.target)).to.equal(
@@ -1467,19 +1441,21 @@ describe("Stake", function () {
           await time.increase(1000); // total 2000s passed
 
           // Verify individual claimable amounts
-          const [aliceClaimable] = await Stake.claimableReward(
-            this.smallPoolId,
-            alice.address
-          );
-          const [bobClaimable] = await Stake.claimableReward(
-            this.smallPoolId,
-            bob.address
-          );
+          const [aliceClaimable, aliceFee, aliceClaimedTotal, aliceFeeTotal] =
+            await Stake.claimableReward(this.smallPoolId, alice.address);
+          const [bobClaimable, bobFee, bobClaimedTotal, bobFeeTotal] =
+            await Stake.claimableReward(this.smallPoolId, bob.address);
 
           // Alice: 1200 + 1200 * 100/400 = 1200 + 300 = 1500
           // Bob: 1200 * 300/400 = 900
           expect(aliceClaimable).to.equal(1500n);
+          expect(aliceFee).to.equal(0); // No claim fee set
+          expect(aliceClaimedTotal).to.equal(0);
+          expect(aliceFeeTotal).to.equal(0);
           expect(bobClaimable).to.equal(900n);
+          expect(bobFee).to.equal(0); // No claim fee set
+          expect(bobClaimedTotal).to.equal(0);
+          expect(bobFeeTotal).to.equal(0);
         });
       }); // Precision and Rounding Edge Cases
 
@@ -1635,40 +1611,183 @@ describe("Stake", function () {
         });
 
         it("should have zero claimable rewards immediately for both users", async function () {
-          const [aliceClaimable] = await Stake.claimableReward(
-            this.poolId,
-            alice.address
-          );
-          const [bobClaimable] = await Stake.claimableReward(
-            this.poolId,
-            bob.address
-          );
+          const [aliceClaimable, aliceFee, aliceClaimedTotal, aliceFeeTotal] =
+            await Stake.claimableReward(this.poolId, alice.address);
+          const [bobClaimable, bobFee, bobClaimedTotal, bobFeeTotal] =
+            await Stake.claimableReward(this.poolId, bob.address);
 
           expect(aliceClaimable).to.equal(0);
+          expect(aliceFee).to.equal(0);
+          expect(aliceClaimedTotal).to.equal(0);
+          expect(aliceFeeTotal).to.equal(0);
           expect(bobClaimable).to.equal(0);
+          expect(bobFee).to.equal(0);
+          expect(bobClaimedTotal).to.equal(0);
+          expect(bobFeeTotal).to.equal(0);
         });
 
         it("should calculate proportional rewards correctly after time passes", async function () {
           // Move time forward by 1000 seconds
           await time.increase(1000);
 
-          const [aliceClaimable] = await Stake.claimableReward(
-            this.poolId,
-            alice.address
-          );
-          const [bobClaimable] = await Stake.claimableReward(
-            this.poolId,
-            bob.address
-          );
+          const [aliceClaimable, aliceFee, aliceClaimedTotal, aliceFeeTotal] =
+            await Stake.claimableReward(this.poolId, alice.address);
+          const [bobClaimable, bobFee, bobClaimedTotal, bobFeeTotal] =
+            await Stake.claimableReward(this.poolId, bob.address);
 
           // Alice: 100/400 = 25% of 1000 rewards = 250
           // Bob: 300/400 = 75% of 1000 rewards = 750
           expect(aliceClaimable).to.equal(wei(250));
+          expect(aliceFee).to.equal(0); // No claim fee set
+          expect(aliceClaimedTotal).to.equal(0);
+          expect(aliceFeeTotal).to.equal(0);
           expect(bobClaimable).to.equal(wei(750));
+          expect(bobFee).to.equal(0); // No claim fee set
+          expect(bobClaimedTotal).to.equal(0);
+          expect(bobFeeTotal).to.equal(0);
         });
       }); // Multiple Transactions In Same Block
     }); // Edge Cases
   }); // Stake Operations
+
+  describe("Claim Fee", function () {
+    beforeEach(async function () {
+      this.poolId = await createSamplePool();
+      await Stake.connect(owner).updateClaimFee(400n);
+      await Stake.connect(alice).stake(this.poolId, wei(100));
+      this.stakedTime = await time.latest();
+    });
+
+    it("should calculate claim fee correctly", async function () {
+      await time.increase(1000);
+      const [claimable, fee, claimedTotal, feeTotal] =
+        await Stake.claimableReward(this.poolId, alice.address);
+
+      expect(claimable).to.equal(wei(960));
+      expect(fee).to.equal(wei(40));
+      expect(claimedTotal).to.equal(0);
+      expect(feeTotal).to.equal(0);
+    });
+
+    it("should transfer fee to protocol beneficiary", async function () {
+      const initialUserBalance = await RewardToken.balanceOf(alice.address);
+      const initialBeneficiaryBalance = await RewardToken.balanceOf(
+        owner.address
+      );
+
+      await time.setNextBlockTimestamp(this.stakedTime + 1000);
+      await Stake.connect(alice).claim(this.poolId);
+
+      const finalUserBalance = await RewardToken.balanceOf(alice.address);
+      const finalBeneficiaryBalance = await RewardToken.balanceOf(
+        owner.address
+      );
+
+      expect(finalUserBalance - initialUserBalance).to.equal(wei(960));
+      expect(finalBeneficiaryBalance - initialBeneficiaryBalance).to.equal(
+        wei(40)
+      ); // Beneficiary gets 4%
+    });
+
+    it("should handle different fee percentages in the middle of the pool", async function () {
+      await time.setNextBlockTimestamp(this.stakedTime + 1000); // alice earned 1000 rewards
+      await Stake.connect(owner).updateClaimFee(100); // update to 1% fee
+
+      await time.increase(1000); // alice earned 2000 rewards in total
+
+      let [claimable, fee, claimedTotal, feeTotal] =
+        await Stake.claimableReward(this.poolId, alice.address);
+      expect(claimable).to.equal(wei(1980)); // 2000 - 20 (1% fee)
+      expect(fee).to.equal(wei(20)); // 1% of 2000
+      expect(claimedTotal).to.equal(0);
+      expect(feeTotal).to.equal(0);
+    });
+
+    it("should handle fee with multiple stakes correctly", async function () {
+      await time.setNextBlockTimestamp(this.stakedTime + 1000); // Alice earned 1000 rewards
+      await Stake.connect(bob).stake(this.poolId, wei(300));
+
+      await time.increase(1000);
+
+      // Alice: 1000 + 1000 * 100/400 = 1250 gross rewards
+      // Reward: 1200 / Fee: 50 (4%)
+      const [aliceClaimable, aliceFee, aliceClaimedTotal, aliceFeeTotal] =
+        await Stake.claimableReward(this.poolId, alice.address);
+      expect(aliceClaimable).to.equal(wei(1200));
+      expect(aliceFee).to.equal(wei(50));
+      expect(aliceClaimedTotal).to.equal(0);
+      expect(aliceFeeTotal).to.equal(0);
+
+      // Bob: 1000 * 300/400 = 750 gross rewards
+      // Reward: 720 / Fee: 30 (4%)
+      const [bobClaimable, bobFee, bobClaimedTotal, bobFeeTotal] =
+        await Stake.claimableReward(this.poolId, bob.address);
+      expect(bobClaimable).to.equal(wei(720));
+      expect(bobFee).to.equal(wei(30));
+      expect(bobClaimedTotal).to.equal(0);
+      expect(bobFeeTotal).to.equal(0);
+    });
+
+    it("should handle fee with unstaking (auto-claim)", async function () {
+      const initialUserBalance = await RewardToken.balanceOf(alice.address);
+      const initialBeneficiaryBalance = await RewardToken.balanceOf(
+        owner.address
+      );
+
+      // Unstaking should auto-claim rewards with fee
+      await time.setNextBlockTimestamp(this.stakedTime + 1000); // alice earned 1000 rewards
+      await Stake.connect(alice).unstake(this.poolId, wei(50)); // alice unstakes 50
+
+      const finalUserBalance = await RewardToken.balanceOf(alice.address);
+      const finalBeneficiaryBalance = await RewardToken.balanceOf(
+        owner.address
+      );
+
+      expect(finalUserBalance - initialUserBalance).to.equal(wei(960));
+      expect(finalBeneficiaryBalance - initialBeneficiaryBalance).to.equal(
+        wei(40)
+      );
+    });
+
+    it("should handle fee with additional stakes (auto-claim)", async function () {
+      const initialUserBalance = await RewardToken.balanceOf(alice.address);
+      const initialBeneficiaryBalance = await RewardToken.balanceOf(
+        owner.address
+      );
+
+      // Additional staking should auto-claim rewards with fee
+      await time.setNextBlockTimestamp(this.stakedTime + 1000); // alice earned 1000 rewards
+      await Stake.connect(alice).stake(this.poolId, wei(100)); // alice stakes 100 more
+
+      const finalUserBalance = await RewardToken.balanceOf(alice.address);
+      const finalBeneficiaryBalance = await RewardToken.balanceOf(
+        owner.address
+      );
+
+      expect(finalUserBalance - initialUserBalance).to.equal(wei(960));
+      expect(finalBeneficiaryBalance - initialBeneficiaryBalance).to.equal(
+        wei(40)
+      );
+    });
+
+    it("should not charge fee when claimable is 0", async function () {
+      // No time passed, so no rewards
+      const [claimable, fee, claimedTotal, feeTotal] =
+        await Stake.claimableReward(this.poolId, alice.address);
+      expect(claimable).to.equal(0);
+      expect(fee).to.equal(0);
+      expect(claimedTotal).to.equal(0);
+      expect(feeTotal).to.equal(0);
+    });
+
+    it("should emit RewardClaimed event with gross amount", async function () {
+      await time.setNextBlockTimestamp(this.stakedTime + 1000); // alice earned 1000 rewards
+
+      await expect(Stake.connect(alice).claim(this.poolId))
+        .to.emit(Stake, "RewardClaimed")
+        .withArgs(this.poolId, alice.address, wei(960), wei(40));
+    });
+  }); // Claim Fee Operations
 
   describe("Admin Functions", function () {
     describe("updateProtocolBeneficiary", function () {
@@ -1710,8 +1829,39 @@ describe("Stake", function () {
           Stake.connect(alice).updateCreationFee(ethers.parseEther("0.1"))
         ).to.be.revertedWithCustomError(Stake, "OwnableUnauthorizedAccount");
       });
-    });
-  });
+    }); // updateCreationFee
+
+    describe("updateClaimFee", function () {
+      it("should update claim fee", async function () {
+        const newFee = 500; // 5%
+        await expect(Stake.connect(owner).updateClaimFee(newFee))
+          .to.emit(Stake, "ClaimFeeUpdated")
+          .withArgs(newFee);
+
+        expect(await Stake.claimFee()).to.equal(newFee);
+      });
+
+      it("should revert if called by non-owner", async function () {
+        await expect(
+          Stake.connect(alice).updateClaimFee(500)
+        ).to.be.revertedWithCustomError(Stake, "OwnableUnauthorizedAccount");
+      });
+
+      it("should allow setting claim fee to 0", async function () {
+        await expect(Stake.connect(owner).updateClaimFee(0))
+          .to.emit(Stake, "ClaimFeeUpdated")
+          .withArgs(0);
+
+        expect(await Stake.claimFee()).to.equal(0);
+      });
+
+      it("should revert if fee is greater than MAX_CLAIM_FEE", async function () {
+        await expect(
+          Stake.connect(owner).updateClaimFee(2001)
+        ).to.be.revertedWithCustomError(Stake, "Stake__InvalidClaimFee");
+      });
+    }); // updateClaimFee
+  }); // Admin Functions
 
   describe("Creation Fee", function () {
     beforeEach(async function () {
@@ -1760,5 +1910,5 @@ describe("Stake", function () {
         )
       ).to.not.be.reverted;
     });
-  });
+  }); // Creation Fee
 }); // Stake

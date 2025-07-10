@@ -24,6 +24,7 @@ contract Stake is Ownable, ReentrancyGuard {
 
     // MARK: - Constants & Errors
 
+    uint256 private constant MAX_CLAIM_FEE = 2000; // 20% - for safety when admin privileges are abused
     uint256 private constant REWARD_PRECISION = 1e18;
     uint256 public constant MIN_REWARD_DURATION = 3600; // 1 hour in seconds
     uint256 public constant MAX_REWARD_DURATION =
@@ -49,12 +50,12 @@ contract Stake is Ownable, ReentrancyGuard {
     error Stake__PoolCancelled();
     error Stake__PoolFinished();
     error Stake__InsufficientBalance();
-    error Stake__NoRewardsToClaim();
     error Stake__InvalidPaginationParameters();
     error Stake__Unauthorized();
     error Stake__InvalidAddress();
     error Stake__StakeTooSmall();
     error Stake__ZeroAmount();
+    error Stake__InvalidClaimFee();
 
     // MARK: - Structs
 
@@ -77,16 +78,20 @@ contract Stake is Ownable, ReentrancyGuard {
     // Gas optimized struct packing - fits in 2 storage slots
     struct UserStake {
         uint104 stakedAmount; // 104 bits - slot 0
-        uint104 claimedRewards; // 104 bits - slot 0
-        uint256 rewardDebt; // 256 bits - slot 1
+        uint104 rewardDebt; // 104 bits - slot 0
+        uint104 claimedTotal; // 104 bits - slot 1 - informational
+        uint104 feeTotal; // 104 bits - slot 1 - informational
     }
 
-    // MARK: - State Variables
+    // MARK: - Protocol Config Variables
 
     address public protocolBeneficiary;
     uint256 public creationFee;
-    uint256 public poolCount;
+    uint256 public claimFee; // BP: 10000 = 100%
 
+    // MARK: - Pool State Variables
+
+    uint256 public poolCount;
     // poolId => Pool
     mapping(uint256 => Pool) public pools;
     // user => poolId => UserStake
@@ -115,11 +120,13 @@ contract Stake is Ownable, ReentrancyGuard {
     event RewardClaimed(
         uint256 indexed poolId,
         address indexed staker,
-        uint104 reward
+        uint104 reward,
+        uint104 fee
     );
     event PoolCancelled(uint256 indexed poolId, uint256 leftoverRewards);
     event ProtocolBeneficiaryUpdated(address protocolBeneficiary);
-    event CreationFeeUpdated(uint256 amount);
+    event CreationFeeUpdated(uint256 creationFee);
+    event ClaimFeeUpdated(uint256 claimFee);
 
     constructor(
         address protocolBeneficiary_,
@@ -185,48 +192,49 @@ contract Stake is Ownable, ReentrancyGuard {
         uint256 updatedAccRewardPerShare,
         uint256 stakedAmount,
         uint256 originalRewardDebt
-    ) internal pure returns (uint256 rewardClaimable) {
-        if (stakedAmount == 0) return 0;
+    ) internal view returns (uint256 rewardClaimable, uint256 fee) {
+        if (stakedAmount == 0) return (0, 0);
 
         uint256 accRewardAmount = (stakedAmount * updatedAccRewardPerShare) /
             REWARD_PRECISION;
 
-        if (accRewardAmount <= originalRewardDebt) return 0;
+        if (accRewardAmount <= originalRewardDebt) return (0, 0);
 
-        return accRewardAmount - originalRewardDebt;
+        rewardClaimable = accRewardAmount - originalRewardDebt;
+        fee = (rewardClaimable * claimFee) / 10000;
+        rewardClaimable -= fee;
     }
 
     /**
      * @dev Internal function to claim rewards for a user
      * @param poolId The ID of the pool
      * @param user The address of the user
-     * @return claimAmount The amount of rewards claimed
      */
-    function _claimRewards(
-        uint256 poolId,
-        address user
-    ) internal returns (uint256 claimAmount) {
+    function _claimRewards(uint256 poolId, address user) internal {
         Pool storage pool = pools[poolId];
         UserStake storage userStake = userPoolStake[user][poolId];
 
         // Use the helper function to calculate claimable rewards
-        claimAmount = _claimableReward(
+        (uint256 claimAmount, uint256 fee) = _claimableReward(
             pool.accRewardPerShare,
             userStake.stakedAmount,
             userStake.rewardDebt
         );
 
-        if (claimAmount == 0) return 0;
-        assert(claimAmount <= pool.rewardAmount);
+        uint256 rewardAndFee = claimAmount + fee;
+        assert(rewardAndFee <= pool.rewardAmount);
+        if (rewardAndFee == 0) return;
 
         // Update user's reward debt and claimed rewards
-        userStake.rewardDebt += claimAmount;
-        userStake.claimedRewards += uint104(claimAmount);
+        userStake.rewardDebt += uint104(rewardAndFee);
+        userStake.claimedTotal += uint104(claimAmount);
+        userStake.feeTotal += uint104(fee);
 
         // Transfer reward tokens to user
         IERC20(pool.rewardToken).safeTransfer(user, claimAmount);
+        IERC20(pool.rewardToken).safeTransfer(protocolBeneficiary, fee);
 
-        emit RewardClaimed(poolId, user, uint104(claimAmount));
+        emit RewardClaimed(poolId, user, uint104(claimAmount), uint104(fee));
     }
 
     /**
@@ -453,9 +461,9 @@ contract Stake is Ownable, ReentrancyGuard {
 
         // Update user's staked amount and reward debt
         userStake.stakedAmount += amount;
-        userStake.rewardDebt =
-            (userStake.stakedAmount * pool.accRewardPerShare) /
-            REWARD_PRECISION;
+        userStake.rewardDebt = uint104(
+            (userStake.stakedAmount * pool.accRewardPerShare) / REWARD_PRECISION
+        );
 
         // Update pool's total staked amount
         pool.totalStaked += amount;
@@ -496,9 +504,9 @@ contract Stake is Ownable, ReentrancyGuard {
         unchecked {
             userStake.stakedAmount -= amount; // Safe: checked above
         }
-        userStake.rewardDebt =
-            (userStake.stakedAmount * pool.accRewardPerShare) /
-            REWARD_PRECISION;
+        userStake.rewardDebt = uint104(
+            (userStake.stakedAmount * pool.accRewardPerShare) / REWARD_PRECISION
+        );
 
         // If user completely unstaked, decrement active staker count
         if (userStake.stakedAmount == 0) {
@@ -525,9 +533,7 @@ contract Stake is Ownable, ReentrancyGuard {
     ) external nonReentrant _checkPoolExists(poolId) {
         _updatePool(poolId);
 
-        uint256 claimedAmount = _claimRewards(poolId, msg.sender);
-
-        if (claimedAmount == 0) revert Stake__NoRewardsToClaim();
+        _claimRewards(poolId, msg.sender);
     }
 
     // MARK: - Admin Functions
@@ -546,6 +552,12 @@ contract Stake is Ownable, ReentrancyGuard {
         emit CreationFeeUpdated(creationFee_);
     }
 
+    function updateClaimFee(uint256 claimFee_) public onlyOwner {
+        if (claimFee_ > MAX_CLAIM_FEE) revert Stake__InvalidClaimFee();
+        claimFee = claimFee_;
+        emit ClaimFeeUpdated(claimFee_);
+    }
+
     // MARK: - View Functions
 
     /**
@@ -553,7 +565,9 @@ contract Stake is Ownable, ReentrancyGuard {
      * @param poolId The ID of the pool
      * @param staker The address of the staker
      * @return rewardClaimable The amount of rewards that can be claimed
-     * @return rewardClaimed The total amount of rewards already claimed
+     * @return fee The fee for claiming rewards
+     * @return claimedTotal The total amount of rewards already claimed
+     * @return feeTotal The total amount of fees already claimed
      */
     function claimableReward(
         uint256 poolId,
@@ -562,32 +576,38 @@ contract Stake is Ownable, ReentrancyGuard {
         external
         view
         _checkPoolExists(poolId)
-        returns (uint256 rewardClaimable, uint256 rewardClaimed)
+        returns (
+            uint256 rewardClaimable,
+            uint256 fee,
+            uint256 claimedTotal,
+            uint256 feeTotal
+        )
     {
         Pool memory pool = pools[poolId];
         UserStake memory userStake = userPoolStake[staker][poolId];
 
-        rewardClaimable = _claimableReward(
+        (rewardClaimable, fee) = _claimableReward(
             _getUpdatedAccRewardPerShare(pool),
             userStake.stakedAmount,
             userStake.rewardDebt
         );
 
-        rewardClaimed = userStake.claimedRewards;
+        claimedTotal = userStake.claimedTotal;
+        feeTotal = userStake.feeTotal;
     }
 
     /**
-     * @dev Returns claimable rewards for multiple pools that have rewards (claimable > 0 or claimed > 0)
+     * @dev Returns claimable rewards for multiple pools that user have engaged (staked > 0 or claimable > 0 or claimed > 0)
      * @param poolIdFrom The starting pool ID
      * @param poolIdTo The ending pool ID (exclusive)
      * @param staker The address of the staker
-     * @return results Array of [poolId, rewardClaimable, rewardClaimed] for pools with rewards only
+     * @return results Array of [poolId, rewardClaimable, fee, claimedTotal, feeTotal] for pools with rewards only
      */
     function claimableRewardBulk(
         uint256 poolIdFrom,
         uint256 poolIdTo,
         address staker
-    ) external view returns (uint256[3][] memory results) {
+    ) external view returns (uint256[5][] memory results) {
         if (poolIdFrom >= poolIdTo || poolIdTo - poolIdFrom > 1000) {
             revert Stake__InvalidPaginationParameters();
         }
@@ -596,33 +616,54 @@ contract Stake is Ownable, ReentrancyGuard {
             // Limit search to actual pool count
             uint256 searchTo = poolIdTo > poolCount ? poolCount : poolIdTo;
             if (poolIdFrom >= searchTo) {
-                return new uint256[3][](0);
+                return new uint256[5][](0);
             }
 
             // Single pass: collect results in temporary array, then resize
             uint256 maxLength = searchTo - poolIdFrom;
-            uint256[3][] memory tempResults = new uint256[3][](maxLength);
+            uint256[5][] memory tempResults = new uint256[5][](maxLength);
             uint256 validCount = 0;
 
             for (uint256 i = poolIdFrom; i < searchTo; ++i) {
-                Pool memory pool = pools[i];
                 UserStake memory userStake = userPoolStake[staker][i];
 
-                uint256 claimable = _claimableReward(
-                    _getUpdatedAccRewardPerShare(pool),
+                // Skip if user has not engaged with the pool
+                if (userStake.stakedAmount == 0 && userStake.claimedTotal == 0)
+                    continue;
+
+                // If the user currently has no staked amount, all rewards are claimed because unstaking claims all pending rewards
+                // We can simply return the claimed total and fee total
+                if (userStake.stakedAmount == 0) {
+                    tempResults[validCount] = [
+                        i,
+                        0,
+                        0,
+                        userStake.claimedTotal,
+                        userStake.feeTotal
+                    ];
+                    ++validCount;
+                    continue;
+                }
+
+                // Now, staked > 0, so we need to calculate the claimable reward
+                (uint256 claimable, uint256 fee) = _claimableReward(
+                    _getUpdatedAccRewardPerShare(pools[i]),
                     userStake.stakedAmount,
                     userStake.rewardDebt
                 );
-                uint256 claimed = userStake.claimedRewards;
 
-                if (claimable > 0 || claimed > 0) {
-                    tempResults[validCount] = [i, claimable, claimed];
-                    ++validCount;
-                }
+                tempResults[validCount] = [
+                    i,
+                    claimable,
+                    fee,
+                    userStake.claimedTotal,
+                    userStake.feeTotal
+                ];
+                ++validCount;
             }
 
             // Create final array with exact size and copy results
-            results = new uint256[3][](validCount);
+            results = new uint256[5][](validCount);
             for (uint256 i = 0; i < validCount; ++i) {
                 results[i] = tempResults[i];
             }
@@ -651,55 +692,6 @@ contract Stake is Ownable, ReentrancyGuard {
 
             for (uint256 i = 0; i < length; ++i) {
                 poolList[i] = pools[poolIdFrom + i];
-            }
-        }
-    }
-
-    /**
-     * @dev Returns all pools a user has interacted with
-     * @param staker The address of the staker
-     * @param poolIdFrom The starting pool ID to search from
-     * @param poolIdTo The ending pool ID to search to (exclusive)
-     * @return poolIds Array of pool IDs the user has engaged with
-     */
-    function getUserEngagedPools(
-        address staker,
-        uint256 poolIdFrom,
-        uint256 poolIdTo
-    ) external view returns (uint256[] memory poolIds) {
-        if (poolIdFrom >= poolIdTo || poolIdTo - poolIdFrom > 1000) {
-            revert Stake__InvalidPaginationParameters();
-        }
-
-        unchecked {
-            // Limit search to actual pool count
-            uint256 searchTo = poolIdTo > poolCount ? poolCount : poolIdTo;
-            if (poolIdFrom >= searchTo) {
-                return new uint256[](0);
-            }
-
-            // Count engaged pools first
-            uint256 engagedCount = 0;
-            for (uint256 i = poolIdFrom; i < searchTo; ++i) {
-                UserStake memory userStake = userPoolStake[staker][i];
-                if (
-                    userStake.stakedAmount > 0 || userStake.claimedRewards > 0
-                ) {
-                    ++engagedCount;
-                }
-            }
-
-            // Create array with exact size
-            poolIds = new uint256[](engagedCount);
-            uint256 index = 0;
-            for (uint256 i = poolIdFrom; i < searchTo; ++i) {
-                UserStake memory userStake = userPoolStake[staker][i];
-                if (
-                    userStake.stakedAmount > 0 || userStake.claimedRewards > 0
-                ) {
-                    poolIds[index] = i;
-                    ++index;
-                }
             }
         }
     }
