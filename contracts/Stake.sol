@@ -16,9 +16,7 @@
 pragma solidity =0.8.20;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
@@ -243,6 +241,28 @@ contract Stake is Ownable, ReentrancyGuard {
     }
 
     /**
+     * @dev Safely transfers tokens from one address to another with balance verification
+     * @param token The address of the token to transfer
+     * @param from The address to transfer from
+     * @param to The address to transfer to
+     * @param amount The amount to transfer
+     */
+    function _safeTransferFrom(
+        address token,
+        address from,
+        address to,
+        uint256 amount
+    ) internal {
+        uint256 balanceBefore = IERC20(token).balanceOf(to);
+        IERC20(token).safeTransferFrom(from, to, amount);
+        uint256 balanceAfter = IERC20(token).balanceOf(to);
+
+        if (balanceAfter - balanceBefore != amount) {
+            revert Stake__TokenHasTransferFeesOrRebasing();
+        }
+    }
+
+    /**
      * @dev Updates the reward variables for a pool based on timestamp
      * @param poolId The ID of the pool to update
      */
@@ -333,17 +353,8 @@ contract Stake is Ownable, ReentrancyGuard {
             accRewardPerShare: 0
         });
 
-        uint256 balanceBefore = IERC20(rewardToken).balanceOf(address(this));
         // Transfer reward tokens from creator to contract
-        IERC20(rewardToken).safeTransferFrom(
-            msg.sender,
-            address(this),
-            rewardAmount
-        );
-        uint256 balanceAfter = IERC20(rewardToken).balanceOf(address(this));
-
-        if (balanceAfter - balanceBefore != rewardAmount)
-            revert Stake__TokenHasTransferFeesOrRebasing();
+        _safeTransferFrom(rewardToken, msg.sender, address(this), rewardAmount);
 
         emit PoolCreated(
             poolId,
@@ -473,12 +484,8 @@ contract Stake is Ownable, ReentrancyGuard {
         // Update pool's total staked amount
         pool.totalStaked += amount;
 
-        // Transfer tokens from user to contract
-        IERC20(pool.stakingToken).safeTransferFrom(
-            msg.sender,
-            address(this),
-            amount
-        );
+        // Transfer tokens from user to contract with balance check to prevent transfer fees/rebasing tokens
+        _safeTransferFrom(pool.stakingToken, msg.sender, address(this), amount);
 
         emit Staked(poolId, msg.sender, amount);
     }

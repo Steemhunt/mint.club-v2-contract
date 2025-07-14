@@ -929,6 +929,36 @@ describe("Stake", function () {
             Stake.connect(alice).stake(this.poolId, wei(100))
           ).to.be.revertedWithCustomError(Stake, "Stake__PoolFinished");
         });
+
+        it("should revert if staking token has transfer fees", async function () {
+          const TaxToken = await ethers.deployContract("TaxToken", [
+            wei(1000000),
+          ]);
+          await TaxToken.waitForDeployment();
+
+          // Create a pool with TaxToken as staking token
+          await distributeTokens(TaxToken, [owner], wei(10000));
+          await approveTokens(TaxToken, [owner], Stake.target);
+          const poolId = await Stake.poolCount();
+          await Stake.connect(owner).createPool(
+            TaxToken.target,
+            RewardToken.target,
+            SIMPLE_POOL.rewardAmount,
+            SIMPLE_POOL.rewardDuration
+          );
+
+          // Distribute and approve TaxToken for alice
+          await distributeTokens(TaxToken, [alice], wei(10000));
+          await approveTokens(TaxToken, [alice], Stake.target);
+
+          // Try to stake - should revert due to transfer fees
+          await expect(
+            Stake.connect(alice).stake(poolId, wei(1000))
+          ).to.be.revertedWithCustomError(
+            Stake,
+            "Stake__TokenHasTransferFeesOrRebasing"
+          );
+        });
       }); // Staking Validations
 
       describe("Unstaking Validations", function () {
@@ -1370,6 +1400,48 @@ describe("Stake", function () {
           expect(fee).to.equal(0); // No claim fee set
           expect(claimedTotal).to.equal(0);
           expect(feeTotal).to.equal(0);
+        });
+
+        it("should handle standard ERC20 tokens without transfer fees correctly", async function () {
+          const poolId = await Stake.poolCount();
+          await approveTokens(StakingToken, [owner], Stake.target);
+          await Stake.connect(owner).createPool(
+            StakingToken.target,
+            RewardToken.target,
+            SIMPLE_POOL.rewardAmount,
+            SIMPLE_POOL.rewardDuration
+          );
+
+          // Record balances before staking
+          const contractBalanceBefore = await StakingToken.balanceOf(
+            Stake.target
+          );
+          const aliceBalanceBefore = await StakingToken.balanceOf(
+            alice.address
+          );
+          const stakeAmount = wei(100);
+
+          // Stake tokens
+          await Stake.connect(alice).stake(poolId, stakeAmount);
+
+          // Verify balances after staking
+          const contractBalanceAfter = await StakingToken.balanceOf(
+            Stake.target
+          );
+          const aliceBalanceAfter = await StakingToken.balanceOf(alice.address);
+
+          // Contract should receive exactly the staked amount
+          expect(contractBalanceAfter - contractBalanceBefore).to.equal(
+            stakeAmount
+          );
+          // Alice should lose exactly the staked amount
+          expect(aliceBalanceBefore - aliceBalanceAfter).to.equal(stakeAmount);
+
+          // Verify accounting is correct
+          const userStake = await Stake.userPoolStake(alice.address, poolId);
+          expect(userStake.stakedAmount).to.equal(stakeAmount);
+          const pool = await Stake.pools(poolId);
+          expect(pool.totalStaked).to.equal(stakeAmount);
         });
       }); // Token Type Edge Cases
 
