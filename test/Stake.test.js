@@ -1869,7 +1869,7 @@ describe("Stake", function () {
           Stake.connect(owner).updateProtocolBeneficiary(alice.address)
         )
           .to.emit(Stake, "ProtocolBeneficiaryUpdated")
-          .withArgs(alice.address);
+          .withArgs(owner.address, alice.address);
 
         expect(await Stake.protocolBeneficiary()).to.equal(alice.address);
       });
@@ -1892,7 +1892,7 @@ describe("Stake", function () {
         const newFee = ethers.parseEther("0.1");
         await expect(Stake.connect(owner).updateCreationFee(newFee))
           .to.emit(Stake, "CreationFeeUpdated")
-          .withArgs(newFee);
+          .withArgs(0, newFee);
 
         expect(await Stake.creationFee()).to.equal(newFee);
       });
@@ -1909,7 +1909,7 @@ describe("Stake", function () {
         const newFee = 500; // 5%
         await expect(Stake.connect(owner).updateClaimFee(newFee))
           .to.emit(Stake, "ClaimFeeUpdated")
-          .withArgs(newFee);
+          .withArgs(0, newFee);
 
         expect(await Stake.claimFee()).to.equal(newFee);
       });
@@ -1923,7 +1923,7 @@ describe("Stake", function () {
       it("should allow setting claim fee to 0", async function () {
         await expect(Stake.connect(owner).updateClaimFee(0))
           .to.emit(Stake, "ClaimFeeUpdated")
-          .withArgs(0);
+          .withArgs(0, 0);
 
         expect(await Stake.claimFee()).to.equal(0);
       });

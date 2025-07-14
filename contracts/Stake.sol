@@ -5,12 +5,15 @@
  * @notice Mint Club V2 - Staking Contract
  * @dev Allows users to create staking pools for any ERC20 tokens with timestamp-based reward distribution
  *
- * NOTE:
+ * NOTICES:
  *      1. We use timestamp-based reward calculation,
  *         so it inherently carries minimal risk of timestamp manipulation (±15 seconds).
  *         We chose this design because this contract may be deployed on various networks with differing block times,
  *         and block times may change in the future even on the same network.
  *      2. We use uint40 for timestamp storage, which supports up to year 36,812.
+ *      3. Precision Loss: Due to integer division in reward calculations, small amounts
+ *         of reward tokens may be lost as "dust" and remain in the contract permanently.
+ *         This is most pronounced with small reward amounts relative to large staking amounts.
  */
 
 pragma solidity =0.8.20;
@@ -125,9 +128,12 @@ contract Stake is Ownable, ReentrancyGuard {
         uint104 fee
     );
     event PoolCancelled(uint256 indexed poolId, uint256 leftoverRewards);
-    event ProtocolBeneficiaryUpdated(address protocolBeneficiary);
-    event CreationFeeUpdated(uint256 creationFee);
-    event ClaimFeeUpdated(uint256 claimFee);
+    event ProtocolBeneficiaryUpdated(
+        address oldBeneficiary,
+        address newBeneficiary
+    );
+    event CreationFeeUpdated(uint256 oldFee, uint256 newFee);
+    event ClaimFeeUpdated(uint256 oldFee, uint256 newFee);
 
     constructor(
         address protocolBeneficiary_,
@@ -152,6 +158,7 @@ contract Stake is Ownable, ReentrancyGuard {
      * @dev Calculates up-to-date accRewardPerShare for a pool without modifying state
      * @param pool The pool struct
      * @return updatedAccRewardPerShare The up-to-date accumulated reward per share
+     * @notice Integer division may cause precision loss in reward calculations
      */
     function _getUpdatedAccRewardPerShare(
         Pool memory pool
@@ -190,6 +197,8 @@ contract Stake is Ownable, ReentrancyGuard {
      * @param stakedAmount The amount of tokens staked
      * @param originalRewardDebt The baseline reward amount to subtract, accounting for staking timing and already claimed rewards
      * @return rewardClaimable The amount of rewards that can be claimed
+     * @notice Due to integer division, small amounts of rewards may be lost as "dust"
+     *         This precision loss is most significant with small reward amounts relative to large total staked amounts
      */
     function _claimableReward(
         uint256 updatedAccRewardPerShare,
@@ -555,19 +564,22 @@ contract Stake is Ownable, ReentrancyGuard {
     ) public onlyOwner {
         if (protocolBeneficiary_ == address(0)) revert Stake__InvalidAddress();
 
+        address oldBeneficiary = protocolBeneficiary;
         protocolBeneficiary = protocolBeneficiary_;
-        emit ProtocolBeneficiaryUpdated(protocolBeneficiary_);
+        emit ProtocolBeneficiaryUpdated(oldBeneficiary, protocolBeneficiary_);
     }
 
     function updateCreationFee(uint256 creationFee_) public onlyOwner {
+        uint256 oldFee = creationFee;
         creationFee = creationFee_;
-        emit CreationFeeUpdated(creationFee_);
+        emit CreationFeeUpdated(oldFee, creationFee_);
     }
 
     function updateClaimFee(uint256 claimFee_) public onlyOwner {
         if (claimFee_ > MAX_CLAIM_FEE) revert Stake__InvalidClaimFee();
+        uint256 oldFee = claimFee;
         claimFee = claimFee_;
-        emit ClaimFeeUpdated(claimFee_);
+        emit ClaimFeeUpdated(oldFee, claimFee_);
     }
 
     // MARK: - View Functions
