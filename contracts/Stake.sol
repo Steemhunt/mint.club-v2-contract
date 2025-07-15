@@ -53,6 +53,7 @@ contract Stake is Ownable, ReentrancyGuard {
     error Stake__ZeroAmount();
     error Stake__InvalidClaimFee();
     error Stake__StakeAmountTooLarge();
+    error Stake__InvalidTokenId();
 
     // MARK: - Structs
 
@@ -239,6 +240,7 @@ contract Stake is Ownable, ReentrancyGuard {
 
         // Update user's reward debt and claimed rewards
         userStake.rewardDebt += rewardAndFee;
+        // Safe to cast because claimAmount + fee <= pool.rewardAmount (uint104)
         userStake.claimedTotal += uint104(claimAmount);
         userStake.feeTotal += uint104(fee);
 
@@ -790,10 +792,12 @@ contract Stake is Ownable, ReentrancyGuard {
     function onERC1155Received(
         address,
         address,
-        uint256,
+        uint256 id,
         uint256,
         bytes memory
     ) external pure returns (bytes4) {
+        if (id != 0) revert Stake__InvalidTokenId();
+
         return this.onERC1155Received.selector;
     }
 }

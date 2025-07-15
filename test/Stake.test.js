@@ -1693,64 +1693,58 @@ describe("Stake", function () {
       }); // Multiple Transactions In Same Block
 
       describe("Overflow Edge Cases", function () {
-        describe("AccRewardPerShare Overflow", function () {
-          it("should fail with overflow in worst-case scenario", async function () {
-            // Create pool with maximum reward amount
-            const maxRewardAmount = 2n ** 104n - 1n; // type(uint104).max
-            const LargeRewardToken = await ethers.deployContract("TestToken", [
-              maxRewardAmount,
-              "Large Reward Token",
-              "LARGE",
-              18n,
-            ]);
-            await LargeRewardToken.waitForDeployment();
-            await LargeRewardToken.connect(owner).approve(
-              Stake.target,
-              maxRewardAmount
-            );
+        it("should handle worst-case reward calculations without overflowing and enforce stake amount limits", async function () {
+          // Create pool with maximum reward amount
+          const maxRewardAmount = 2n ** 104n - 1n; // type(uint104).max
+          const LargeRewardToken = await ethers.deployContract("TestToken", [
+            maxRewardAmount,
+            "Large Reward Token",
+            "LARGE",
+            18n,
+          ]);
+          await LargeRewardToken.waitForDeployment();
+          await LargeRewardToken.connect(owner).approve(
+            Stake.target,
+            maxRewardAmount
+          );
 
-            // Create pool with maximum reward amount
-            const poolId = await Stake.poolCount();
-            await Stake.connect(owner).createPool(
-              StakingToken.target,
-              true,
-              LargeRewardToken.target,
-              maxRewardAmount,
-              MIN_REWARD_DURATION
-            );
+          // Create pool with maximum reward amount
+          const poolId = await Stake.poolCount();
+          await Stake.connect(owner).createPool(
+            StakingToken.target,
+            true,
+            LargeRewardToken.target,
+            maxRewardAmount,
+            MIN_REWARD_DURATION
+          );
 
-            // Step 1: First user stakes minimum amount (1 token)
-            await Stake.connect(alice).stake(poolId, 1n);
+          // Step 1: First user stakes minimum amount (1 token)
+          await Stake.connect(alice).stake(poolId, 1n);
 
-            // Step 2: Wait for full reward duration to maximize accRewardPerShare
-            await time.increase(MIN_REWARD_DURATION - 10n);
+          // Step 2: Wait for full reward duration to maximize accRewardPerShare
+          await time.increase(MIN_REWARD_DURATION - 10n);
 
-            // At this point, accRewardPerShare ≈ (maxRewardAmount * 10^18) / 1
-            // This should be around type(uint104).max * 10^18
+          // At this point, accRewardPerShare ≈ (maxRewardAmount * 10^18) / 1
+          // This should be around type(uint104).max * 10^18
 
-            // Step 3: Second user tries to stake maximum amount
-            const maxStakeAmount = 2n ** 104n - 1n; // type(uint104).max
-            await distributeTokens(StakingToken, [bob], maxStakeAmount * 2n);
+          // Step 3: Second user tries to stake maximum amount
+          const maxStakeAmount = 2n ** 104n - 1n; // type(uint104).max
+          await distributeTokens(StakingToken, [bob], maxStakeAmount * 2n);
 
-            // This should cause overflow when calculating reward debt:
-            // rewardDebt = (stakedAmount * accRewardPerShare) / REWARD_PRECISION
-            // = (type(uint104).max * type(uint104).max * 10^18) / 10^18
-            // = type(uint104).max * type(uint104).max
-            // ≈ 4.12 × 10^80 which exceeds uint256.max (≈ 1.15 × 10^77)
+          // This should cause overflow when calculating reward debt:
+          // rewardDebt = (stakedAmount * accRewardPerShare) / REWARD_PRECISION
+          // = (type(uint104).max * type(uint104).max * 10^18) / 10^18
+          // = type(uint104).max * type(uint104).max
+          // ≈ 4.12 × 10^80 which exceeds uint256.max (≈ 1.15 × 10^77)
 
-            await expect(Stake.connect(bob).stake(poolId, maxStakeAmount - 1n))
-              .to.not.be.reverted;
+          await expect(Stake.connect(bob).stake(poolId, maxStakeAmount - 1n)).to
+            .not.be.reverted;
 
-            await expect(Stake.connect(bob).stake(poolId, 1n)).to.not.be
-              .reverted; // still within the limit
+          await expect(Stake.connect(bob).stake(poolId, 1n)).to.not.be.reverted; // still within the limit
 
-            await expect(
-              Stake.connect(bob).stake(poolId, 1n)
-            ).to.be.revertedWithCustomError(
-              Stake,
-              "Stake__StakeAmountTooLarge"
-            );
-          });
+          await expect(
+            Stake.connect(bob).stake(poolId, 1n)
+          ).to.be.revertedWithCustomError(Stake, "Stake__StakeAmountTooLarge");
         });
       }); // Overflow Edge Cases
     }); // Edge Cases
@@ -1759,23 +1753,25 @@ describe("Stake", function () {
   describe("ERC1155 Staking", function () {
     beforeEach(async function () {
       const TestMultiToken = await ethers.deployContract("TestMultiToken", [
-        wei(1000000), // 1M tokens
+        1_000_000n, // 1M tokens
       ]);
       await TestMultiToken.waitForDeployment();
+
+      this.initialBalance = 10_000n;
 
       // Distribute and approve ERC1155 tokens for alice, bob, and owner
       await TestMultiToken.connect(owner).safeTransferFrom(
         owner.address,
         alice.address,
         0,
-        wei(100000),
+        this.initialBalance,
         "0x"
       );
       await TestMultiToken.connect(owner).safeTransferFrom(
         owner.address,
         bob.address,
         0,
-        wei(100000),
+        this.initialBalance,
         "0x"
       );
       await TestMultiToken.connect(owner).setApprovalForAll(Stake.target, true);
@@ -1803,7 +1799,7 @@ describe("Stake", function () {
 
     describe("Basic Staking Operations", function () {
       it("should stake ERC1155 tokens correctly", async function () {
-        const stakeAmount = 1000;
+        const stakeAmount = 1000n;
         await Stake.connect(alice).stake(this.poolId, stakeAmount);
 
         // Verify staking worked
@@ -1813,7 +1809,7 @@ describe("Stake", function () {
           stakeAmount
         );
         expect(await this.TestMultiToken.balanceOf(alice.address, 0)).to.equal(
-          wei(100000) - BigInt(stakeAmount)
+          this.initialBalance - stakeAmount
         );
 
         // Pool state should be updated
@@ -1824,8 +1820,8 @@ describe("Stake", function () {
       });
 
       it("should handle multiple stakes by same user", async function () {
-        const firstStake = 1000;
-        const secondStake = 2000;
+        const firstStake = 1000n;
+        const secondStake = 2000n;
 
         await Stake.connect(alice).stake(this.poolId, firstStake);
 
@@ -1840,7 +1836,7 @@ describe("Stake", function () {
           firstStake + secondStake
         );
         expect(await this.TestMultiToken.balanceOf(alice.address, 0)).to.equal(
-          wei(100000) - BigInt(firstStake + secondStake)
+          this.initialBalance - (firstStake + secondStake)
         );
 
         // Active staker count should still be 1
@@ -1849,8 +1845,8 @@ describe("Stake", function () {
       });
 
       it("should handle multiple users staking ERC1155 tokens", async function () {
-        const aliceStake = 1000;
-        const bobStake = 2000;
+        const aliceStake = 1000n;
+        const bobStake = 2000n;
 
         await Stake.connect(alice).stake(this.poolId, aliceStake);
         await time.setNextBlockTimestamp((await time.latest()) + 1);
@@ -1882,7 +1878,7 @@ describe("Stake", function () {
 
     describe("Reward Operations", function () {
       beforeEach(async function () {
-        await Stake.connect(alice).stake(this.poolId, 1000);
+        await Stake.connect(alice).stake(this.poolId, 1000n);
       });
 
       it("should calculate rewards correctly for ERC1155 staking", async function () {
@@ -1915,7 +1911,7 @@ describe("Stake", function () {
       it("should handle proportional rewards with multiple ERC1155 stakers", async function () {
         // Bob stakes 3x more than Alice after 1000s
         await time.setNextBlockTimestamp((await time.latest()) + 1000);
-        await Stake.connect(bob).stake(this.poolId, 3000);
+        await Stake.connect(bob).stake(this.poolId, 3000n);
 
         // Move time forward
         await time.increase(1000);
@@ -1939,11 +1935,12 @@ describe("Stake", function () {
 
     describe("Unstaking Operations", function () {
       beforeEach(async function () {
-        await Stake.connect(alice).stake(this.poolId, 1000);
+        this.stakedAmount = 1000n;
+        await Stake.connect(alice).stake(this.poolId, this.stakedAmount);
       });
 
       it("should unstake ERC1155 tokens correctly", async function () {
-        const unstakeAmount = 500;
+        const unstakeAmount = 500n;
         await Stake.connect(alice).unstake(this.poolId, unstakeAmount);
 
         // Verify unstaking worked
@@ -1951,22 +1948,24 @@ describe("Stake", function () {
           alice.address,
           this.poolId
         );
-        expect(userStakeAfter.stakedAmount).to.equal(1000 - unstakeAmount);
+        expect(userStakeAfter.stakedAmount).to.equal(
+          this.stakedAmount - unstakeAmount
+        );
         expect(await this.TestMultiToken.balanceOf(Stake.target, 0)).to.equal(
-          1000 - unstakeAmount
+          this.stakedAmount - unstakeAmount
         );
         expect(await this.TestMultiToken.balanceOf(alice.address, 0)).to.equal(
-          wei(100000) - BigInt(1000 - unstakeAmount)
+          this.initialBalance - (this.stakedAmount - unstakeAmount)
         );
 
         // Pool state should be updated
         const pool = await Stake.pools(this.poolId);
-        expect(pool.totalStaked).to.equal(1000 - unstakeAmount);
+        expect(pool.totalStaked).to.equal(this.stakedAmount - unstakeAmount);
         expect(pool.activeStakerCount).to.equal(1); // Still active since partial unstake
       });
 
       it("should fully unstake ERC1155 tokens", async function () {
-        await Stake.connect(alice).unstake(this.poolId, 1000);
+        await Stake.connect(alice).unstake(this.poolId, this.stakedAmount);
 
         // Verify full unstaking worked
         const userStakeAfter = await Stake.userPoolStake(
@@ -1978,7 +1977,7 @@ describe("Stake", function () {
           0
         );
         expect(await this.TestMultiToken.balanceOf(alice.address, 0)).to.equal(
-          wei(100000)
+          this.initialBalance
         );
 
         // Pool state should reflect no active stakers
@@ -1993,7 +1992,7 @@ describe("Stake", function () {
 
         // Unstake should auto-claim rewards
         const initialRewardBalance = await RewardToken.balanceOf(alice.address);
-        await Stake.connect(alice).unstake(this.poolId, 500);
+        await Stake.connect(alice).unstake(this.poolId, 500n);
         const finalRewardBalance = await RewardToken.balanceOf(alice.address);
 
         expect(finalRewardBalance - initialRewardBalance).to.equal(wei(1000));
@@ -2008,7 +2007,7 @@ describe("Stake", function () {
       it("should revert if insufficient ERC1155 balance", async function () {
         // Try to stake more than balance
         await expect(
-          Stake.connect(alice).stake(this.poolId, wei(200000))
+          Stake.connect(alice).stake(this.poolId, this.initialBalance * 2n)
         ).to.be.revertedWithCustomError(
           this.TestMultiToken,
           "ERC1155InsufficientBalance"
@@ -2016,11 +2015,32 @@ describe("Stake", function () {
       });
 
       it("should revert if insufficient staked amount for unstaking", async function () {
-        await Stake.connect(alice).stake(this.poolId, 1000);
+        await Stake.connect(alice).stake(this.poolId, 1000n);
 
         await expect(
-          Stake.connect(alice).unstake(this.poolId, 1001)
+          Stake.connect(alice).unstake(this.poolId, 1001n)
         ).to.be.revertedWithCustomError(Stake, "Stake__InsufficientBalance");
+      });
+
+      it("should revert with InvalidTokenId when trying to send ERC1155 with non-zero token ID", async function () {
+        await this.TestMultiToken.connect(owner).safeTransferFrom(
+          owner.address,
+          alice.address,
+          1,
+          1n,
+          "0x"
+        );
+
+        // Try to send ERC1155 token with ID 1 to the Stake contract
+        await expect(
+          this.TestMultiToken.connect(alice).safeTransferFrom(
+            alice.address,
+            Stake.target,
+            1, // Invalid token ID (should be 0)
+            1n,
+            "0x"
+          )
+        ).to.be.revertedWithCustomError(Stake, "Stake__InvalidTokenId");
       });
     }); // Validations
   }); // ERC1155 Staking

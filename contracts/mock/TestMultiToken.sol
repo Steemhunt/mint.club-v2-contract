@@ -10,6 +10,7 @@ contract TestMultiToken is ERC1155 {
 
     constructor(uint256 initialSupply) ERC1155("https://hunt.town/token.json") {
         _mint(msg.sender, 0, initialSupply, "");
+        _mint(msg.sender, 1, initialSupply, "");
 
         name = "Test Multi Token";
         symbol = "TEST_MULTI";
