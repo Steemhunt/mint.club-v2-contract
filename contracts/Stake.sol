@@ -20,6 +20,8 @@ pragma solidity =0.8.20;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
@@ -33,20 +35,11 @@ contract Stake is Ownable, ReentrancyGuard {
     uint256 public constant MIN_REWARD_DURATION = 3600; // 1 hour in seconds
     uint256 public constant MAX_REWARD_DURATION =
         MIN_REWARD_DURATION * 24 * 365 * 10; // 10 years
-    uint256 public constant MIN_STAKE_AMOUNT = 1000; // Prevent dust stakes for gas efficiency and to avoid state bloat
-
-    // Maximum safe reward amount to prevent overflow in calculations
-    // Calculation: MAX_SAFE_REWARD_AMOUNT = (type(uint256).max * MIN_STAKE_AMOUNT) / (type(uint104).max * REWARD_PRECISION)
-    // This ensures that even with maximum stake amounts, accRewardPerShare calculations won't overflow
-    uint256 public constant MAX_SAFE_REWARD_AMOUNT =
-        ((type(uint256).max / type(uint104).max) * MIN_STAKE_AMOUNT) /
-            REWARD_PRECISION; // ~ 5.7T tokens with 18 decimals
 
     // MARK: - Error messages
 
     error Stake__InvalidToken();
     error Stake__TokenHasTransferFeesOrRebasing();
-    error Stake__InvalidRewardAmount();
     error Stake__InvalidCreationFee();
     error Stake__FeeTransferFailed();
     error Stake__InvalidDuration();
@@ -57,15 +50,16 @@ contract Stake is Ownable, ReentrancyGuard {
     error Stake__InvalidPaginationParameters();
     error Stake__Unauthorized();
     error Stake__InvalidAddress();
-    error Stake__StakeTooSmall();
     error Stake__ZeroAmount();
     error Stake__InvalidClaimFee();
+    error Stake__StakeAmountTooLarge();
 
     // MARK: - Structs
 
     // Gas optimized struct packing - fits in 6 storage slots
     struct Pool {
         address stakingToken; // 160 bits - slot 0 - immutable
+        bool isStakingTokenERC20; // 8 bit - slot 0 - immutable
         address rewardToken; // 160 bits - slot 1 - immutable
         address creator; // 160 bits - slot 2 - immutable
         uint104 rewardAmount; // 104 bits - slot 3 - immutable
@@ -79,12 +73,12 @@ contract Stake is Ownable, ReentrancyGuard {
         uint256 accRewardPerShare; // 256 bits - slot 5
     }
 
-    // Gas optimized struct packing - fits in 2 storage slots
+    // Gas optimized struct packing - fits in 3 storage slots
     struct UserStake {
         uint104 stakedAmount; // 104 bits - slot 0
-        uint104 rewardDebt; // 104 bits - slot 0
-        uint104 claimedTotal; // 104 bits - slot 1 - informational
+        uint104 claimedTotal; // 104 bits - slot 0 - informational
         uint104 feeTotal; // 104 bits - slot 1 - informational
+        uint256 rewardDebt; // 256 bits - slot 2 - uses full slot for overflow safety
     }
 
     // MARK: - Protocol Config Variables
@@ -107,6 +101,7 @@ contract Stake is Ownable, ReentrancyGuard {
         uint256 indexed poolId,
         address indexed creator,
         address indexed stakingToken,
+        bool isStakingTokenERC20,
         address rewardToken,
         uint104 rewardAmount,
         uint32 rewardDuration
@@ -182,13 +177,15 @@ contract Stake is Ownable, ReentrancyGuard {
 
         if (timePassed == 0) return pool.accRewardPerShare;
 
-        uint256 totalReward = (timePassed * pool.rewardAmount) /
-            pool.rewardDuration;
+        uint256 totalReward = Math.mulDiv(
+            timePassed,
+            pool.rewardAmount,
+            pool.rewardDuration
+        );
 
         return
             pool.accRewardPerShare +
-            (totalReward * REWARD_PRECISION) /
-            pool.totalStaked;
+            Math.mulDiv(totalReward, REWARD_PRECISION, pool.totalStaked);
     }
 
     /**
@@ -207,13 +204,16 @@ contract Stake is Ownable, ReentrancyGuard {
     ) internal view returns (uint256 rewardClaimable, uint256 fee) {
         if (stakedAmount == 0) return (0, 0);
 
-        uint256 accRewardAmount = (stakedAmount * updatedAccRewardPerShare) /
-            REWARD_PRECISION;
+        uint256 accRewardAmount = Math.mulDiv(
+            stakedAmount,
+            updatedAccRewardPerShare,
+            REWARD_PRECISION
+        );
 
         if (accRewardAmount <= originalRewardDebt) return (0, 0);
 
         rewardClaimable = accRewardAmount - originalRewardDebt;
-        fee = (rewardClaimable * claimFee) / 10000;
+        fee = Math.mulDiv(rewardClaimable, claimFee, 10000);
         rewardClaimable -= fee;
     }
 
@@ -238,13 +238,17 @@ contract Stake is Ownable, ReentrancyGuard {
         if (rewardAndFee == 0) return;
 
         // Update user's reward debt and claimed rewards
-        userStake.rewardDebt += uint104(rewardAndFee);
+        userStake.rewardDebt += rewardAndFee;
         userStake.claimedTotal += uint104(claimAmount);
         userStake.feeTotal += uint104(fee);
 
-        // Transfer reward tokens to user
-        IERC20(pool.rewardToken).safeTransfer(user, claimAmount);
-        IERC20(pool.rewardToken).safeTransfer(protocolBeneficiary, fee);
+        // Transfer reward tokens to user (reward tokens are always ERC20)
+        if (claimAmount > 0) {
+            IERC20(pool.rewardToken).safeTransfer(user, claimAmount);
+        }
+        if (fee > 0) {
+            IERC20(pool.rewardToken).safeTransfer(protocolBeneficiary, fee);
+        }
 
         emit RewardClaimed(poolId, user, uint104(claimAmount), uint104(fee));
     }
@@ -252,22 +256,35 @@ contract Stake is Ownable, ReentrancyGuard {
     /**
      * @dev Safely transfers tokens from one address to another with balance verification
      * @param token The address of the token to transfer
+     * @param isERC20 Whether the token is ERC20 (true) or ERC1155 (false)
      * @param from The address to transfer from
      * @param to The address to transfer to
      * @param amount The amount to transfer
      */
     function _safeTransferFrom(
         address token,
+        bool isERC20,
         address from,
         address to,
         uint256 amount
     ) internal {
-        uint256 balanceBefore = IERC20(token).balanceOf(to);
-        IERC20(token).safeTransferFrom(from, to, amount);
-        uint256 balanceAfter = IERC20(token).balanceOf(to);
+        if (isERC20) {
+            uint256 balanceBefore = IERC20(token).balanceOf(to);
+            IERC20(token).safeTransferFrom(from, to, amount);
+            uint256 balanceAfter = IERC20(token).balanceOf(to);
 
-        if (balanceAfter - balanceBefore != amount) {
-            revert Stake__TokenHasTransferFeesOrRebasing();
+            if (balanceAfter - balanceBefore != amount) {
+                revert Stake__TokenHasTransferFeesOrRebasing();
+            }
+        } else {
+            // For ERC1155, we use token ID 0 only
+            uint256 balanceBefore = IERC1155(token).balanceOf(to, 0);
+            IERC1155(token).safeTransferFrom(from, to, 0, amount, "");
+            uint256 balanceAfter = IERC1155(token).balanceOf(to, 0);
+
+            if (balanceAfter - balanceBefore != amount) {
+                revert Stake__TokenHasTransferFeesOrRebasing();
+            }
         }
     }
 
@@ -324,6 +341,7 @@ contract Stake is Ownable, ReentrancyGuard {
      */
     function createPool(
         address stakingToken,
+        bool isStakingTokenERC20,
         address rewardToken,
         uint104 rewardAmount,
         uint32 rewardDuration
@@ -331,8 +349,6 @@ contract Stake is Ownable, ReentrancyGuard {
         if (stakingToken == address(0)) revert Stake__InvalidToken();
         if (rewardToken == address(0)) revert Stake__InvalidToken();
         if (rewardAmount == 0) revert Stake__ZeroAmount();
-        if (rewardAmount > MAX_SAFE_REWARD_AMOUNT)
-            revert Stake__InvalidRewardAmount();
         if (
             rewardDuration < MIN_REWARD_DURATION ||
             rewardDuration > MAX_REWARD_DURATION
@@ -349,6 +365,7 @@ contract Stake is Ownable, ReentrancyGuard {
 
         pools[poolId] = Pool({
             stakingToken: stakingToken,
+            isStakingTokenERC20: isStakingTokenERC20,
             rewardToken: rewardToken,
             creator: msg.sender,
             rewardAmount: rewardAmount,
@@ -362,13 +379,20 @@ contract Stake is Ownable, ReentrancyGuard {
             accRewardPerShare: 0
         });
 
-        // Transfer reward tokens from creator to contract
-        _safeTransferFrom(rewardToken, msg.sender, address(this), rewardAmount);
+        // Transfer reward tokens from creator to contract (always ERC20)
+        _safeTransferFrom(
+            rewardToken,
+            true,
+            msg.sender,
+            address(this),
+            rewardAmount
+        );
 
         emit PoolCreated(
             poolId,
             msg.sender,
             stakingToken,
+            isStakingTokenERC20,
             rewardToken,
             rewardAmount,
             rewardDuration
@@ -427,6 +451,7 @@ contract Stake is Ownable, ReentrancyGuard {
                     IERC20(pool.rewardToken).balanceOf(address(this))
             );
 
+            // Reward tokens are always ERC20
             IERC20(pool.rewardToken).safeTransfer(
                 pool.creator,
                 leftoverRewards
@@ -447,7 +472,7 @@ contract Stake is Ownable, ReentrancyGuard {
         uint256 poolId,
         uint104 amount
     ) external nonReentrant _checkPoolExists(poolId) {
-        if (amount < MIN_STAKE_AMOUNT) revert Stake__StakeTooSmall();
+        if (amount == 0) revert Stake__ZeroAmount();
 
         Pool storage pool = pools[poolId];
 
@@ -467,6 +492,12 @@ contract Stake is Ownable, ReentrancyGuard {
 
         UserStake storage userStake = userPoolStake[msg.sender][poolId];
 
+        // safely checks for overflow and reverts with the custom error
+        if (
+            type(uint104).max - amount < userStake.stakedAmount ||
+            type(uint128).max - amount < totalStaked
+        ) revert Stake__StakeAmountTooLarge();
+
         // If this is the first stake in the pool, start the reward clock
         if (rewardStartedAt == 0 && totalStaked == 0) {
             uint40 currentTime = uint40(block.timestamp);
@@ -484,17 +515,25 @@ contract Stake is Ownable, ReentrancyGuard {
             pool.activeStakerCount++;
         }
 
-        // Update user's staked amount and reward debt
+        // Update user's staked amount
         userStake.stakedAmount += amount;
-        userStake.rewardDebt = uint104(
-            (userStake.stakedAmount * pool.accRewardPerShare) / REWARD_PRECISION
+        userStake.rewardDebt = Math.mulDiv(
+            userStake.stakedAmount,
+            pool.accRewardPerShare,
+            REWARD_PRECISION
         );
 
         // Update pool's total staked amount
         pool.totalStaked += amount;
 
         // Transfer tokens from user to contract with balance check to prevent transfer fees/rebasing tokens
-        _safeTransferFrom(pool.stakingToken, msg.sender, address(this), amount);
+        _safeTransferFrom(
+            pool.stakingToken,
+            pool.isStakingTokenERC20,
+            msg.sender,
+            address(this),
+            amount
+        );
 
         emit Staked(poolId, msg.sender, amount);
     }
@@ -525,8 +564,10 @@ contract Stake is Ownable, ReentrancyGuard {
         unchecked {
             userStake.stakedAmount -= amount; // Safe: checked above
         }
-        userStake.rewardDebt = uint104(
-            (userStake.stakedAmount * pool.accRewardPerShare) / REWARD_PRECISION
+        userStake.rewardDebt = Math.mulDiv(
+            userStake.stakedAmount,
+            pool.accRewardPerShare,
+            REWARD_PRECISION
         );
 
         // If user completely unstaked, decrement active staker count
@@ -540,7 +581,18 @@ contract Stake is Ownable, ReentrancyGuard {
         }
 
         // Transfer tokens back to user
-        IERC20(pool.stakingToken).safeTransfer(msg.sender, amount);
+        if (pool.isStakingTokenERC20) {
+            IERC20(pool.stakingToken).safeTransfer(msg.sender, amount);
+        } else {
+            // For ERC1155, we use token ID 0 only
+            IERC1155(pool.stakingToken).safeTransferFrom(
+                address(this),
+                msg.sender,
+                0,
+                amount,
+                ""
+            );
+        }
 
         emit Unstaked(poolId, msg.sender, amount);
     }
@@ -726,5 +778,22 @@ contract Stake is Ownable, ReentrancyGuard {
      */
     function version() external pure returns (string memory) {
         return "1.0.0";
+    }
+
+    // MARK: - ERC1155 Receiver
+
+    /**
+     * @dev Handles the receipt of a single ERC1155 token type. This function is
+     * called at the end of a `safeTransferFrom` after the balance has been updated.
+     * Required for the contract to receive ERC1155 tokens.
+     */
+    function onERC1155Received(
+        address,
+        address,
+        uint256,
+        uint256,
+        bytes memory
+    ) external pure returns (bytes4) {
+        return this.onERC1155Received.selector;
     }
 }
