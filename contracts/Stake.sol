@@ -24,6 +24,7 @@ import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {MCV2_ICommonToken} from "./interfaces/MCV2_ICommonToken.sol";
 
 contract Stake is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -748,6 +749,59 @@ contract Stake is Ownable, ReentrancyGuard {
         }
     }
 
+    // Struct and view helper functions for getPool and getPools
+    struct TokenInfo {
+        string symbol;
+        string name;
+        uint8 decimals;
+    }
+    struct PoolView {
+        Pool pool;
+        TokenInfo stakingToken;
+        TokenInfo rewardToken;
+    }
+
+    function _getTokenInfo(
+        address tokenAddress
+    ) internal view returns (TokenInfo memory) {
+        MCV2_ICommonToken token = MCV2_ICommonToken(tokenAddress);
+        string memory symbol;
+        string memory name;
+        uint8 decimals;
+        try token.symbol() returns (string memory _symbol) {
+            symbol = _symbol;
+        } catch {
+            symbol = "undefined";
+        }
+        try token.name() returns (string memory _name) {
+            name = _name;
+        } catch {
+            name = "undefined";
+        }
+        try token.decimals() returns (uint8 _decimals) {
+            decimals = _decimals;
+        } catch {
+            decimals = 0;
+        }
+
+        return TokenInfo({symbol: symbol, name: name, decimals: decimals});
+    }
+
+    /**
+     * @dev Returns pool information for a single pool
+     * @param poolId The ID of the pool
+     * @return poolView The pool information
+     */
+    function getPool(
+        uint256 poolId
+    ) external view _checkPoolExists(poolId) returns (PoolView memory) {
+        Pool memory pool = pools[poolId];
+        TokenInfo memory stakingTokenInfo = _getTokenInfo(pool.stakingToken);
+        TokenInfo memory rewardTokenInfo = _getTokenInfo(pool.rewardToken);
+
+        return PoolView(pool, stakingTokenInfo, rewardTokenInfo);
+    }
+
     /**
      * @dev Returns pool information for a range of pools
      * @param poolIdFrom The starting pool ID
@@ -757,7 +811,7 @@ contract Stake is Ownable, ReentrancyGuard {
     function getPools(
         uint256 poolIdFrom,
         uint256 poolIdTo
-    ) external view returns (Pool[] memory poolList) {
+    ) external view returns (PoolView[] memory poolList) {
         if (poolIdFrom >= poolIdTo || poolIdTo - poolIdFrom > 1000) {
             revert Stake__InvalidPaginationParameters();
         }
@@ -766,10 +820,15 @@ contract Stake is Ownable, ReentrancyGuard {
             uint256 length = poolIdTo > poolCount
                 ? poolCount - poolIdFrom
                 : poolIdTo - poolIdFrom;
-            poolList = new Pool[](length);
+            poolList = new PoolView[](length);
 
             for (uint256 i = 0; i < length; ++i) {
-                poolList[i] = pools[poolIdFrom + i];
+                Pool memory pool = pools[poolIdFrom + i];
+                poolList[i] = PoolView({
+                    pool: pool,
+                    stakingToken: _getTokenInfo(pool.stakingToken),
+                    rewardToken: _getTokenInfo(pool.rewardToken)
+                });
             }
         }
     }

@@ -1187,19 +1187,265 @@ describe("Stake", function () {
         });
       }); // claimableRewardBulk
 
-      describe("getPools", function () {
-        it("should return pools in range", async function () {
-          const pools = await Stake.getPools(0, 2);
+      describe("getPool", function () {
+        it("should return complete pool view with token info", async function () {
+          const poolView = await Stake.getPool(this.poolId);
 
-          expect(pools).to.have.length(2);
-          expect(pools[0].creator).to.equal(owner.address);
-          expect(pools[1].creator).to.equal(owner.address);
+          // Check pool data
+          expect(poolView.pool.stakingToken).to.equal(SIMPLE_POOL.stakingToken);
+          expect(poolView.pool.rewardToken).to.equal(SIMPLE_POOL.rewardToken);
+          expect(poolView.pool.creator).to.equal(owner.address);
+          expect(poolView.pool.rewardAmount).to.equal(SIMPLE_POOL.rewardAmount);
+          expect(poolView.pool.rewardDuration).to.equal(
+            SIMPLE_POOL.rewardDuration
+          );
+
+          // Check staking token info
+          expect(poolView.stakingToken.symbol).to.equal("STAKE");
+          expect(poolView.stakingToken.name).to.equal("Staking Token");
+          expect(poolView.stakingToken.decimals).to.equal(18);
+
+          // Check reward token info
+          expect(poolView.rewardToken.symbol).to.equal("REWARD");
+          expect(poolView.rewardToken.name).to.equal("Reward Token");
+          expect(poolView.rewardToken.decimals).to.equal(18);
+        });
+
+        it("should handle tokens with different decimals", async function () {
+          const Token6 = await ethers.deployContract("TestToken", [
+            wei(1_000_000, 6),
+            "6 Decimal Token",
+            "6DEC",
+            6n,
+          ]);
+          await Token6.waitForDeployment();
+
+          await approveTokens(Token6, [owner], Stake.target);
+          const poolId = await Stake.poolCount();
+          await Stake.connect(owner).createPool(
+            Token6.target,
+            true,
+            RewardToken.target,
+            SIMPLE_POOL.rewardAmount,
+            SIMPLE_POOL.rewardDuration
+          );
+
+          const poolView = await Stake.getPool(poolId);
+
+          expect(poolView.stakingToken.symbol).to.equal("6DEC");
+          expect(poolView.stakingToken.name).to.equal("6 Decimal Token");
+          expect(poolView.stakingToken.decimals).to.equal(6);
+        });
+
+        it("should handle ERC1155 tokens (which don't have optional ERC20 methods)", async function () {
+          const TestERC1155 = await ethers.deployContract("TestERC1155", [
+            1_000_000n,
+          ]);
+          await TestERC1155.waitForDeployment();
+
+          await TestERC1155.connect(owner).setApprovalForAll(
+            Stake.target,
+            true
+          );
+          const poolId = await Stake.poolCount();
+          await Stake.connect(owner).createPool(
+            TestERC1155.target,
+            false, // isStakingTokenERC20 = false for ERC1155
+            RewardToken.target,
+            SIMPLE_POOL.rewardAmount,
+            SIMPLE_POOL.rewardDuration
+          );
+
+          const poolView = await Stake.getPool(poolId);
+
+          // ERC1155 tokens don't have symbol(), name(), decimals() methods
+          // Should fall back to defaults
+          expect(poolView.stakingToken.symbol).to.equal("undefined");
+          expect(poolView.stakingToken.name).to.equal("undefined");
+          expect(poolView.stakingToken.decimals).to.equal(0);
+
+          // Reward token should still work normally (it's ERC20)
+          expect(poolView.rewardToken.symbol).to.equal("REWARD");
+          expect(poolView.rewardToken.name).to.equal("Reward Token");
+          expect(poolView.rewardToken.decimals).to.equal(18);
+        });
+
+        it("should handle tokens with empty string methods", async function () {
+          // Create token with empty strings for name/symbol
+          const tokenWithEmptyStrings = await ethers.deployContract(
+            "TestToken",
+            [
+              wei(1_000_000),
+              "", // empty name
+              "", // empty symbol
+              0n, // 0 decimals
+            ]
+          );
+          await tokenWithEmptyStrings.waitForDeployment();
+
+          await approveTokens(tokenWithEmptyStrings, [owner], Stake.target);
+          const poolId = await Stake.poolCount();
+          await Stake.connect(owner).createPool(
+            tokenWithEmptyStrings.target,
+            true,
+            RewardToken.target,
+            SIMPLE_POOL.rewardAmount,
+            SIMPLE_POOL.rewardDuration
+          );
+
+          const poolView = await Stake.getPool(poolId);
+
+          // Should return the actual empty strings and 0 decimals
+          expect(poolView.stakingToken.symbol).to.equal("");
+          expect(poolView.stakingToken.name).to.equal("");
+          expect(poolView.stakingToken.decimals).to.equal(0);
+        });
+
+        it("should revert if pool does not exist", async function () {
+          await expect(Stake.getPool(999)).to.be.revertedWithCustomError(
+            Stake,
+            "Stake__PoolNotFound"
+          );
+        });
+      }); // getPool
+
+      describe("getPools", function () {
+        it("should return pool views in range", async function () {
+          const poolViews = await Stake.getPools(0, 2);
+
+          expect(poolViews).to.have.length(2);
+          expect(poolViews[0].pool.creator).to.equal(owner.address);
+          expect(poolViews[1].pool.creator).to.equal(owner.address);
+
+          // Check that token info is included
+          expect(poolViews[0].stakingToken.symbol).to.equal("STAKE");
+          expect(poolViews[0].stakingToken.name).to.equal("Staking Token");
+          expect(poolViews[0].stakingToken.decimals).to.equal(18);
+          expect(poolViews[0].rewardToken.symbol).to.equal("REWARD");
+          expect(poolViews[0].rewardToken.name).to.equal("Reward Token");
+          expect(poolViews[0].rewardToken.decimals).to.equal(18);
         });
 
         it("should handle poolIdTo exceeding poolCount", async function () {
-          const pools = await Stake.getPools(0, 10);
+          const poolViews = await Stake.getPools(0, 10);
 
-          expect(pools).to.have.length(3); // Only 3 pools exist
+          expect(poolViews).to.have.length(3); // Only 3 pools exist
+          expect(poolViews[0].pool.creator).to.equal(owner.address);
+          expect(poolViews[1].pool.creator).to.equal(owner.address);
+          expect(poolViews[2].pool.creator).to.equal(owner.address);
+        });
+
+        it("should return pool views with complete token information", async function () {
+          const poolViews = await Stake.getPools(0, 1);
+
+          expect(poolViews).to.have.length(1);
+          const poolView = poolViews[0];
+
+          // Verify pool data structure
+          expect(poolView.pool.stakingToken).to.equal(SIMPLE_POOL.stakingToken);
+          expect(poolView.pool.rewardToken).to.equal(SIMPLE_POOL.rewardToken);
+          expect(poolView.pool.creator).to.equal(owner.address);
+
+          // Verify token info structure
+          expect(poolView.stakingToken.symbol).to.equal("STAKE");
+          expect(poolView.stakingToken.name).to.equal("Staking Token");
+          expect(poolView.stakingToken.decimals).to.equal(18);
+          expect(poolView.rewardToken.symbol).to.equal("REWARD");
+          expect(poolView.rewardToken.name).to.equal("Reward Token");
+          expect(poolView.rewardToken.decimals).to.equal(18);
+        });
+
+        it("should handle pools with ERC1155 staking tokens", async function () {
+          // Create ERC1155 token
+          const TestERC1155 = await ethers.deployContract("TestERC1155", [
+            1_000_000n,
+          ]);
+          await TestERC1155.waitForDeployment();
+
+          await TestERC1155.connect(owner).setApprovalForAll(
+            Stake.target,
+            true
+          );
+          // Create pool with ERC1155 staking token
+          const poolId = await Stake.poolCount();
+          await Stake.connect(owner).createPool(
+            TestERC1155.target,
+            false, // ERC1155
+            RewardToken.target,
+            SIMPLE_POOL.rewardAmount,
+            SIMPLE_POOL.rewardDuration
+          );
+
+          const poolViews = await Stake.getPools(poolId, poolId + 1n);
+
+          expect(poolViews).to.have.length(1);
+          const poolView = poolViews[0];
+
+          // ERC1155 should fall back to "undefined" defaults
+          expect(poolView.stakingToken.symbol).to.equal("undefined");
+          expect(poolView.stakingToken.name).to.equal("undefined");
+          expect(poolView.stakingToken.decimals).to.equal(0);
+
+          // Reward token (ERC20) should work normally
+          expect(poolView.rewardToken.symbol).to.equal("REWARD");
+          expect(poolView.rewardToken.name).to.equal("Reward Token");
+          expect(poolView.rewardToken.decimals).to.equal(18);
+        });
+
+        it("should handle mixed token types in pool range", async function () {
+          // Create a pool with tokens having different decimals
+          const Token6 = await ethers.deployContract("TestToken", [
+            wei(1_000_000, 6),
+            "6 Decimal Token",
+            "6DEC",
+            6n,
+          ]);
+          await Token6.waitForDeployment();
+          await approveTokens(Token6, [owner], Stake.target);
+
+          // Create a pool with ERC1155 token
+          const TestERC1155 = await ethers.deployContract("TestERC1155", [
+            1_000_000n,
+          ]);
+          await TestERC1155.waitForDeployment();
+
+          await TestERC1155.connect(owner).setApprovalForAll(
+            Stake.target,
+            true
+          );
+          // Create both pools
+          const pool1Id = await Stake.poolCount();
+          await Stake.connect(owner).createPool(
+            Token6.target,
+            true,
+            RewardToken.target,
+            SIMPLE_POOL.rewardAmount,
+            SIMPLE_POOL.rewardDuration
+          );
+
+          const pool2Id = await Stake.poolCount();
+          await Stake.connect(owner).createPool(
+            TestERC1155.target,
+            false,
+            RewardToken.target,
+            SIMPLE_POOL.rewardAmount,
+            SIMPLE_POOL.rewardDuration
+          );
+
+          // Get both pools
+          const poolViews = await Stake.getPools(pool1Id, pool2Id + 1n);
+
+          expect(poolViews).to.have.length(2);
+
+          // First pool (ERC20 with 6 decimals)
+          expect(poolViews[0].stakingToken.symbol).to.equal("6DEC");
+          expect(poolViews[0].stakingToken.name).to.equal("6 Decimal Token");
+          expect(poolViews[0].stakingToken.decimals).to.equal(6);
+
+          // Second pool (ERC1155)
+          expect(poolViews[1].stakingToken.symbol).to.equal("undefined");
+          expect(poolViews[1].stakingToken.name).to.equal("undefined");
+          expect(poolViews[1].stakingToken.decimals).to.equal(0);
         });
 
         it("should revert if pagination parameters are invalid", async function () {

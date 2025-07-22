@@ -4,8 +4,10 @@ const { getCreationFee } = require("../test/utils/test-utils");
 
 async function main() {
   const PROTOCOL_BENEFICIARY = process.env.PROTOCOL_BENEFICIARY;
-  const CREATION_FEE = getCreationFee(hre.network.name) * 5n; // creationFee x 5 = ~$10
-  const CLAIM_FEE = 400; // 4%
+  // const CREATION_FEE = getCreationFee(hre.network.name) * 5n; // creationFee x 5 = ~$10
+  // const CLAIM_FEE = 400; // 4%
+  const CREATION_FEE = 0;
+  const CLAIM_FEE = 0;
 
   const accounts = await hre.ethers.getSigners();
   const deployer = accounts[0].address;
