@@ -1461,6 +1461,278 @@ describe("Stake", function () {
         });
       }); // getPools
 
+      describe("getPoolsByCreator", function () {
+        beforeEach(async function () {
+          // Create additional pools with different creators for testing
+          // owner creates pools 0, 1, 2 (from previous setup)
+
+          // alice creates pool 3
+          await distributeTokens(
+            RewardToken,
+            [alice],
+            SIMPLE_POOL.rewardAmount
+          );
+          await approveTokens(RewardToken, [alice], Stake.target);
+          this.alicePoolId = await Stake.poolCount();
+          await Stake.connect(alice).createPool(
+            StakingToken.target,
+            true,
+            RewardToken.target,
+            SIMPLE_POOL.rewardAmount,
+            SIMPLE_POOL.rewardDuration
+          );
+
+          // bob creates pools 4 and 5
+          await distributeTokens(
+            RewardToken,
+            [bob],
+            SIMPLE_POOL.rewardAmount * 2n
+          );
+          await approveTokens(RewardToken, [bob], Stake.target);
+          this.bobPoolId1 = await Stake.poolCount();
+          await Stake.connect(bob).createPool(
+            StakingToken.target,
+            true,
+            RewardToken.target,
+            SIMPLE_POOL.rewardAmount,
+            SIMPLE_POOL.rewardDuration
+          );
+          this.bobPoolId2 = await Stake.poolCount();
+          await Stake.connect(bob).createPool(
+            StakingToken.target,
+            true,
+            RewardToken.target,
+            SIMPLE_POOL.rewardAmount,
+            SIMPLE_POOL.rewardDuration
+          );
+
+          // Total pools: 6 (0,1,2 by owner, 3 by alice, 4,5 by bob)
+        });
+
+        it("should return only pools created by owner", async function () {
+          const poolViews = await Stake.getPoolsByCreator(0, 6, owner.address);
+
+          // Owner created pools 0, 1, 2
+          expect(poolViews).to.have.length(3);
+          expect(poolViews[0].pool.creator).to.equal(owner.address);
+          expect(poolViews[1].pool.creator).to.equal(owner.address);
+          expect(poolViews[2].pool.creator).to.equal(owner.address);
+
+          // Verify token info is included
+          expect(poolViews[0].stakingToken.symbol).to.equal("STAKE");
+          expect(poolViews[0].rewardToken.symbol).to.equal("REWARD");
+        });
+
+        it("should return only pools created by alice", async function () {
+          const poolViews = await Stake.getPoolsByCreator(0, 6, alice.address);
+
+          // Alice created only pool 3
+          expect(poolViews).to.have.length(1);
+          expect(poolViews[0].pool.creator).to.equal(alice.address);
+
+          // Verify it's the correct pool
+          const poolData = await Stake.pools(this.alicePoolId);
+          expect(poolViews[0].pool.stakingToken).to.equal(
+            poolData.stakingToken
+          );
+          expect(poolViews[0].pool.rewardToken).to.equal(poolData.rewardToken);
+        });
+
+        it("should return only pools created by bob", async function () {
+          const poolViews = await Stake.getPoolsByCreator(0, 6, bob.address);
+
+          // Bob created pools 4 and 5
+          expect(poolViews).to.have.length(2);
+          expect(poolViews[0].pool.creator).to.equal(bob.address);
+          expect(poolViews[1].pool.creator).to.equal(bob.address);
+        });
+
+        it("should return empty array for creator with no pools", async function () {
+          const poolViews = await Stake.getPoolsByCreator(0, 6, carol.address);
+
+          expect(poolViews).to.have.length(0);
+        });
+
+        it("should handle partial ranges correctly", async function () {
+          // Query only pools 3-5 (alice: 3, bob: 4,5)
+          const ownerPools = await Stake.getPoolsByCreator(3, 6, owner.address);
+          const alicePools = await Stake.getPoolsByCreator(3, 6, alice.address);
+          const bobPools = await Stake.getPoolsByCreator(3, 6, bob.address);
+
+          expect(ownerPools).to.have.length(0); // Owner has no pools in this range
+          expect(alicePools).to.have.length(1); // Alice has pool 3
+          expect(bobPools).to.have.length(2); // Bob has pools 4,5
+        });
+
+        it("should handle ranges with some matching pools", async function () {
+          // Query pools 1-4 (owner: 1,2, alice: 3, bob: none in this range)
+          const ownerPools = await Stake.getPoolsByCreator(1, 4, owner.address);
+          const alicePools = await Stake.getPoolsByCreator(1, 4, alice.address);
+          const bobPools = await Stake.getPoolsByCreator(1, 4, bob.address);
+
+          expect(ownerPools).to.have.length(2); // Owner has pools 1,2
+          expect(alicePools).to.have.length(1); // Alice has pool 3
+          expect(bobPools).to.have.length(0); // Bob has no pools in this range
+        });
+
+        it("should handle single pool ranges", async function () {
+          // Query only pool 3 (alice's pool)
+          const alicePools = await Stake.getPoolsByCreator(3, 4, alice.address);
+          const ownerPools = await Stake.getPoolsByCreator(3, 4, owner.address);
+
+          expect(alicePools).to.have.length(1);
+          expect(alicePools[0].pool.creator).to.equal(alice.address);
+          expect(ownerPools).to.have.length(0);
+        });
+
+        it("should handle poolIdTo exceeding poolCount", async function () {
+          const poolViews = await Stake.getPoolsByCreator(
+            0,
+            100,
+            owner.address
+          );
+
+          // Should still return only owner's pools (0,1,2)
+          expect(poolViews).to.have.length(3);
+          expect(poolViews[0].pool.creator).to.equal(owner.address);
+          expect(poolViews[1].pool.creator).to.equal(owner.address);
+          expect(poolViews[2].pool.creator).to.equal(owner.address);
+        });
+
+        it("should return empty array if poolIdFrom >= poolCount", async function () {
+          const poolViews = await Stake.getPoolsByCreator(
+            10,
+            20,
+            owner.address
+          );
+
+          expect(poolViews).to.have.length(0);
+        });
+
+        it("should return empty array if poolIdFrom >= searchTo", async function () {
+          // poolIdFrom (5) >= poolCount (6) after limiting searchTo
+          const poolViews = await Stake.getPoolsByCreator(5, 10, owner.address);
+
+          // Should return pool 5 which doesn't belong to owner
+          expect(poolViews).to.have.length(0);
+        });
+
+        it("should handle edge case where range contains no pools", async function () {
+          const poolViews = await Stake.getPoolsByCreator(
+            100,
+            200,
+            owner.address
+          );
+
+          expect(poolViews).to.have.length(0);
+        });
+
+        it("should return correct pool data structure", async function () {
+          const poolViews = await Stake.getPoolsByCreator(0, 1, owner.address);
+
+          expect(poolViews).to.have.length(1);
+          const poolView = poolViews[0];
+
+          // Verify pool data structure matches what we expect
+          expect(poolView.pool.stakingToken).to.equal(SIMPLE_POOL.stakingToken);
+          expect(poolView.pool.rewardToken).to.equal(SIMPLE_POOL.rewardToken);
+          expect(poolView.pool.creator).to.equal(owner.address);
+          expect(poolView.pool.rewardAmount).to.equal(SIMPLE_POOL.rewardAmount);
+          expect(poolView.pool.rewardDuration).to.equal(
+            SIMPLE_POOL.rewardDuration
+          );
+
+          // Verify token info structure
+          expect(poolView.stakingToken.symbol).to.equal("STAKE");
+          expect(poolView.stakingToken.name).to.equal("Staking Token");
+          expect(poolView.stakingToken.decimals).to.equal(18);
+          expect(poolView.rewardToken.symbol).to.equal("REWARD");
+          expect(poolView.rewardToken.name).to.equal("Reward Token");
+          expect(poolView.rewardToken.decimals).to.equal(18);
+        });
+
+        it("should handle multiple creators with different token types", async function () {
+          // Create a pool with different tokens for testing
+          const Token6 = await ethers.deployContract("TestToken", [
+            wei(1_000_000, 6),
+            "6 Decimal Token",
+            "6DEC",
+            6n,
+          ]);
+          await Token6.waitForDeployment();
+
+          await distributeTokens(Token6, [carol], wei(10000, 6));
+          await approveTokens(Token6, [carol], Stake.target);
+          await distributeTokens(
+            RewardToken,
+            [carol],
+            SIMPLE_POOL.rewardAmount
+          );
+          await approveTokens(RewardToken, [carol], Stake.target);
+
+          // Carol creates pool with different staking token
+          await Stake.connect(carol).createPool(
+            Token6.target,
+            true,
+            RewardToken.target,
+            SIMPLE_POOL.rewardAmount,
+            SIMPLE_POOL.rewardDuration
+          );
+
+          const carolPools = await Stake.getPoolsByCreator(
+            0,
+            10,
+            carol.address
+          );
+
+          expect(carolPools).to.have.length(1);
+          expect(carolPools[0].stakingToken.symbol).to.equal("6DEC");
+          expect(carolPools[0].stakingToken.decimals).to.equal(6);
+          expect(carolPools[0].rewardToken.symbol).to.equal("REWARD");
+        });
+
+        it("should revert if pagination parameters are invalid", async function () {
+          await expect(
+            Stake.getPoolsByCreator(5, 5, owner.address)
+          ).to.be.revertedWithCustomError(
+            Stake,
+            "Stake__InvalidPaginationParameters"
+          );
+
+          await expect(
+            Stake.getPoolsByCreator(0, 1001, owner.address)
+          ).to.be.revertedWithCustomError(
+            Stake,
+            "Stake__InvalidPaginationParameters"
+          );
+        });
+
+        it("should handle gas efficiently with large ranges", async function () {
+          // Test that the function doesn't consume excessive gas even with max range
+          const tx = await Stake.getPoolsByCreator(0, 1000, owner.address);
+
+          // Should complete without reverting (gas limit test)
+          expect(tx).to.have.length(3); // Owner's 3 pools
+        });
+
+        it("should maintain correct order of pools", async function () {
+          const bobPools = await Stake.getPoolsByCreator(0, 10, bob.address);
+
+          expect(bobPools).to.have.length(2);
+
+          // Verify pools are returned in order (pool 4 before pool 5)
+          const pool4Data = await Stake.pools(this.bobPoolId1);
+          const pool5Data = await Stake.pools(this.bobPoolId2);
+
+          expect(bobPools[0].pool.stakingToken).to.equal(
+            pool4Data.stakingToken
+          );
+          expect(bobPools[1].pool.stakingToken).to.equal(
+            pool5Data.stakingToken
+          );
+        });
+      }); // getPoolsByCreator
+
       describe("version", function () {
         it("should return correct version", async function () {
           const version = await Stake.version();

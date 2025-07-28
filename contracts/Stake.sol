@@ -834,6 +834,58 @@ contract Stake is Ownable, ReentrancyGuard {
     }
 
     /**
+     * @dev Returns pool information for pools created by a specific creator within a range
+     * @param poolIdFrom The starting pool ID (inclusive)
+     * @param poolIdTo The ending pool ID (exclusive)
+     * @param creator The address of the pool creator to filter by
+     * @return poolList Array of PoolView structs for pools created by the specified creator
+     * @notice This function filters pools by creator and returns only matching pools
+     *         The returned array size will match the number of pools found, not the input range
+     */
+    function getPoolsByCreator(
+        uint256 poolIdFrom,
+        uint256 poolIdTo,
+        address creator
+    ) external view returns (PoolView[] memory poolList) {
+        if (poolIdFrom >= poolIdTo || poolIdTo - poolIdFrom > 1000) {
+            revert Stake__InvalidPaginationParameters();
+        }
+
+        unchecked {
+            // Limit search to actual pool count
+            uint256 searchTo = poolIdTo > poolCount ? poolCount : poolIdTo;
+            if (poolIdFrom >= searchTo) {
+                return new PoolView[](0);
+            }
+
+            // Single pass: collect results in temporary array, then resize
+            uint256 maxLength = searchTo - poolIdFrom;
+            PoolView[] memory tempResults = new PoolView[](maxLength);
+            uint256 validCount = 0;
+
+            for (uint256 i = poolIdFrom; i < searchTo; ++i) {
+                Pool memory pool = pools[i];
+
+                // Skip pools not created by the specified creator
+                if (pool.creator != creator) continue;
+
+                tempResults[validCount] = PoolView({
+                    pool: pool,
+                    stakingToken: _getTokenInfo(pool.stakingToken),
+                    rewardToken: _getTokenInfo(pool.rewardToken)
+                });
+                ++validCount;
+            }
+
+            // Create final array with exact size and copy results
+            poolList = new PoolView[](validCount);
+            for (uint256 i = 0; i < validCount; ++i) {
+                poolList[i] = tempResults[i];
+            }
+        }
+    }
+
+    /**
      * @dev Returns the version of the contract
      * @return The version string
      */
