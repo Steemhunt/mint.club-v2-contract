@@ -407,6 +407,10 @@ contract Stake is Ownable, ReentrancyGuard {
     /**
      * @dev Cancels a pool (only pool creator can call)
      * @param poolId The ID of the pool to cancel
+     * @notice INTENTIONAL DESIGN: Pool creators can cancel their pools at any time, even during active staking periods.
+     *         This may impact stakers who committed tokens expecting ongoing reward distribution for the full duration.
+     *         Stakers risk losing expected future rewards when creators exercise this cancellation right.
+     *         This design prioritizes creator flexibility over staker reward guarantees.
      */
     function cancelPool(
         uint256 poolId
