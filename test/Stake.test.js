@@ -404,14 +404,81 @@ describe("Stake", function () {
         expect(pool.activeStakerCount).to.equal(1);
       });
 
-      it("should emit Unstaked event", async function () {
+      it("should emit Unstaked event with rewardClaimed=true", async function () {
         await expect(
           Stake.connect(alice).unstake(this.poolId, this.unstakeAmount)
         )
           .emit(Stake, "Unstaked")
-          .withArgs(this.poolId, alice.address, this.unstakeAmount);
+          .withArgs(this.poolId, alice.address, this.unstakeAmount, true);
       });
     }); // Unstaking Operations
+
+    describe("Emergency Unstaking Operations", function () {
+      beforeEach(async function () {
+        await Stake.connect(alice).stake(this.poolId, wei(100));
+      });
+
+      it("should unstake full amount without claiming rewards", async function () {
+        await time.setNextBlockTimestamp((await time.latest()) + 1000);
+
+        const initialRewardBalance = await RewardToken.balanceOf(alice.address);
+        await Stake.connect(alice).emergencyUnstake(this.poolId);
+
+        // All staking tokens returned, no rewards claimed
+        const userStake = await Stake.userPoolStake(alice.address, this.poolId);
+        expect(userStake.stakedAmount).to.equal(0);
+        expect(await RewardToken.balanceOf(alice.address)).to.equal(
+          initialRewardBalance
+        );
+      });
+
+      it("should forfeit rewards during emergency unstake", async function () {
+        await time.setNextBlockTimestamp((await time.latest()) + 1000);
+
+        const initialBalance = await RewardToken.balanceOf(alice.address);
+
+        // Emergency unstake full amount - rewards will be forfeited
+        await Stake.connect(alice).emergencyUnstake(this.poolId);
+
+        // User should have 0 staked and rewards should be forfeited
+        const userStake = await Stake.userPoolStake(alice.address, this.poolId);
+        expect(userStake.stakedAmount).to.equal(0);
+
+        // Rewards should NOT be claimable (forfeited)
+        const [rewardClaimable] = await Stake.claimableReward(
+          this.poolId,
+          alice.address
+        );
+        expect(rewardClaimable).to.equal(0);
+
+        // No reward tokens should have been transferred
+        expect(await RewardToken.balanceOf(alice.address)).to.equal(
+          initialBalance
+        );
+
+        // Claiming should not transfer any tokens
+        await Stake.connect(alice).claim(this.poolId);
+        expect(await RewardToken.balanceOf(alice.address)).to.equal(
+          initialBalance
+        );
+      });
+
+      it("should emit Unstaked event with rewardClaimed=false", async function () {
+        await expect(Stake.connect(alice).emergencyUnstake(this.poolId))
+          .to.emit(Stake, "Unstaked")
+          .withArgs(this.poolId, alice.address, wei(100), false);
+      });
+
+      it("should revert if no tokens staked", async function () {
+        // First unstake all tokens
+        await Stake.connect(alice).emergencyUnstake(this.poolId);
+
+        // Try to emergency unstake again
+        await expect(
+          Stake.connect(alice).emergencyUnstake(this.poolId)
+        ).to.be.revertedWithCustomError(Stake, "Stake__ZeroAmount");
+      });
+    }); // Emergency Unstaking Operations
 
     describe("Pool Management", function () {
       it("should create pool with correct parameters", async function () {

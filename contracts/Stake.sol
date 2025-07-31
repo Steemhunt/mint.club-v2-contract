@@ -119,7 +119,8 @@ contract Stake is Ownable, ReentrancyGuard {
     event Unstaked(
         uint256 indexed poolId,
         address indexed staker,
-        uint104 amount
+        uint104 amount,
+        bool rewardClaimed
     );
     event RewardClaimed(
         uint256 indexed poolId,
@@ -546,6 +547,33 @@ contract Stake is Ownable, ReentrancyGuard {
         uint256 poolId,
         uint104 amount
     ) external nonReentrant _checkPoolExists(poolId) {
+        _unstake(poolId, amount, true);
+    }
+
+    /**
+     * @dev Emergency unstake function that allows users to withdraw ALL their staking tokens
+     * without claiming rewards. Use this if reward claims are failing due to malicious reward tokens.
+     * WARNING: Any accumulated rewards will be forfeited and permanently locked in the contract.
+     * @param poolId The ID of the pool to unstake from
+     */
+    function emergencyUnstake(
+        uint256 poolId
+    ) external nonReentrant _checkPoolExists(poolId) {
+        // Unstake the total staked amount
+        _unstake(poolId, userPoolStake[msg.sender][poolId].stakedAmount, false);
+    }
+
+    /**
+     * @dev Internal function to handle unstaking logic
+     * @param poolId The ID of the pool to unstake from
+     * @param amount The amount of tokens to unstake
+     * @param shouldClaimRewards Whether to claim rewards before unstaking
+     */
+    function _unstake(
+        uint256 poolId,
+        uint104 amount,
+        bool shouldClaimRewards
+    ) internal {
         if (amount == 0) revert Stake__ZeroAmount();
 
         Pool storage pool = pools[poolId];
@@ -556,13 +584,19 @@ contract Stake is Ownable, ReentrancyGuard {
 
         _updatePool(poolId);
 
-        // Automatically claim all pending rewards before unstaking
-        _claimRewards(poolId, msg.sender);
+        // Regular unstake: claim rewards
+        if (shouldClaimRewards) {
+            _claimRewards(poolId, msg.sender); // Transfers rewards and updates rewardDebt
+        }
+        // Emergency unstake: skip reward claiming (rewards are forfeited)
 
-        // Update user's staked amount and reward debt
+        // Update user and pool's staked amount
         unchecked {
             userStake.stakedAmount -= amount; // Safe: checked above
+            pool.totalStaked -= amount; // Safe: total always >= user amount
         }
+
+        // Reset rewardDebt for both regular and emergency unstake
         userStake.rewardDebt = Math.mulDiv(
             userStake.stakedAmount,
             pool.accRewardPerShare,
@@ -572,11 +606,6 @@ contract Stake is Ownable, ReentrancyGuard {
         // If user completely unstaked, decrement active staker count
         if (userStake.stakedAmount == 0) {
             pool.activeStakerCount--;
-        }
-
-        // Update pool's total staked amount
-        unchecked {
-            pool.totalStaked -= amount; // Safe: total always >= user amount
         }
 
         // Transfer tokens back to user
@@ -593,7 +622,7 @@ contract Stake is Ownable, ReentrancyGuard {
             );
         }
 
-        emit Unstaked(poolId, msg.sender, amount);
+        emit Unstaked(poolId, msg.sender, amount, shouldClaimRewards);
     }
 
     /**
