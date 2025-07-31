@@ -57,10 +57,11 @@ contract Stake is Ownable, ReentrancyGuard {
     error Stake__InvalidClaimFee();
     error Stake__StakeAmountTooLarge();
     error Stake__InvalidTokenId();
+    error Stake__RewardRateTooLow();
 
     // MARK: - Structs
 
-    // Gas optimized struct packing - fits in 6 storage slots
+    // Gas optimized struct packing - fits in 7 storage slots
     struct Pool {
         address stakingToken; // 160 bits - slot 0 - immutable
         bool isStakingTokenERC20; // 8 bit - slot 0 - immutable
@@ -68,13 +69,13 @@ contract Stake is Ownable, ReentrancyGuard {
         address creator; // 160 bits - slot 2 - immutable
         uint104 rewardAmount; // 104 bits - slot 3 - immutable
         uint32 rewardDuration; // 32 bits - slot 3 (up to ~136 years in seconds) - immutable
-        uint32 totalSkippedDuration; // 32 bits - slot 3 - Track time when totalStaked was 0 to refund undistributed rewards
         uint40 rewardStartedAt; // 40 bits - slot 3 (until year 36,812) - 0 until first stake
         uint40 cancelledAt; // 40 bits - slot 3 - default 0 (not cancelled)
         uint128 totalStaked; // 128 bits - slot 4
         uint32 activeStakerCount; // 32 bits - slot 4 - number of unique active stakers
         uint40 lastRewardUpdatedAt; // 40 bits - slot 4
         uint256 accRewardPerShare; // 256 bits - slot 5
+        uint104 totalAllocatedRewards; // 104 bits - slot 6 - Track rewards allocated to users (earned but maybe not claimed)
     }
 
     // Gas optimized struct packing - fits in 3 storage slots
@@ -308,9 +309,6 @@ contract Stake is Ownable, ReentrancyGuard {
         // If rewards haven't started yet or no time passed, no need to update
         if (rewardStartedAt == 0 || currentTime <= lastRewardUpdatedAt) return;
 
-        // Update accRewardPerShare
-        pool.accRewardPerShare = _getUpdatedAccRewardPerShare(pool);
-
         // Cache more values for efficiency
         uint32 rewardDuration = pool.rewardDuration;
         uint40 cancelledAt = pool.cancelledAt;
@@ -321,15 +319,21 @@ contract Stake is Ownable, ReentrancyGuard {
             endTime = cancelledAt;
         }
         uint256 toTime = currentTime > endTime ? endTime : currentTime;
+        uint256 timePassed = toTime - lastRewardUpdatedAt;
 
-        if (pool.totalStaked == 0) {
-            // Track the skipped time to refund undistributed rewards on cancellation
-            uint256 skippedTime = toTime - lastRewardUpdatedAt;
-            assert(skippedTime <= rewardDuration);
-            unchecked {
-                pool.totalSkippedDuration += uint32(skippedTime);
-            }
+        // Track allocated rewards if there are stakers and time has passed
+        if (pool.totalStaked > 0 && timePassed > 0) {
+            uint256 totalReward = Math.mulDiv(
+                timePassed,
+                pool.rewardAmount,
+                pool.rewardDuration
+            );
+            // Track these rewards as allocated to users (earned, whether claimed or not)
+            pool.totalAllocatedRewards += uint104(totalReward);
         }
+
+        // Update accRewardPerShare
+        pool.accRewardPerShare = _getUpdatedAccRewardPerShare(pool);
 
         pool.lastRewardUpdatedAt = uint40(toTime);
     }
@@ -358,6 +362,9 @@ contract Stake is Ownable, ReentrancyGuard {
             rewardDuration < MIN_REWARD_DURATION ||
             rewardDuration > MAX_REWARD_DURATION
         ) revert Stake__InvalidDuration();
+        // Validate that reward rate is meaningful to prevent precision loss
+        if (rewardAmount / rewardDuration == 0)
+            revert Stake__RewardRateTooLow();
         if (msg.value != creationFee) revert Stake__InvalidCreationFee();
 
         if (creationFee > 0) {
@@ -375,13 +382,13 @@ contract Stake is Ownable, ReentrancyGuard {
             creator: msg.sender,
             rewardAmount: rewardAmount,
             rewardDuration: rewardDuration,
-            totalSkippedDuration: 0,
             rewardStartedAt: 0, // Will be set on first stake
             cancelledAt: 0,
             totalStaked: 0,
             activeStakerCount: 0,
             lastRewardUpdatedAt: 0, // Will be set on first stake
-            accRewardPerShare: 0
+            accRewardPerShare: 0,
+            totalAllocatedRewards: 0
         });
 
         // Transfer reward tokens from creator to contract (always ERC20)
@@ -425,28 +432,11 @@ contract Stake is Ownable, ReentrancyGuard {
         uint40 currentTime = uint40(block.timestamp);
 
         // Calculate leftover rewards to return to creator
-        uint256 leftoverRewards = 0;
-        if (pool.rewardStartedAt == 0) {
-            // Pool never started, return all rewards
-            leftoverRewards = pool.rewardAmount;
-        } else {
-            uint256 endTime = pool.rewardStartedAt + pool.rewardDuration;
-
-            // Calculate future rewards
-            uint256 futureRewards = 0;
-            if (currentTime < endTime) {
-                uint256 remainingTime = endTime - currentTime;
-                futureRewards =
-                    (remainingTime * pool.rewardAmount) /
-                    pool.rewardDuration;
-            }
-
-            // Calculate skipped rewards from past unstaked periods
-            uint256 skippedRewards = (pool.totalSkippedDuration *
-                pool.rewardAmount) / pool.rewardDuration;
-
-            leftoverRewards = futureRewards + skippedRewards;
-        }
+        // Only return rewards that haven't been allocated to users yet
+        // This prevents precision loss from permanently locking tokens and ensures
+        // that users can still claim rewards they've earned even after cancellation
+        uint256 leftoverRewards = pool.rewardAmount -
+            pool.totalAllocatedRewards;
 
         // Set cancellation time
         pool.cancelledAt = currentTime;
