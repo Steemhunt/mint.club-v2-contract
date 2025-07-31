@@ -96,6 +96,37 @@ describe("Stake", function () {
     await approveTokens(RewardToken, [owner], Stake.target);
   });
 
+  describe("Contract Deployment", function () {
+    it("should deploy with valid creation fee", async function () {
+      const validFee = 5n * 10n ** 17n; // 0.5 ETH
+      const TestStake = await ethers.deployContract("Stake", [
+        owner.address,
+        validFee,
+        0,
+      ]);
+      await TestStake.waitForDeployment();
+      expect(await TestStake.creationFee()).to.equal(validFee);
+    });
+
+    it("should deploy with maximum creation fee (1 ETH)", async function () {
+      const maxFee = 10n ** 18n;
+      const TestStake = await ethers.deployContract("Stake", [
+        owner.address,
+        maxFee,
+        0,
+      ]);
+      await TestStake.waitForDeployment();
+      expect(await TestStake.creationFee()).to.equal(maxFee);
+    });
+
+    it("should revert deployment if creation fee exceeds maximum", async function () {
+      const tooHighFee = 10n ** 18n + 1n;
+      await expect(
+        ethers.deployContract("Stake", [owner.address, tooHighFee, 0])
+      ).to.be.revertedWithCustomError(Stake, "Stake__CreationFeeTooHigh");
+    });
+  });
+
   describe("Stake Operations", function () {
     beforeEach(async function () {
       this.poolId = await createSamplePool();
@@ -2741,6 +2772,22 @@ describe("Stake", function () {
         await expect(
           Stake.connect(alice).updateCreationFee(ethers.parseEther("0.1"))
         ).to.be.revertedWithCustomError(Stake, "OwnableUnauthorizedAccount");
+      });
+
+      it("should allow setting creation fee to maximum (1 ETH)", async function () {
+        const maxFee = 10n ** 18n;
+        await expect(Stake.connect(owner).updateCreationFee(maxFee))
+          .to.emit(Stake, "CreationFeeUpdated")
+          .withArgs(0, maxFee);
+
+        expect(await Stake.creationFee()).to.equal(maxFee);
+      });
+
+      it("should revert if fee is greater than MAX_CREATION_FEE (1 ETH)", async function () {
+        const tooHighFee = 10n ** 18n + 1n;
+        await expect(
+          Stake.connect(owner).updateCreationFee(tooHighFee)
+        ).to.be.revertedWithCustomError(Stake, "Stake__CreationFeeTooHigh");
       });
     }); // updateCreationFee
 

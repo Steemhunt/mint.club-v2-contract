@@ -32,6 +32,7 @@ contract Stake is Ownable, ReentrancyGuard {
     // MARK: - Constants & Errors
 
     uint256 private constant MAX_CLAIM_FEE = 2000; // 20% - for safety when admin privileges are abused
+    uint256 private constant MAX_CREATION_FEE = 1 ether; // 1 ETH - for safety when admin privileges are abused
     uint256 private constant REWARD_PRECISION = 1e18;
     uint256 public constant MIN_REWARD_DURATION = 3600; // 1 hour in seconds
     uint256 public constant MAX_REWARD_DURATION =
@@ -42,6 +43,7 @@ contract Stake is Ownable, ReentrancyGuard {
     error Stake__InvalidToken();
     error Stake__TokenHasTransferFeesOrRebasing();
     error Stake__InvalidCreationFee();
+    error Stake__CreationFeeTooHigh();
     error Stake__FeeTransferFailed();
     error Stake__InvalidDuration();
     error Stake__PoolNotFound();
@@ -625,6 +627,7 @@ contract Stake is Ownable, ReentrancyGuard {
     }
 
     function updateCreationFee(uint256 creationFee_) public onlyOwner {
+        if (creationFee_ > MAX_CREATION_FEE) revert Stake__CreationFeeTooHigh();
         uint256 oldFee = creationFee;
         creationFee = creationFee_;
         emit CreationFeeUpdated(oldFee, creationFee_);
