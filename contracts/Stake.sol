@@ -485,7 +485,7 @@ contract Stake is Ownable, ReentrancyGuard {
         if (cancelledAt > 0) revert Stake__PoolCancelled();
         if (
             rewardStartedAt > 0 &&
-            block.timestamp > rewardStartedAt + rewardDuration
+            block.timestamp >= rewardStartedAt + rewardDuration
         ) {
             revert Stake__PoolFinished();
         }

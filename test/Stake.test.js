@@ -1040,11 +1040,49 @@ describe("Stake", function () {
 
           // Move past pool end time
           const endTime = stakeTime + SIMPLE_POOL.rewardDuration + 1;
-          await time.increaseTo(endTime);
+          await time.setNextBlockTimestamp(endTime);
 
           await expect(
             Stake.connect(alice).stake(this.poolId, wei(100))
           ).to.be.revertedWithCustomError(Stake, "Stake__PoolFinished");
+        });
+
+        it("should revert if attempting to stake at exact reward end time", async function () {
+          // Start rewards by staking
+          const stakeTime = (await time.latest()) + 1000;
+          await time.setNextBlockTimestamp(stakeTime);
+          await Stake.connect(bob).stake(this.poolId, wei(300));
+
+          // Move to exact pool end time (not past it)
+          const exactEndTime = stakeTime + SIMPLE_POOL.rewardDuration;
+          await time.setNextBlockTimestamp(exactEndTime);
+
+          // Should revert at exact end time due to >= boundary condition
+          await expect(
+            Stake.connect(alice).stake(this.poolId, wei(100))
+          ).to.be.revertedWithCustomError(Stake, "Stake__PoolFinished");
+        });
+
+        it("should allow staking one second before reward end time", async function () {
+          // Start rewards by staking
+          const stakeTime = (await time.latest()) + 1000;
+          await time.setNextBlockTimestamp(stakeTime);
+          await Stake.connect(bob).stake(this.poolId, wei(300));
+
+          // Move to 1 seconds before pool end time
+          const beforeEndTime = stakeTime + SIMPLE_POOL.rewardDuration - 1;
+          await time.setNextBlockTimestamp(beforeEndTime);
+
+          // Should allow staking one second before end time
+          await expect(Stake.connect(alice).stake(this.poolId, wei(100))).to.not
+            .be.reverted;
+
+          // Verify stake was successful
+          const userStake = await Stake.userPoolStake(
+            alice.address,
+            this.poolId
+          );
+          expect(userStake.stakedAmount).to.equal(wei(100));
         });
 
         it("should revert if staking token has transfer fees", async function () {
