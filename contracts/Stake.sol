@@ -815,27 +815,49 @@ contract Stake is Ownable, ReentrancyGuard {
         TokenInfo rewardToken;
     }
 
+    // Gas stipend for external view calls to prevent DoS attacks on view functions
+    // 20000 gas handles very long token names/symbols (~256 chars) while preventing DoS
+    uint256 constant METADATA_GAS_STIPEND = 20000;
+    uint256 constant MAX_ITEMS_PER_PAGE = 500;
+
+    /**
+     * @dev Safely fetch token metadata with gas limits to prevent DoS
+     * @param tokenAddress The token contract address
+     * @return TokenInfo struct with token metadata
+     */
     function _getTokenInfo(
         address tokenAddress
     ) internal view returns (TokenInfo memory) {
-        MCV2_ICommonToken token = MCV2_ICommonToken(tokenAddress);
-        string memory symbol;
-        string memory name;
-        uint8 decimals;
-        try token.symbol() returns (string memory _symbol) {
-            symbol = _symbol;
-        } catch {
-            symbol = "undefined";
+        string memory symbol = "undefined";
+        string memory name = "undefined";
+        uint8 decimals = 0;
+
+        // Get symbol with gas limit
+        (bool successSymbol, bytes memory dataSymbol) = tokenAddress.staticcall{
+            gas: METADATA_GAS_STIPEND
+        }(abi.encodeWithSignature("symbol()"));
+
+        if (successSymbol && dataSymbol.length >= 64) {
+            symbol = abi.decode(dataSymbol, (string));
         }
-        try token.name() returns (string memory _name) {
-            name = _name;
-        } catch {
-            name = "undefined";
+
+        // Get name with gas limit
+        (bool successName, bytes memory dataName) = tokenAddress.staticcall{
+            gas: METADATA_GAS_STIPEND
+        }(abi.encodeWithSignature("name()"));
+
+        if (successName && dataName.length >= 64) {
+            name = abi.decode(dataName, (string));
         }
-        try token.decimals() returns (uint8 _decimals) {
-            decimals = _decimals;
-        } catch {
-            decimals = 0;
+
+        // Get decimals with gas limit
+        (bool successDecimals, bytes memory dataDecimals) = tokenAddress
+            .staticcall{gas: METADATA_GAS_STIPEND}(
+            abi.encodeWithSignature("decimals()")
+        );
+
+        if (successDecimals && dataDecimals.length == 32) {
+            decimals = abi.decode(dataDecimals, (uint8));
         }
 
         return TokenInfo({symbol: symbol, name: name, decimals: decimals});
@@ -866,7 +888,9 @@ contract Stake is Ownable, ReentrancyGuard {
         uint256 poolIdFrom,
         uint256 poolIdTo
     ) external view returns (PoolView[] memory poolList) {
-        if (poolIdFrom >= poolIdTo || poolIdTo - poolIdFrom > 1000) {
+        if (
+            poolIdFrom >= poolIdTo || poolIdTo - poolIdFrom > MAX_ITEMS_PER_PAGE
+        ) {
             revert Stake__InvalidPaginationParameters();
         }
 
@@ -901,7 +925,9 @@ contract Stake is Ownable, ReentrancyGuard {
         uint256 poolIdTo,
         address creator
     ) external view returns (PoolView[] memory poolList) {
-        if (poolIdFrom >= poolIdTo || poolIdTo - poolIdFrom > 1000) {
+        if (
+            poolIdFrom >= poolIdTo || poolIdTo - poolIdFrom > MAX_ITEMS_PER_PAGE
+        ) {
             revert Stake__InvalidPaginationParameters();
         }
 

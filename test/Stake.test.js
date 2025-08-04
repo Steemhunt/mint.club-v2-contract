@@ -2193,7 +2193,7 @@ describe("Stake", function () {
 
         it("should handle gas efficiently with large ranges", async function () {
           // Test that the function doesn't consume excessive gas even with max range
-          const tx = await Stake.getPoolsByCreator(0, 1000, owner.address);
+          const tx = await Stake.getPoolsByCreator(0, 500, owner.address);
 
           // Should complete without reverting (gas limit test)
           expect(tx).to.have.length(3); // Owner's 3 pools
@@ -2223,6 +2223,143 @@ describe("Stake", function () {
           expect(version).to.equal("1.0.0");
         });
       }); // version
+
+      describe("DoS Protection", function () {
+        it("should handle gas bomb tokens without reverting", async function () {
+          // Deploy gas bomb token
+          const GasBombToken = await ethers.getContractFactory("GasBombToken");
+          const gasBombToken = await GasBombToken.deploy();
+          await gasBombToken.waitForDeployment();
+
+          // Create a reward token for the pool
+          const TestToken = await ethers.getContractFactory("TestToken");
+          const rewardToken = await TestToken.deploy(
+            ethers.parseEther("10000"),
+            "Test Reward Token",
+            "TREWARD",
+            18
+          );
+          await rewardToken.waitForDeployment();
+
+          // Create pool with gas bomb token as staking token
+          const rewardAmount = ethers.parseEther("100"); // Smaller amount
+          await rewardToken.connect(owner).approve(Stake.target, rewardAmount);
+
+          const gasBombPoolId = await Stake.poolCount();
+          const createTx = await Stake.createPool(
+            gasBombToken.target, // Gas bomb staking token
+            true, // isStakingTokenERC20
+            rewardToken.target,
+            rewardAmount,
+            0, // immediate start (rewardStartsAt)
+            7200 // 2 hours duration (rewardDuration)
+          );
+
+          // Test getPool - should not revert despite gas bomb
+          const poolView = await Stake.getPool(gasBombPoolId);
+
+          // Gas bomb token should return fallback values (gas stipend prevents the bomb)
+          expect(poolView.stakingToken.symbol).to.equal("undefined");
+          expect(poolView.stakingToken.name).to.equal("undefined");
+          expect(poolView.stakingToken.decimals).to.equal(0);
+
+          // Reward token should work normally
+          expect(poolView.rewardToken.symbol).to.equal("TREWARD");
+          expect(poolView.rewardToken.name).to.equal("Test Reward Token");
+          expect(poolView.rewardToken.decimals).to.equal(18);
+
+          // Test getPools - should not revert despite gas bomb
+          const pools = await Stake.getPools(gasBombPoolId, gasBombPoolId + 1n);
+          expect(pools).to.have.length(1);
+          expect(pools[0].stakingToken.symbol).to.equal("undefined");
+          expect(pools[0].rewardToken.symbol).to.equal("TREWARD");
+
+          // Test getPoolsByCreator - should not revert despite gas bomb
+          const creatorPools = await Stake.getPoolsByCreator(
+            0,
+            500, // Updated to respect MAX_ITEMS_PER_PAGE = 500
+            owner.address
+          );
+          expect(creatorPools.length).to.be.greaterThan(0);
+
+          const gasBombPool = creatorPools.find(
+            (p) => p.pool.stakingToken === gasBombToken.target
+          );
+          expect(gasBombPool).to.exist;
+          expect(gasBombPool.stakingToken.symbol).to.equal("undefined");
+        });
+
+        it("should handle tokens with very long names/symbols without gas issues", async function () {
+          // Create very long strings (128 characters each - realistic but long)
+          const longName = "A".repeat(128);
+          const longSymbol = "B".repeat(128);
+
+          // Deploy token with very long name and symbol
+          const TestToken = await ethers.getContractFactory("TestToken");
+          const longNameToken = await TestToken.deploy(
+            ethers.parseEther("10000"), // supply
+            longName,
+            longSymbol,
+            18 // decimals
+          );
+          await longNameToken.waitForDeployment();
+
+          // Create reward token
+          const rewardToken = await TestToken.deploy(
+            ethers.parseEther("10000"),
+            "Reward Token",
+            "REWARD",
+            18
+          );
+          await rewardToken.waitForDeployment();
+
+          // Create pool with long name token as staking token
+          const rewardAmount = ethers.parseEther("100");
+          await rewardToken.connect(owner).approve(Stake.target, rewardAmount);
+
+          const poolId = await Stake.poolCount();
+          await Stake.createPool(
+            longNameToken.target, // Long name staking token
+            true,
+            rewardToken.target,
+            rewardAmount,
+            0, // immediate start
+            7200 // 2 hours duration
+          );
+
+          // Test that view functions work correctly with long names
+          const poolView = await Stake.getPool(poolId);
+
+          // Should return the full long name and symbol (not truncated or "undefined")
+          expect(poolView.stakingToken.symbol).to.equal(longSymbol);
+          expect(poolView.stakingToken.name).to.equal(longName);
+          expect(poolView.stakingToken.decimals).to.equal(18);
+
+          // Reward token should work normally too
+          expect(poolView.rewardToken.symbol).to.equal("REWARD");
+          expect(poolView.rewardToken.name).to.equal("Reward Token");
+          expect(poolView.rewardToken.decimals).to.equal(18);
+
+          // Test getPools also works with long names
+          const pools = await Stake.getPools(poolId, poolId + 1n);
+          expect(pools).to.have.length(1);
+          expect(pools[0].stakingToken.symbol).to.equal(longSymbol);
+          expect(pools[0].stakingToken.name).to.equal(longName);
+
+          // Test getPoolsByCreator also works
+          const creatorPools = await Stake.getPoolsByCreator(
+            0,
+            500,
+            owner.address
+          );
+          const longNamePool = creatorPools.find(
+            (p) => p.pool.stakingToken === longNameToken.target
+          );
+          expect(longNamePool).to.exist;
+          expect(longNamePool.stakingToken.symbol).to.equal(longSymbol);
+          expect(longNamePool.stakingToken.name).to.equal(longName);
+        });
+      }); // DoS Protection
     }); // View Functions
 
     describe("Edge Cases", function () {
