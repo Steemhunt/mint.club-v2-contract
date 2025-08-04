@@ -58,6 +58,7 @@ contract Stake is Ownable, ReentrancyGuard {
     error Stake__StakeAmountTooLarge();
     error Stake__InvalidTokenId();
     error Stake__RewardRateTooLow();
+    error Stake__InvalidRewardStartsAt();
 
     // MARK: - Structs
 
@@ -69,6 +70,7 @@ contract Stake is Ownable, ReentrancyGuard {
         address creator; // 160 bits - slot 2 - immutable
         uint104 rewardAmount; // 104 bits - slot 3 - immutable
         uint32 rewardDuration; // 32 bits - slot 3 (up to ~136 years in seconds) - immutable
+        uint40 rewardStartsAt; // 40 bits - slot 3 - immutable (0 for immediate start on the first stake, future time up to 1 week from now to allow pre-staking)
         uint40 rewardStartedAt; // 40 bits - slot 3 (until year 36,812) - 0 until first stake
         uint40 cancelledAt; // 40 bits - slot 3 - default 0 (not cancelled)
         uint128 totalStaked; // 128 bits - slot 4
@@ -109,6 +111,7 @@ contract Stake is Ownable, ReentrancyGuard {
         bool isStakingTokenERC20,
         address rewardToken,
         uint104 rewardAmount,
+        uint40 rewardStartsAt,
         uint32 rewardDuration
     );
     event Staked(
@@ -346,6 +349,7 @@ contract Stake is Ownable, ReentrancyGuard {
      * @param stakingToken The address of the token to be staked
      * @param rewardToken The address of the reward token
      * @param rewardAmount The total amount of rewards to be distributed
+     * @param rewardStartsAt The timestamp when rewards should start (max 1 week from now)
      * @param rewardDuration The duration in seconds over which rewards are distributed
      * @return poolId The ID of the newly created pool
      */
@@ -354,6 +358,7 @@ contract Stake is Ownable, ReentrancyGuard {
         bool isStakingTokenERC20,
         address rewardToken,
         uint104 rewardAmount,
+        uint40 rewardStartsAt,
         uint32 rewardDuration
     ) external payable nonReentrant returns (uint256 poolId) {
         if (stakingToken == address(0)) revert Stake__InvalidToken();
@@ -366,6 +371,8 @@ contract Stake is Ownable, ReentrancyGuard {
         // Validate that reward rate is meaningful to prevent precision loss
         if (rewardAmount / rewardDuration == 0)
             revert Stake__RewardRateTooLow();
+        if (rewardStartsAt > block.timestamp + 7 days)
+            revert Stake__InvalidRewardStartsAt();
         if (msg.value != creationFee) revert Stake__InvalidCreationFee();
 
         if (creationFee > 0) {
@@ -383,11 +390,12 @@ contract Stake is Ownable, ReentrancyGuard {
             creator: msg.sender,
             rewardAmount: rewardAmount,
             rewardDuration: rewardDuration,
-            rewardStartedAt: 0, // Will be set on first stake
+            rewardStartsAt: rewardStartsAt,
+            rewardStartedAt: 0,
             cancelledAt: 0,
             totalStaked: 0,
             activeStakerCount: 0,
-            lastRewardUpdatedAt: 0, // Will be set on first stake
+            lastRewardUpdatedAt: 0,
             accRewardPerShare: 0,
             totalAllocatedRewards: 0
         });
@@ -408,6 +416,7 @@ contract Stake is Ownable, ReentrancyGuard {
             isStakingTokenERC20,
             rewardToken,
             rewardAmount,
+            rewardStartsAt,
             rewardDuration
         );
     }
@@ -476,16 +485,15 @@ contract Stake is Ownable, ReentrancyGuard {
 
         Pool storage pool = pools[poolId];
 
-        // Cache frequently accessed storage values for gas efficiency
-        uint40 cancelledAt = pool.cancelledAt;
-        uint40 rewardStartedAt = pool.rewardStartedAt;
-        uint32 rewardDuration = pool.rewardDuration;
-        uint128 totalStaked = pool.totalStaked;
+        if (pool.cancelledAt > 0) revert Stake__PoolCancelled();
 
-        if (cancelledAt > 0) revert Stake__PoolCancelled();
+        // Cache frequently accessed storage values for gas efficiency
+        uint40 rewardStartedAt = pool.rewardStartedAt;
+
+        // Users can stake anytime now (pre-staking allowed), but check if rewards period has ended
         if (
             rewardStartedAt > 0 &&
-            block.timestamp >= rewardStartedAt + rewardDuration
+            block.timestamp >= rewardStartedAt + pool.rewardDuration
         ) {
             revert Stake__PoolFinished();
         }
@@ -495,14 +503,23 @@ contract Stake is Ownable, ReentrancyGuard {
         // safely checks for overflow and reverts with the custom error
         if (
             type(uint104).max - amount < userStake.stakedAmount ||
-            type(uint128).max - amount < totalStaked
+            type(uint128).max - amount < pool.totalStaked
         ) revert Stake__StakeAmountTooLarge();
 
-        // If this is the first stake in the pool, start the reward clock
-        if (rewardStartedAt == 0 && totalStaked == 0) {
+        // If this is the first stake in the pool, initialize the reward clock
+        if (rewardStartedAt == 0) {
             uint40 currentTime = uint40(block.timestamp);
-            pool.rewardStartedAt = currentTime;
-            pool.lastRewardUpdatedAt = currentTime;
+            uint40 rewardStartsAt = pool.rewardStartsAt;
+
+            if (currentTime >= rewardStartsAt) {
+                // Start rewards immediately if we're past the scheduled start time
+                pool.rewardStartedAt = currentTime;
+                pool.lastRewardUpdatedAt = currentTime;
+            } else {
+                // Schedule rewards to start at rewardStartsAt (allow pre-staking)
+                pool.rewardStartedAt = rewardStartsAt;
+                pool.lastRewardUpdatedAt = rewardStartsAt;
+            }
         }
 
         _updatePool(poolId);
@@ -606,6 +623,17 @@ contract Stake is Ownable, ReentrancyGuard {
         // If user completely unstaked, decrement active staker count
         if (userStake.stakedAmount == 0) {
             pool.activeStakerCount--;
+        }
+
+        // If everyone has unstaked before rewards actually started, reset the reward clock
+        // This prevents "wasted" rewards during periods when no one is staked
+        if (
+            pool.totalStaked == 0 &&
+            pool.rewardStartedAt > 0 &&
+            block.timestamp < pool.rewardStartedAt
+        ) {
+            pool.rewardStartedAt = 0;
+            pool.lastRewardUpdatedAt = 0;
         }
 
         // Transfer tokens back to user

@@ -66,7 +66,8 @@ describe("Stake", function () {
 
   const createSamplePool = async (
     creator = owner,
-    isStakingTokenERC20 = true
+    isStakingTokenERC20 = true,
+    rewardStartsAt = 0 // 0 = start on first stake, future time = pre-staking allowed
   ) => {
     const poolId = await Stake.poolCount(); // Get current pool count before creating
     await Stake.connect(creator).createPool(
@@ -74,6 +75,7 @@ describe("Stake", function () {
       isStakingTokenERC20,
       SIMPLE_POOL.rewardToken,
       SIMPLE_POOL.rewardAmount,
+      rewardStartsAt,
       SIMPLE_POOL.rewardDuration
     );
     return poolId; // Return the pool ID that was created
@@ -158,8 +160,11 @@ describe("Stake", function () {
         expect(this.pool.activeStakerCount).to.equal(1);
       });
 
-      it("should set rewardStartedAt when first stake happens", async function () {
-        expect(this.pool.rewardStartedAt).to.equal(await time.latest());
+      it("should initialize reward clock on first stake", async function () {
+        // Both rewardStartedAt and lastRewardUpdatedAt should be set to current time
+        const stakeTime = await time.latest();
+        expect(this.pool.rewardStartedAt).to.equal(stakeTime);
+        expect(this.pool.lastRewardUpdatedAt).to.equal(stakeTime);
       });
 
       it("should emit Staked event", async function () {
@@ -512,6 +517,7 @@ describe("Stake", function () {
             true,
             SIMPLE_POOL.rewardToken,
             SIMPLE_POOL.rewardAmount,
+            0,
             SIMPLE_POOL.rewardDuration
           )
         )
@@ -523,6 +529,7 @@ describe("Stake", function () {
             true,
             SIMPLE_POOL.rewardToken,
             SIMPLE_POOL.rewardAmount,
+            0,
             SIMPLE_POOL.rewardDuration
           );
       });
@@ -778,6 +785,7 @@ describe("Stake", function () {
               true,
               SIMPLE_POOL.rewardToken,
               SIMPLE_POOL.rewardAmount,
+              0,
               SIMPLE_POOL.rewardDuration
             )
           ).to.be.revertedWithCustomError(Stake, "Stake__InvalidToken");
@@ -790,6 +798,7 @@ describe("Stake", function () {
               true,
               ethers.ZeroAddress,
               SIMPLE_POOL.rewardAmount,
+              0,
               SIMPLE_POOL.rewardDuration
             )
           ).to.be.revertedWithCustomError(Stake, "Stake__InvalidToken");
@@ -801,6 +810,7 @@ describe("Stake", function () {
               SIMPLE_POOL.stakingToken,
               true,
               SIMPLE_POOL.rewardToken,
+              0,
               0,
               SIMPLE_POOL.rewardDuration
             )
@@ -814,6 +824,7 @@ describe("Stake", function () {
               true,
               SIMPLE_POOL.rewardToken,
               SIMPLE_POOL.rewardAmount,
+              0,
               MIN_REWARD_DURATION - 1n
             )
           ).to.be.revertedWithCustomError(Stake, "Stake__InvalidDuration");
@@ -826,6 +837,7 @@ describe("Stake", function () {
               true,
               SIMPLE_POOL.rewardToken,
               SIMPLE_POOL.rewardAmount,
+              0,
               MAX_REWARD_DURATION + 1n
             )
           ).to.be.revertedWithCustomError(Stake, "Stake__InvalidDuration");
@@ -838,6 +850,7 @@ describe("Stake", function () {
               true,
               SIMPLE_POOL.rewardToken,
               SIMPLE_POOL.rewardAmount,
+              0,
               MIN_REWARD_DURATION
             )
           ).to.not.be.reverted;
@@ -850,6 +863,7 @@ describe("Stake", function () {
               true,
               SIMPLE_POOL.rewardToken,
               SIMPLE_POOL.rewardAmount,
+              0,
               MAX_REWARD_DURATION
             )
           ).to.not.be.reverted;
@@ -868,6 +882,7 @@ describe("Stake", function () {
               true,
               SIMPLE_POOL.rewardToken,
               SIMPLE_POOL.rewardAmount,
+              0,
               SIMPLE_POOL.rewardDuration
             )
           ).to.be.revertedWithCustomError(
@@ -890,6 +905,7 @@ describe("Stake", function () {
               true,
               SIMPLE_POOL.rewardToken,
               SIMPLE_POOL.rewardAmount,
+              0,
               SIMPLE_POOL.rewardDuration
             )
           ).to.be.revertedWithCustomError(
@@ -911,6 +927,7 @@ describe("Stake", function () {
             true,
             SIMPLE_POOL.rewardToken,
             SIMPLE_POOL.rewardAmount,
+            0,
             SIMPLE_POOL.rewardDuration
           );
 
@@ -943,6 +960,7 @@ describe("Stake", function () {
               true,
               SIMPLE_POOL.rewardToken,
               customRewardAmount,
+              0,
               customDuration
             )
           )
@@ -954,6 +972,7 @@ describe("Stake", function () {
               true,
               SIMPLE_POOL.rewardToken,
               customRewardAmount,
+              0,
               customDuration
             );
 
@@ -987,6 +1006,7 @@ describe("Stake", function () {
               true,
               TaxToken.target,
               wei(10000),
+              0,
               SIMPLE_POOL.rewardDuration
             )
           ).to.be.revertedWithCustomError(
@@ -1005,10 +1025,111 @@ describe("Stake", function () {
               true,
               RewardToken.target,
               lowRewardAmount,
+              0,
               longDuration
             )
           ).to.be.revertedWithCustomError(Stake, "Stake__RewardRateTooLow");
         });
+
+        describe("Reward Start Time Validations", function () {
+          beforeEach(async function () {
+            await RewardToken.connect(owner).approve(
+              Stake.target,
+              SIMPLE_POOL.rewardAmount
+            );
+          });
+
+          it("should accept valid future rewardStartsAt within 1 week", async function () {
+            const futureTime = (await time.latest()) + 24 * 60 * 60; // 1 day from now
+            await expect(
+              Stake.connect(owner).createPool(
+                SIMPLE_POOL.stakingToken,
+                true,
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                futureTime,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.not.be.reverted;
+          });
+
+          it("should revert if rewardStartsAt is more than 1 week in the future", async function () {
+            const tooFarFuture = (await time.latest()) + 7 * 24 * 60 * 60 + 2; // 7 days and 2 second from now
+            await expect(
+              Stake.connect(owner).createPool(
+                SIMPLE_POOL.stakingToken,
+                true,
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                tooFarFuture,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.revertedWithCustomError(
+              Stake,
+              "Stake__InvalidRewardStartsAt"
+            );
+          });
+
+          it("should accept rewardStartedAt exactly 1 week in the future", async function () {
+            const exactlyOneWeek = (await time.latest()) + 7 * 24 * 60 * 60; // exactly 7 days
+            await expect(
+              Stake.connect(owner).createPool(
+                SIMPLE_POOL.stakingToken,
+                true,
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                exactlyOneWeek,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.not.be.reverted;
+          });
+
+          it("should emit PoolCreated event with rewardStartsAt", async function () {
+            const futureTime = (await time.latest()) + 3600; // 1 hour from now
+            const poolId = await Stake.poolCount();
+
+            await expect(
+              Stake.connect(owner).createPool(
+                SIMPLE_POOL.stakingToken,
+                true,
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                futureTime,
+                SIMPLE_POOL.rewardDuration
+              )
+            )
+              .to.emit(Stake, "PoolCreated")
+              .withArgs(
+                poolId,
+                owner.address,
+                SIMPLE_POOL.stakingToken,
+                true,
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                futureTime,
+                SIMPLE_POOL.rewardDuration
+              );
+          });
+
+          it("should set rewardStartsAt in pool correctly", async function () {
+            const futureTime = (await time.latest()) + 3600; // 1 hour from now
+            const poolId = await Stake.poolCount();
+
+            await Stake.connect(owner).createPool(
+              SIMPLE_POOL.stakingToken,
+              true,
+              SIMPLE_POOL.rewardToken,
+              SIMPLE_POOL.rewardAmount,
+              futureTime,
+              SIMPLE_POOL.rewardDuration
+            );
+
+            const pool = await Stake.pools(poolId);
+            expect(pool.rewardStartsAt).to.equal(futureTime);
+            expect(pool.rewardStartedAt).to.equal(0); // Not started yet until someone stakes
+            expect(pool.lastRewardUpdatedAt).to.equal(0); // Not started yet until someone stakes
+          });
+        }); // Reward Start Time Validations
       }); // Pool Creation Validations
 
       describe("Staking Validations", function () {
@@ -1022,6 +1143,24 @@ describe("Stake", function () {
           await expect(
             Stake.connect(alice).stake(999, wei(100))
           ).to.be.revertedWithCustomError(Stake, "Stake__PoolNotFound");
+        });
+
+        it("should allow pre-staking before pool start time", async function () {
+          // Create a pool with start time 1 hour in the future
+          const futureStartTime = (await time.latest()) + 3600; // 1 hour from now
+          const poolId = await createSamplePool(owner, true, futureStartTime);
+
+          // Should now allow staking before the start time (pre-staking)
+          await expect(Stake.connect(alice).stake(poolId, wei(100))).to.not.be
+            .reverted;
+
+          // Verify stake was successful
+          const userStake = await Stake.userPoolStake(alice.address, poolId);
+          expect(userStake.stakedAmount).to.equal(wei(100));
+
+          // Verify rewards are scheduled to start at futureStartTime
+          const pool = await Stake.pools(poolId);
+          expect(pool.rewardStartedAt).to.equal(futureStartTime);
         });
 
         it("should revert if pool is cancelled", async function () {
@@ -1100,6 +1239,7 @@ describe("Stake", function () {
             true,
             RewardToken.target,
             SIMPLE_POOL.rewardAmount,
+            0,
             SIMPLE_POOL.rewardDuration
           );
 
@@ -1115,6 +1255,174 @@ describe("Stake", function () {
             "Stake__TokenHasTransferFeesOrRebasing"
           );
         });
+
+        describe("Reward Start Time Integration Tests", function () {
+          it("should allow staking after pool start time", async function () {
+            // Create a pool with start time 1000 seconds in the future
+            const futureStartTime = (await time.latest()) + 1000;
+            const poolId = await createSamplePool(owner, true, futureStartTime);
+
+            // Move time to after the start time
+            await time.setNextBlockTimestamp(futureStartTime + 1);
+
+            // Should allow staking after start time
+            await expect(Stake.connect(alice).stake(poolId, wei(100))).to.not.be
+              .reverted;
+
+            // Verify stake was successful
+            const userStake = await Stake.userPoolStake(alice.address, poolId);
+            expect(userStake.stakedAmount).to.equal(wei(100));
+          });
+
+          it("should allow staking exactly at pool start time", async function () {
+            // Create a pool with start time 1000 seconds in the future
+            const futureStartTime = (await time.latest()) + 1000;
+            const poolId = await createSamplePool(owner, true, futureStartTime);
+
+            // Move time to exactly the start time
+            await time.setNextBlockTimestamp(futureStartTime);
+
+            // Should allow staking at exactly start time
+            await expect(Stake.connect(alice).stake(poolId, wei(100))).to.not.be
+              .reverted;
+
+            // Verify stake was successful
+            const userStake = await Stake.userPoolStake(alice.address, poolId);
+            expect(userStake.stakedAmount).to.equal(wei(100));
+          });
+
+          it("should not start rewards until first stake even with preset start time", async function () {
+            // Create a pool with start time in the past
+            const pastStartTime = (await time.latest()) - 100;
+            const poolId = await createSamplePool(owner, true, pastStartTime);
+
+            // Move forward in time without any stakes
+            await time.increase(50);
+
+            // Now stake
+            await Stake.connect(alice).stake(poolId, wei(100));
+
+            // Move forward a bit more
+            await time.increase(100);
+
+            // Check claimable rewards - should only be based on time since stake, not since pastStartTime
+            const [claimable] = await Stake.claimableReward(
+              poolId,
+              alice.address
+            );
+            expect(claimable).to.be.equal(wei(100)); // 100 seconds since stake
+          });
+
+          it("should handle pre-staking before scheduled reward start", async function () {
+            // Create a pool with start time 1000 seconds in the future
+            const futureStartTime = (await time.latest()) + 1000;
+            const poolId = await createSamplePool(owner, true, futureStartTime);
+
+            // Pre-stake before the scheduled start time
+            await Stake.connect(alice).stake(poolId, wei(100));
+
+            // Verify stake worked and rewards are scheduled for future
+            const pool = await Stake.pools(poolId);
+            expect(pool.totalStaked).to.equal(wei(100));
+            expect(pool.rewardStartedAt).to.equal(futureStartTime); // Scheduled for future
+            expect(pool.rewardStartsAt).to.equal(futureStartTime);
+            const [claimable] = await Stake.claimableReward(
+              poolId,
+              alice.address
+            );
+            expect(claimable).to.equal(0); // No rewards during pre-staking period
+          });
+
+          it("should start rewards after scheduled start time", async function () {
+            const futureStartTime = (await time.latest()) + 1000;
+            const poolId = await createSamplePool(owner, true, futureStartTime);
+
+            // Pre-stake before the scheduled start time
+            await Stake.connect(alice).stake(poolId, wei(100));
+            await time.increase(100); // 100 seconds after alice's stake
+            await Stake.connect(bob).stake(poolId, wei(100));
+
+            // Move forward and check rewards
+            await time.increaseTo(futureStartTime + 1000);
+
+            const [claimableAlice] = await Stake.claimableReward(
+              poolId,
+              alice.address
+            );
+            const [claimableBob] = await Stake.claimableReward(
+              poolId,
+              bob.address
+            );
+
+            expect(claimableAlice).to.equal(wei(500)); // 1000 seconds after reward start time, 50% of 1000 seconds
+            expect(claimableBob).to.equal(wei(500)); // same as alice even though bob staked later
+          });
+
+          it("should reset reward clock if everyone unstakes before rewards start", async function () {
+            // Create a pool with start time 1000 seconds in the future
+            const futureStartTime = (await time.latest()) + 1000;
+            const poolId = await createSamplePool(owner, true, futureStartTime);
+
+            // Alice pre-stakes
+            await Stake.connect(alice).stake(poolId, wei(100));
+
+            // Verify reward clock was set to future time
+            let pool = await Stake.pools(poolId);
+            expect(pool.rewardStartedAt).to.equal(futureStartTime);
+            expect(pool.lastRewardUpdatedAt).to.equal(futureStartTime);
+            expect(pool.totalStaked).to.equal(wei(100));
+
+            // Alice unstakes before rewards start (everyone leaves)
+            await Stake.connect(alice).unstake(poolId, wei(100));
+
+            // Verify reward clock was reset since everyone left before rewards started
+            pool = await Stake.pools(poolId);
+            expect(pool.rewardStartedAt).to.equal(0); // Reset!
+            expect(pool.lastRewardUpdatedAt).to.equal(0); // Reset!
+            expect(pool.totalStaked).to.equal(0);
+
+            // Bob stakes after the original scheduled start time
+            await time.increase(1100); // Move past the original futureStartTime
+            await Stake.connect(bob).stake(poolId, wei(200));
+
+            // Verify rewards start immediately now (not at the original scheduled time)
+            pool = await Stake.pools(poolId);
+            expect(pool.rewardStartedAt).to.equal(await time.latest()); // Current time, not original schedule
+            expect(pool.totalStaked).to.equal(wei(200));
+
+            // Move forward and verify rewards work correctly
+            await time.increase(100);
+            const [claimable] = await Stake.claimableReward(
+              poolId,
+              bob.address
+            );
+            expect(claimable).to.be.equal(wei(100)); // 100 seconds of rewards
+          });
+
+          it("should NOT reset reward clock if someone unstakes AFTER rewards started", async function () {
+            // Create a pool with start time 100 seconds in the future
+            const futureStartTime = (await time.latest()) + 100;
+            const poolId = await createSamplePool(owner, true, futureStartTime);
+
+            // Alice pre-stakes
+            await Stake.connect(alice).stake(poolId, wei(100));
+
+            // Move time past the start time (rewards now active)
+            await time.setNextBlockTimestamp(futureStartTime + 50);
+
+            // Trigger pool update by staking more
+            await Stake.connect(bob).stake(poolId, wei(50));
+
+            // Now Alice unstakes after rewards have started
+            await Stake.connect(alice).unstake(poolId, wei(100));
+            await Stake.connect(bob).unstake(poolId, wei(50)); // Everyone leaves
+
+            // Verify reward clock was NOT reset (rewards had already started)
+            const pool = await Stake.pools(poolId);
+            expect(pool.rewardStartedAt).to.not.equal(0); // Should NOT be reset
+            expect(pool.totalStaked).to.equal(0);
+          });
+        }); // Reward Start Time Integration Tests
       }); // Staking Validations
 
       describe("Unstaking Validations", function () {
@@ -1393,6 +1701,7 @@ describe("Stake", function () {
             true,
             RewardToken.target,
             SIMPLE_POOL.rewardAmount,
+            0,
             SIMPLE_POOL.rewardDuration
           );
 
@@ -1419,6 +1728,7 @@ describe("Stake", function () {
             false, // isStakingTokenERC20 = false for ERC1155
             RewardToken.target,
             SIMPLE_POOL.rewardAmount,
+            0,
             SIMPLE_POOL.rewardDuration
           );
 
@@ -1456,6 +1766,7 @@ describe("Stake", function () {
             true,
             RewardToken.target,
             SIMPLE_POOL.rewardAmount,
+            0,
             SIMPLE_POOL.rewardDuration
           );
 
@@ -1539,6 +1850,7 @@ describe("Stake", function () {
             false, // ERC1155
             RewardToken.target,
             SIMPLE_POOL.rewardAmount,
+            0,
             SIMPLE_POOL.rewardDuration
           );
 
@@ -1586,6 +1898,7 @@ describe("Stake", function () {
             true,
             RewardToken.target,
             SIMPLE_POOL.rewardAmount,
+            0,
             SIMPLE_POOL.rewardDuration
           );
 
@@ -1595,6 +1908,7 @@ describe("Stake", function () {
             false,
             RewardToken.target,
             SIMPLE_POOL.rewardAmount,
+            0,
             SIMPLE_POOL.rewardDuration
           );
 
@@ -1645,6 +1959,7 @@ describe("Stake", function () {
             true,
             RewardToken.target,
             SIMPLE_POOL.rewardAmount,
+            0,
             SIMPLE_POOL.rewardDuration
           );
 
@@ -1661,6 +1976,7 @@ describe("Stake", function () {
             true,
             RewardToken.target,
             SIMPLE_POOL.rewardAmount,
+            0,
             SIMPLE_POOL.rewardDuration
           );
           this.bobPoolId2 = await Stake.poolCount();
@@ -1669,6 +1985,7 @@ describe("Stake", function () {
             true,
             RewardToken.target,
             SIMPLE_POOL.rewardAmount,
+            0,
             SIMPLE_POOL.rewardDuration
           );
 
@@ -1842,6 +2159,7 @@ describe("Stake", function () {
             true,
             RewardToken.target,
             SIMPLE_POOL.rewardAmount,
+            0,
             SIMPLE_POOL.rewardDuration
           );
 
@@ -2020,6 +2338,7 @@ describe("Stake", function () {
             true,
             StakingToken.target, // Same token
             SIMPLE_POOL.rewardAmount,
+            0,
             SIMPLE_POOL.rewardDuration
           );
 
@@ -2065,6 +2384,7 @@ describe("Stake", function () {
             true,
             Token8.target,
             wei(10000, 8), // 10k reward tokens, with 8 decimals
+            0,
             10000n // 10000 seconds
           );
 
@@ -2086,6 +2406,7 @@ describe("Stake", function () {
             true,
             RewardToken.target,
             SIMPLE_POOL.rewardAmount,
+            0,
             SIMPLE_POOL.rewardDuration
           );
 
@@ -2142,6 +2463,7 @@ describe("Stake", function () {
             true,
             RewardToken.target,
             this.rewardAmount,
+            0,
             this.duration
           );
 
@@ -2344,6 +2666,7 @@ describe("Stake", function () {
               true,
               RewardToken.target,
               SIMPLE_POOL.rewardAmount,
+              0,
               maxDuration
             )
           ).to.not.be.reverted;
@@ -2517,6 +2840,7 @@ describe("Stake", function () {
             true,
             LargeRewardToken.target,
             maxRewardAmount,
+            0,
             MIN_REWARD_DURATION
           );
 
@@ -2586,6 +2910,7 @@ describe("Stake", function () {
         false, // isStakingTokenERC20 = false for ERC1155
         RewardToken.target,
         SIMPLE_POOL.rewardAmount,
+        0,
         SIMPLE_POOL.rewardDuration
       );
 
@@ -3088,6 +3413,7 @@ describe("Stake", function () {
           true,
           RewardToken.target,
           SIMPLE_POOL.rewardAmount,
+          0,
           SIMPLE_POOL.rewardDuration,
           { value: ethers.parseEther("0.05") }
         )
@@ -3104,6 +3430,7 @@ describe("Stake", function () {
         true,
         RewardToken.target,
         SIMPLE_POOL.rewardAmount,
+        0,
         SIMPLE_POOL.rewardDuration,
         { value: ethers.parseEther("0.1") }
       );
@@ -3121,6 +3448,7 @@ describe("Stake", function () {
           true,
           RewardToken.target,
           SIMPLE_POOL.rewardAmount,
+          0,
           SIMPLE_POOL.rewardDuration,
           { value: 0 }
         )
