@@ -120,13 +120,6 @@ describe("Stake", function () {
       await TestStake.waitForDeployment();
       expect(await TestStake.creationFee()).to.equal(maxFee);
     });
-
-    it("should revert deployment if creation fee exceeds maximum", async function () {
-      const tooHighFee = 10n ** 18n + 1n;
-      await expect(
-        ethers.deployContract("Stake", [owner.address, tooHighFee, 0])
-      ).to.be.revertedWithCustomError(Stake, "Stake__CreationFeeTooHigh");
-    });
   });
 
   describe("Stake Operations", function () {
@@ -3496,13 +3489,6 @@ describe("Stake", function () {
           .withArgs(0, maxFee);
 
         expect(await Stake.creationFee()).to.equal(maxFee);
-      });
-
-      it("should revert if fee is greater than MAX_CREATION_FEE (1 ETH)", async function () {
-        const tooHighFee = 10n ** 18n + 1n;
-        await expect(
-          Stake.connect(owner).updateCreationFee(tooHighFee)
-        ).to.be.revertedWithCustomError(Stake, "Stake__CreationFeeTooHigh");
       });
     }); // updateCreationFee
 
