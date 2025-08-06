@@ -42,7 +42,6 @@ contract Stake is Ownable, ReentrancyGuard {
     error Stake__InvalidToken();
     error Stake__TokenHasTransferFeesOrRebasing();
     error Stake__InvalidCreationFee();
-    error Stake__CreationFeeTooHigh();
     error Stake__FeeTransferFailed();
     error Stake__InvalidDuration();
     error Stake__PoolNotFound();
