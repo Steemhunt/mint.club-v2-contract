@@ -808,6 +808,7 @@ contract Stake is Ownable, ReentrancyGuard {
         uint8 decimals;
     }
     struct PoolView {
+        uint256 poolId;
         Pool pool;
         TokenInfo stakingToken;
         TokenInfo rewardToken;
@@ -873,7 +874,7 @@ contract Stake is Ownable, ReentrancyGuard {
         TokenInfo memory stakingTokenInfo = _getTokenInfo(pool.stakingToken);
         TokenInfo memory rewardTokenInfo = _getTokenInfo(pool.rewardToken);
 
-        return PoolView(pool, stakingTokenInfo, rewardTokenInfo);
+        return PoolView(poolId, pool, stakingTokenInfo, rewardTokenInfo);
     }
 
     /**
@@ -899,8 +900,10 @@ contract Stake is Ownable, ReentrancyGuard {
             poolList = new PoolView[](length);
 
             for (uint256 i = 0; i < length; ++i) {
-                Pool memory pool = pools[poolIdFrom + i];
+                uint256 poolId = poolIdFrom + i;
+                Pool memory pool = pools[poolId];
                 poolList[i] = PoolView({
+                    poolId: poolId,
                     pool: pool,
                     stakingToken: _getTokenInfo(pool.stakingToken),
                     rewardToken: _getTokenInfo(pool.rewardToken)
@@ -948,6 +951,7 @@ contract Stake is Ownable, ReentrancyGuard {
                 if (pool.creator != creator) continue;
 
                 tempResults[validCount] = PoolView({
+                    poolId: i,
                     pool: pool,
                     stakingToken: _getTokenInfo(pool.stakingToken),
                     rewardToken: _getTokenInfo(pool.rewardToken)
