@@ -1125,6 +1125,287 @@ describe("Stake", function () {
         }); // Reward Start Time Validations
       }); // Pool Creation Validations
 
+      describe("Token Type Validation", function () {
+        let ERC1155ClaimingToBeERC20,
+          WrongSupportsInterfaceReturn,
+          RevertingSupportsInterface;
+        let NoBalanceOf,
+          WrongERC20BalanceOfSignature,
+          WrongERC1155BalanceOfSignature;
+        let WrongBalanceOfReturnLength,
+          RevertingBalanceOf,
+          GasConsumingContract,
+          EmptyReturnData;
+
+        beforeEach(async function () {
+          await RewardToken.connect(owner).approve(
+            Stake.target,
+            SIMPLE_POOL.rewardAmount
+          );
+
+          // Deploy mock contracts for testing _isTokenTypeValid logic
+          ERC1155ClaimingToBeERC20 = await ethers.deployContract(
+            "ERC1155ClaimingToBeERC20"
+          );
+          WrongSupportsInterfaceReturn = await ethers.deployContract(
+            "WrongSupportsInterfaceReturn"
+          );
+          RevertingSupportsInterface = await ethers.deployContract(
+            "RevertingSupportsInterface"
+          );
+          NoBalanceOf = await ethers.deployContract("NoBalanceOf");
+          WrongERC20BalanceOfSignature = await ethers.deployContract(
+            "WrongERC20BalanceOfSignature"
+          );
+          WrongERC1155BalanceOfSignature = await ethers.deployContract(
+            "WrongERC1155BalanceOfSignature"
+          );
+          WrongBalanceOfReturnLength = await ethers.deployContract(
+            "WrongBalanceOfReturnLength"
+          );
+          RevertingBalanceOf = await ethers.deployContract(
+            "RevertingBalanceOf"
+          );
+          GasConsumingContract = await ethers.deployContract(
+            "GasConsumingContract"
+          );
+          EmptyReturnData = await ethers.deployContract("EmptyReturnData");
+        });
+
+        describe("ERC20 Validation Path", function () {
+          it("should succeed with valid ERC20 tokens", async function () {
+            // Existing StakingToken should work (baseline test)
+            await expect(
+              Stake.connect(owner).createPool(
+                StakingToken.target,
+                true, // isStakingTokenERC20 = true
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.not.be.reverted;
+          });
+
+          it("should revert when contract claims to support ERC1155 interface", async function () {
+            await expect(
+              Stake.connect(owner).createPool(
+                ERC1155ClaimingToBeERC20.target,
+                true, // isStakingTokenERC20 = true
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.revertedWithCustomError(Stake, "Stake__InvalidTokenType");
+          });
+
+          it("should succeed when supportsInterface returns wrong data format", async function () {
+            await expect(
+              Stake.connect(owner).createPool(
+                WrongSupportsInterfaceReturn.target,
+                true, // isStakingTokenERC20 = true
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.not.be.reverted;
+          });
+
+          it("should succeed when supportsInterface reverts", async function () {
+            await expect(
+              Stake.connect(owner).createPool(
+                RevertingSupportsInterface.target,
+                true, // isStakingTokenERC20 = true
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.not.be.reverted;
+          });
+
+          it("should revert when balanceOf doesn't exist", async function () {
+            await expect(
+              Stake.connect(owner).createPool(
+                NoBalanceOf.target,
+                true, // isStakingTokenERC20 = true
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.revertedWithCustomError(Stake, "Stake__InvalidTokenType");
+          });
+
+          it("should revert when balanceOf has wrong signature", async function () {
+            await expect(
+              Stake.connect(owner).createPool(
+                WrongERC20BalanceOfSignature.target,
+                true, // isStakingTokenERC20 = true
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.revertedWithCustomError(Stake, "Stake__InvalidTokenType");
+          });
+
+          it("should revert when balanceOf returns wrong data length", async function () {
+            await expect(
+              Stake.connect(owner).createPool(
+                WrongBalanceOfReturnLength.target,
+                true, // isStakingTokenERC20 = true
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.revertedWithCustomError(Stake, "Stake__InvalidTokenType");
+          });
+
+          it("should revert when balanceOf reverts", async function () {
+            await expect(
+              Stake.connect(owner).createPool(
+                RevertingBalanceOf.target,
+                true, // isStakingTokenERC20 = true
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.revertedWithCustomError(Stake, "Stake__InvalidTokenType");
+          });
+
+          it("should revert when balanceOf returns empty data", async function () {
+            await expect(
+              Stake.connect(owner).createPool(
+                EmptyReturnData.target,
+                true, // isStakingTokenERC20 = true
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.revertedWithCustomError(Stake, "Stake__InvalidTokenType");
+          });
+        });
+
+        describe("ERC1155 Validation Path", function () {
+          it("should succeed with valid ERC1155 tokens", async function () {
+            const TestERC1155 = await ethers.deployContract("TestERC1155", [
+              1000,
+            ]);
+            await expect(
+              Stake.connect(owner).createPool(
+                TestERC1155.target,
+                false, // isStakingTokenERC20 = false
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.not.be.reverted;
+          });
+
+          it("should revert when balanceOf doesn't exist", async function () {
+            await expect(
+              Stake.connect(owner).createPool(
+                NoBalanceOf.target,
+                false, // isStakingTokenERC20 = false
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.revertedWithCustomError(Stake, "Stake__InvalidTokenType");
+          });
+
+          it("should revert when balanceOf has wrong signature", async function () {
+            await expect(
+              Stake.connect(owner).createPool(
+                WrongERC1155BalanceOfSignature.target,
+                false, // isStakingTokenERC20 = false
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.revertedWithCustomError(Stake, "Stake__InvalidTokenType");
+          });
+
+          it("should revert when balanceOf returns wrong data length", async function () {
+            await expect(
+              Stake.connect(owner).createPool(
+                WrongBalanceOfReturnLength.target,
+                false, // isStakingTokenERC20 = false
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.revertedWithCustomError(Stake, "Stake__InvalidTokenType");
+          });
+
+          it("should revert when balanceOf reverts", async function () {
+            await expect(
+              Stake.connect(owner).createPool(
+                RevertingBalanceOf.target,
+                false, // isStakingTokenERC20 = false
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.revertedWithCustomError(Stake, "Stake__InvalidTokenType");
+          });
+
+          it("should revert when balanceOf returns empty data", async function () {
+            await expect(
+              Stake.connect(owner).createPool(
+                EmptyReturnData.target,
+                false, // isStakingTokenERC20 = false
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.revertedWithCustomError(Stake, "Stake__InvalidTokenType");
+          });
+        });
+
+        describe("Gas Limit Protection", function () {
+          it("should handle gas-consuming contracts (ERC20 mode)", async function () {
+            // Gas consuming contract should fail due to gas limit in supportsInterface or balanceOf
+            await expect(
+              Stake.connect(owner).createPool(
+                GasConsumingContract.target,
+                true, // isStakingTokenERC20 = true
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.revertedWithCustomError(Stake, "Stake__InvalidTokenType");
+          });
+
+          it("should handle gas-consuming contracts (ERC1155 mode)", async function () {
+            // Gas consuming contract should fail due to gas limit in balanceOf
+            await expect(
+              Stake.connect(owner).createPool(
+                GasConsumingContract.target,
+                false, // isStakingTokenERC20 = false
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.revertedWithCustomError(Stake, "Stake__InvalidTokenType");
+          });
+        });
+      }); // Token Type Validation
+
       describe("Staking Validations", function () {
         it("should revert if stake amount is zero", async function () {
           await expect(

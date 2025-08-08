@@ -37,6 +37,11 @@ contract Stake is Ownable, ReentrancyGuard {
     uint256 public constant MAX_REWARD_DURATION =
         MIN_REWARD_DURATION * 24 * 365 * 10; // 10 years
 
+    // Gas stipend for external view calls to prevent DoS attacks on view functions
+    // 20000 gas handles very long token names/symbols (~256 chars) while preventing DoS
+    uint256 private constant METADATA_GAS_STIPEND = 20000;
+    uint256 private constant MAX_ITEMS_PER_PAGE = 500;
+
     // MARK: - Error messages
 
     error Stake__InvalidToken();
@@ -57,6 +62,7 @@ contract Stake is Ownable, ReentrancyGuard {
     error Stake__InvalidTokenId();
     error Stake__RewardRateTooLow();
     error Stake__InvalidRewardStartsAt();
+    error Stake__InvalidTokenType();
 
     // MARK: - Structs
 
@@ -340,6 +346,56 @@ contract Stake is Ownable, ReentrancyGuard {
         pool.lastRewardUpdatedAt = uint40(toTime);
     }
 
+    /**
+     * @dev Checks if the token is a valid ERC20 or ERC1155 token
+     * @param token The address of the token to check
+     * @param isERC20 Whether the token is ERC20 (true) or ERC1155 (false)
+     * @return isValid True if the token is valid, false otherwise
+     */
+    function _isTokenTypeValid(
+        address token,
+        bool isERC20
+    ) internal view returns (bool) {
+        if (isERC20) {
+            // 1) IERC1155 interface claiming contract is rejected
+            (bool ok165, bytes memory ret165) = token.staticcall{
+                gas: METADATA_GAS_STIPEND
+            }(
+                abi.encodeWithSignature(
+                    "supportsInterface(bytes4)",
+                    bytes4(0xd9b67a26) // ERC1155 interface id
+                )
+            );
+            if (ok165 && ret165.length == 32 && abi.decode(ret165, (bool))) {
+                return false;
+            }
+
+            // 2) ERC20 balanceOf(address) exists and returns 32 bytes
+            (bool ok20, bytes memory ret20) = token.staticcall{
+                gas: METADATA_GAS_STIPEND
+            }(abi.encodeWithSignature("balanceOf(address)", address(this)));
+            if (!ok20 || ret20.length != 32) {
+                return false;
+            }
+        } else {
+            // Check if the token is an ERC1155 (balanceOf(address,uint256))
+            (bool ok1155, bytes memory ret1155) = token.staticcall{
+                gas: METADATA_GAS_STIPEND
+            }(
+                abi.encodeWithSignature(
+                    "balanceOf(address,uint256)",
+                    address(this),
+                    uint256(0)
+                )
+            );
+            if (!ok1155 || ret1155.length != 32) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     // MARK: - Pool Management
 
     /**
@@ -372,11 +428,12 @@ contract Stake is Ownable, ReentrancyGuard {
         if (rewardStartsAt > block.timestamp + 7 days)
             revert Stake__InvalidRewardStartsAt();
         if (msg.value != creationFee) revert Stake__InvalidCreationFee();
-
         if (creationFee > 0) {
             (bool success, ) = protocolBeneficiary.call{value: creationFee}("");
             if (!success) revert Stake__FeeTransferFailed();
         }
+        if (!_isTokenTypeValid(stakingToken, isStakingTokenERC20))
+            revert Stake__InvalidTokenType();
 
         poolId = poolCount;
         poolCount = poolId + 1;
@@ -814,11 +871,6 @@ contract Stake is Ownable, ReentrancyGuard {
         TokenInfo rewardToken;
     }
 
-    // Gas stipend for external view calls to prevent DoS attacks on view functions
-    // 20000 gas handles very long token names/symbols (~256 chars) while preventing DoS
-    uint256 constant METADATA_GAS_STIPEND = 20000;
-    uint256 constant MAX_ITEMS_PER_PAGE = 500;
-
     /**
      * @dev Safely fetch token metadata with gas limits to prevent DoS
      * @param tokenAddress The token contract address
@@ -893,22 +945,22 @@ contract Stake is Ownable, ReentrancyGuard {
             revert Stake__InvalidPaginationParameters();
         }
 
-        unchecked {
-            uint256 length = poolIdTo > poolCount
-                ? poolCount - poolIdFrom
-                : poolIdTo - poolIdFrom;
-            poolList = new PoolView[](length);
+        uint256 end = poolIdTo > poolCount ? poolCount : poolIdTo;
+        if (poolIdFrom >= end) {
+            return new PoolView[](0);
+        }
 
-            for (uint256 i = 0; i < length; ++i) {
-                uint256 poolId = poolIdFrom + i;
-                Pool memory pool = pools[poolId];
-                poolList[i] = PoolView({
-                    poolId: poolId,
-                    pool: pool,
-                    stakingToken: _getTokenInfo(pool.stakingToken),
-                    rewardToken: _getTokenInfo(pool.rewardToken)
-                });
-            }
+        uint256 length = end - poolIdFrom;
+        poolList = new PoolView[](length);
+        for (uint256 i = 0; i < length; ++i) {
+            uint256 poolId = poolIdFrom + i;
+            Pool memory pool = pools[poolId];
+            poolList[i] = PoolView({
+                poolId: poolId,
+                pool: pool,
+                stakingToken: _getTokenInfo(pool.stakingToken),
+                rewardToken: _getTokenInfo(pool.rewardToken)
+            });
         }
     }
 
