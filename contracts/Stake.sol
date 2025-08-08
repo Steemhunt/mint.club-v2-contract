@@ -109,11 +109,11 @@ contract Stake is Ownable, ReentrancyGuard {
     // MARK: - Events
 
     event PoolCreated(
-        uint256 indexed poolId,
+        uint256 poolId,
         address indexed creator,
         address indexed stakingToken,
         bool isStakingTokenERC20,
-        address rewardToken,
+        address indexed rewardToken,
         uint104 rewardAmount,
         uint40 rewardStartsAt,
         uint32 rewardDuration
