@@ -121,21 +121,24 @@ contract Stake is Ownable, ReentrancyGuard {
     event Staked(
         uint256 indexed poolId,
         address indexed staker,
-        uint104 amount
+        uint104 indexed amount
     );
     event Unstaked(
         uint256 indexed poolId,
         address indexed staker,
-        uint104 amount,
+        uint104 indexed amount,
         bool rewardClaimed
     );
     event RewardClaimed(
         uint256 indexed poolId,
         address indexed staker,
-        uint104 reward,
+        uint104 indexed reward,
         uint104 fee
     );
-    event PoolCancelled(uint256 indexed poolId, uint256 leftoverRewards);
+    event PoolCancelled(
+        uint256 indexed poolId,
+        uint256 indexed leftoverRewards
+    );
     event ProtocolBeneficiaryUpdated(
         address oldBeneficiary,
         address newBeneficiary
