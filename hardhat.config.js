@@ -7,6 +7,17 @@ module.exports = {
   solidity: {
     compilers: [
       {
+        version: "0.8.30",
+        settings: {
+          evmVersion: "paris",
+          optimizer: {
+            enabled: true,
+            runs: 50000,
+          },
+          viaIR: true,
+        },
+      },
+      {
         version: "0.8.20",
         settings: {
           // NOTE: PUSH0 opcode is not supported on some L2s
