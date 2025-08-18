@@ -4,10 +4,10 @@ const { getCreationFee } = require("../test/utils/test-utils");
 
 async function main() {
   const PROTOCOL_BENEFICIARY = process.env.PROTOCOL_BENEFICIARY;
-  // const CREATION_FEE = getCreationFee(hre.network.name) * 5n; // creationFee x 5 = ~$10
-  // const CLAIM_FEE = 400; // 4%
-  const CREATION_FEE = 0;
-  const CLAIM_FEE = 0;
+  const CREATION_FEE = getCreationFee(hre.network.name) * 5n; // creationFee x 5 = ~$10
+  const CLAIM_FEE = 400; // 4%
+  // const CREATION_FEE = 0;
+  // const CLAIM_FEE = 0;
 
   const accounts = await hre.ethers.getSigners();
   const deployer = accounts[0].address;
@@ -57,7 +57,7 @@ npx hardhat compile && npx hardhat run --network degen scripts/deploy-stake.js
 npx hardhat compile && npx hardhat run --network zora scripts/deploy-stake.js
 npx hardhat compile && npx hardhat run --network klaytn scripts/deploy-stake.js
 npx hardhat compile && npx hardhat run --network cyber scripts/deploy-stake.js
-npx hardhat compile && npx hardhat run --network ham scripts/deploy-stake.js
+// npx hardhat compile && npx hardhat run --network ham scripts/deploy-stake.js // DEPRECATED
 npx hardhat compile && npx hardhat run --network apechain scripts/deploy-stake.js
 npx hardhat compile && npx hardhat run --network shibarium scripts/deploy-stake.js
 npx hardhat compile && npx hardhat run --network hashkey scripts/deploy-stake.js

@@ -236,7 +236,7 @@ module.exports = {
         network: "degen",
         chainId: 666666666,
         urls: {
-          apiURL: "https://explorer.degen.tips/api/v2/TODO:", // TODO: API verification?
+          apiURL: "https://explorer.degen.tips/api",
           browserURL: "https://explorer.degen.tips",
         },
       },
@@ -244,7 +244,7 @@ module.exports = {
         network: "zora",
         chainId: 7777777,
         urls: {
-          apiURL: "https://explorer.zora.energy/api/v2/TODO:", // TODO: API verification?
+          apiURL: "https://explorer.zora.energy/api",
           browserURL: "https://explorer.zora.energy",
         },
       },
@@ -252,15 +252,16 @@ module.exports = {
         network: "klaytn",
         chainId: 8217,
         urls: {
-          apiURL: "https://api-cypress.klaytnscope.com/api",
-          browserURL: "https://klaytnscope.com",
+          apiURL: "https://mainnet-api.kaiascan.io/hardhat-verify",
+          browserURL: "https://kaiascan.io",
         },
       },
       {
         network: "cyber",
         chainId: 7560,
         urls: {
-          apiURL: "https://cyberscan.co/api",
+          apiURL:
+            "https://api.socialscan.io/cyber/v1/explorer/command_api/contract",
           browserURL: "https://cyberscan.co/",
         },
       },
@@ -268,7 +269,7 @@ module.exports = {
         network: "ham",
         chainId: 5112,
         urls: {
-          apiURL: "https://ham.calderaexplorer.xyz/api/v2/TODO:", // TODO: API verification?
+          apiURL: "https://ham.calderaexplorer.xyz/api", // TODO: API verification?
           browserURL: "https://ham.calderaexplorer.xyz",
         },
       },
@@ -284,7 +285,7 @@ module.exports = {
         network: "shibarium",
         chainId: 109,
         urls: {
-          apiURL: "https://www.shibariumscan.io/api", // TODO: API verification?
+          apiURL: "https://www.shibariumscan.io/api",
           browserURL: "https://www.shibariumscan.io/",
         },
       },
