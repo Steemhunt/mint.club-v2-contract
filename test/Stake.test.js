@@ -3183,7 +3183,7 @@ describe("Stake", function () {
           expect(contractUSDCBalance).to.equal(0n);
         });
 
-        describe("Tiny rewards progression with minimum viable reward rate", function () {
+        describe("Tiny rewards progression with minimum viable reward rate (at REWARD_PRECISION = 1e30)", function () {
           it("should miss 1 wei USDC until accRewardPerShare set to 1 eventually", async function () {
             // Create a new pool with 1 USDC rewards over 1,000,000 seconds (1 micro / sec)
             const DURATION_SECONDS = 1_000_000;
@@ -3385,10 +3385,14 @@ describe("Stake", function () {
       }); // Multiple Transactions In Same Block
 
       describe("Overflow Edge Cases", function () {
-        it("should handle worst-case reward calculations without overflowing and enforce stake amount limits", async function () {
-          // Create pool with maximum reward amount
-          const maxRewardAmount = 2n ** 104n - 1n; // type(uint104).max
-          const LargeRewardToken = await ethers.deployContract("TestToken", [
+        let LargeRewardToken, maxRewardAmount, maxStakeAmount, nearMax;
+
+        beforeEach(async function () {
+          maxRewardAmount = 2n ** 104n - 1n; // type(uint104).max
+          maxStakeAmount = 2n ** 104n - 1n; // type(uint104).max
+          nearMax = 2n ** 104n - 1n - 1n; // type(uint104).max - 1
+
+          LargeRewardToken = await ethers.deployContract("TestToken", [
             maxRewardAmount,
             "Large Reward Token",
             "LARGE",
@@ -3399,7 +3403,9 @@ describe("Stake", function () {
             Stake.target,
             maxRewardAmount
           );
+        });
 
+        it("should handle worst-case reward calculations without overflowing and enforce stake amount limits", async function () {
           // Create pool with maximum reward amount
           const poolId = await Stake.poolCount();
           await Stake.connect(owner).createPool(
@@ -3421,7 +3427,6 @@ describe("Stake", function () {
           // This should be around type(uint104).max * 10^18
 
           // Step 3: Second user tries to stake maximum amount
-          const maxStakeAmount = 2n ** 104n - 1n; // type(uint104).max
           await distributeTokens(StakingToken, [bob], maxStakeAmount * 2n);
 
           // This should cause overflow when calculating reward debt:
@@ -3438,6 +3443,99 @@ describe("Stake", function () {
           await expect(
             Stake.connect(bob).stake(poolId, 1n)
           ).to.be.revertedWithCustomError(Stake, "Stake__StakeAmountTooLarge");
+        });
+
+        it("should not overflow accRewardPerShare and rewardDebt with max rewards and 1 wei stake", async function () {
+          const poolId = await Stake.poolCount();
+          await Stake.connect(owner).createPool(
+            StakingToken.target,
+            true,
+            LargeRewardToken.target,
+            maxRewardAmount,
+            0,
+            MIN_REWARD_DURATION
+          );
+
+          // Alice stakes the minimum possible unit to maximize accRewardPerShare
+          await Stake.connect(alice).stake(poolId, 1n);
+          // Bob stakes near the maximum allowed amount without hitting the uint104 cap
+          await distributeTokens(StakingToken, [bob], 1n);
+
+          // Move to two seconds before reward end using on-chain rewardStartedAt
+          // Account for the fact that each transaction consumes the next block and increases timestamp by 1
+          const poolBefore = await Stake.pools(poolId);
+          const ts =
+            Number(poolBefore.rewardStartedAt) +
+            Number(MIN_REWARD_DURATION) -
+            2;
+          await time.setNextBlockTimestamp(ts);
+          await expect(Stake.connect(bob).stake(poolId, 1n)).to.not.be.reverted;
+
+          // Sanity: values should be large but finite
+          const pool = await Stake.pools(poolId);
+          const bobStake = await Stake.userPoolStake(bob.address, poolId);
+          const aliceStake = await Stake.userPoolStake(alice.address, poolId);
+
+          expect(pool.accRewardPerShare).to.be.gt(0n);
+          expect(aliceStake.rewardDebt).to.equal(0n); // no reward debt for alice because she staked first
+          expect(bobStake.rewardDebt).to.be.gt(0n);
+        });
+
+        it("should allow claiming after huge accRewardPerShare without overflow", async function () {
+          const poolId = await Stake.poolCount();
+          await Stake.connect(owner).createPool(
+            StakingToken.target,
+            true,
+            LargeRewardToken.target,
+            maxRewardAmount,
+            0,
+            MIN_REWARD_DURATION
+          );
+
+          // Minimal initial stake then move to just before end based on rewardStartedAt
+          await Stake.connect(alice).stake(poolId, 1n);
+
+          // Large second stake
+          await distributeTokens(StakingToken, [bob], nearMax);
+
+          // Set next block timestamp to two seconds before end so the following stake executes before finish
+          const poolMid = await Stake.pools(poolId);
+          const ts2 =
+            Number(poolMid.rewardStartedAt) + Number(MIN_REWARD_DURATION) - 1;
+          await time.setNextBlockTimestamp(ts2);
+          await Stake.connect(bob).stake(poolId, nearMax);
+
+          // Let a bit more time pass, then both claim
+          await time.increase(10);
+
+          const aliceBefore = await LargeRewardToken.balanceOf(alice.address);
+          const bobBefore = await LargeRewardToken.balanceOf(bob.address);
+
+          await expect(Stake.connect(alice).claim(poolId)).to.not.be.reverted;
+          await expect(Stake.connect(bob).claim(poolId)).to.not.be.reverted;
+
+          const aliceAfter = await LargeRewardToken.balanceOf(alice.address);
+          const bobAfter = await LargeRewardToken.balanceOf(bob.address);
+
+          const aliceClaimed = aliceAfter - aliceBefore;
+          const bobClaimed = bobAfter - bobBefore;
+
+          expect(aliceClaimed).to.equal(
+            (maxRewardAmount * (MIN_REWARD_DURATION - 1n)) / MIN_REWARD_DURATION
+          );
+          expect(bobClaimed).to.be.closeTo(
+            maxRewardAmount / MIN_REWARD_DURATION,
+            16n // precision loss
+          );
+
+          // Sum of claimed by users should never exceed total reward amount
+          expect(aliceClaimed + bobClaimed).to.closeTo(maxRewardAmount, 17n); // precision loss
+
+          // Sanity: check pool state
+          const stakingPoolBalance = await LargeRewardToken.balanceOf(
+            Stake.target
+          );
+          expect(stakingPoolBalance).to.lte(17n); // precision loss at REWARD_PRECISION = 1e30 - permanently locked in the pool
         });
       }); // Overflow Edge Cases
     }); // Edge Cases
