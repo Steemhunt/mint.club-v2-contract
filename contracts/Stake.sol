@@ -32,7 +32,7 @@ contract Stake is Ownable, ReentrancyGuard {
     // MARK: - Constants & Errors
 
     uint256 private constant MAX_CLAIM_FEE = 2000; // 20% - for safety when admin privileges are abused
-    uint256 private constant REWARD_PRECISION = 1e18;
+    uint256 private constant REWARD_PRECISION = 1e30;
     uint256 public constant MIN_REWARD_DURATION = 3600; // 1 hour in seconds
     uint256 public constant MAX_REWARD_DURATION =
         MIN_REWARD_DURATION * 24 * 365 * 10; // 10 years
@@ -1027,7 +1027,7 @@ contract Stake is Ownable, ReentrancyGuard {
      * @return The version string
      */
     function version() external pure returns (string memory) {
-        return "1.0.0";
+        return "1.1.0";
     }
 
     // MARK: - ERC1155 Receiver

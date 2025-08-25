@@ -2494,7 +2494,7 @@ describe("Stake", function () {
       describe("version", function () {
         it("should return correct version", async function () {
           const version = await Stake.version();
-          expect(version).to.equal("1.0.0");
+          expect(version).to.equal("1.1.0");
         });
       }); // version
 
@@ -2883,12 +2883,12 @@ describe("Stake", function () {
             this.stakingAmount
           );
 
-          // Precision loss calculation:
-          // After 1000s: totalAllocatedRewards = 1234, but claimable = 1200 (loss: 34)
-          // After 10000s: totalAllocatedRewards = 12340, but claimable = 12300 (loss: 40)
+          // Precision behavior with higher REWARD_PRECISION (1e30):
+          // After 1000s: totalAllocatedRewards = 1234, claimable/claimed = 1234 (loss: 0)
+          // After 10000s: totalAllocatedRewards = 12340, claimable/claimed = 12340 (loss: 0)
         });
 
-        it("should have exact precision loss of 34 after 1000s", async function () {
+        it("should have zero precision loss after 1000s", async function () {
           await time.setNextBlockTimestamp((await time.latest()) + 1000);
 
           // Trigger pool update by claiming (which calls _updatePool)
@@ -2903,20 +2903,20 @@ describe("Stake", function () {
           // Theoretical allocation: Math.mulDiv(1000, 12340, 10000) = 1234
           expect(pool.totalAllocatedRewards).to.equal(1234n);
 
-          // User claimed: 1200 (due to precision loss in accRewardPerShare calculation)
-          expect(claimedTotal).to.equal(1200n);
+          // With higher precision, user claims full allocated amount
+          expect(claimedTotal).to.equal(1234n);
 
           // Remaining claimable should be 0 after claiming
           expect(claimable).to.equal(0n);
           expect(fee).to.equal(0);
           expect(feeTotal).to.equal(0);
 
-          // Precision loss = allocated - actually claimed = 1234 - 1200 = 34
+          // Precision loss = allocated - actually claimed = 1234 - 1234 = 0
           const precisionLoss = pool.totalAllocatedRewards - claimedTotal;
-          expect(precisionLoss).to.equal(34n);
+          expect(precisionLoss).to.equal(0n);
         });
 
-        it("should have exact precision loss of 40 after full duration", async function () {
+        it("should have zero precision loss after full duration", async function () {
           // Wait full duration
           await time.setNextBlockTimestamp(
             (await time.latest()) + this.duration
@@ -2934,25 +2934,25 @@ describe("Stake", function () {
           // Theoretical allocation for full duration: 12340
           expect(pool.totalAllocatedRewards).to.equal(12340n);
 
-          // User claimed: 12300 (due to precision loss in accRewardPerShare calculation)
-          expect(claimedTotal).to.equal(12300n);
+          // With higher precision, user claims full allocated amount
+          expect(claimedTotal).to.equal(12340n);
 
           // Remaining claimable should be 0 after claiming
           expect(claimable).to.equal(0n);
           expect(fee).to.equal(0);
           expect(feeTotal).to.equal(0);
 
-          // Precision loss = allocated - actually claimed = 12340 - 12300 = 40
+          // Precision loss = allocated - actually claimed = 0
           const precisionLoss = pool.totalAllocatedRewards - claimedTotal;
-          expect(precisionLoss).to.equal(40n);
+          expect(precisionLoss).to.equal(0n);
 
-          // With new system, the 40 precision loss still remains as dust in contract
+          // With higher precision, no precision loss dust remains
           const contractBalance = await RewardToken.balanceOf(Stake.target);
-          const expectedDust = 40n + SIMPLE_POOL.rewardAmount; // 40 from this pool + previous pool
+          const expectedDust = 0n + SIMPLE_POOL.rewardAmount; // 0 from this pool + previous pool
           expect(contractBalance).to.equal(expectedDust);
         });
 
-        it("should handle multiple users with exact precision loss of 68", async function () {
+        it("should handle multiple users with 1 wei precision loss", async function () {
           // After 1000s, bob stakes 300 * 1e18 wei (this will trigger _updatePool for first 1000s)
           await time.setNextBlockTimestamp((await time.latest()) + 1000);
           await Stake.connect(bob).stake(this.smallPoolId, wei(300));
@@ -2972,23 +2972,23 @@ describe("Stake", function () {
           const pool = await Stake.pools(this.smallPoolId);
           expect(pool.totalAllocatedRewards).to.equal(2468n); // 1234 + 1234 theoretical
 
-          // Alice claimed during the first period claim: 1200 + 300 = 1500
-          expect(aliceClaimedTotal).to.equal(1500n);
+          // Alice claimed during the first period claim: 1234 + 308 = 1542
+          expect(aliceClaimedTotal).to.equal(1542n);
           expect(aliceClaimable).to.equal(0n); // Already claimed
           expect(aliceFee).to.equal(0);
           expect(aliceFeeTotal).to.equal(0);
 
-          // Bob can claim: 900 (second period share only)
-          expect(bobClaimable).to.equal(900n);
+          // Bob can claim: 925 (second period share only)
+          expect(bobClaimable).to.equal(925n);
           expect(bobClaimedTotal).to.equal(0n); // Not claimed yet
           expect(bobFee).to.equal(0);
           expect(bobFeeTotal).to.equal(0);
 
-          // Total user actual rewards: 1500 (Alice claimed) + 900 (Bob claimable) = 2400
-          // Precision loss: 2468 - 2400 = 68
+          // Total user actual rewards: 1542 (Alice) + 925 (Bob) = 2467
+          // Precision loss: 2468 - 2467 = 1
           const totalUserRewards = aliceClaimedTotal + bobClaimable;
           const precisionLoss = pool.totalAllocatedRewards - totalUserRewards;
-          expect(precisionLoss).to.equal(68n);
+          expect(precisionLoss).to.equal(1n);
         });
 
         it("should refund creator correctly with totalAllocatedRewards system", async function () {
@@ -3019,8 +3019,7 @@ describe("Stake", function () {
           // Note: The precision loss will still occur when users claim their allocated rewards
         });
 
-        it("should demonstrate remaining precision loss limitation", async function () {
-          // This test shows that precision loss still creates dust even with totalAllocatedRewards
+        it("should demonstrate no remaining precision loss", async function () {
           await time.setNextBlockTimestamp(
             (await time.latest()) + this.duration
           );
@@ -3035,14 +3034,14 @@ describe("Stake", function () {
           );
 
           // totalAllocatedRewards = 12340 (theoretical)
-          // User claimable/claimed = 12300 (due to precision loss in claiming)
-          // Precision loss = 40 tokens
+          // User claimable/claimed = 12340 with higher precision
+          // Precision loss = 0 tokens
           expect(pool.totalAllocatedRewards).to.equal(12340n);
-          expect(claimedTotal).to.equal(12300n);
+          expect(claimedTotal).to.equal(12340n);
           expect(claimable).to.equal(0n); // Already claimed
 
           const precisionLoss = pool.totalAllocatedRewards - claimedTotal;
-          expect(precisionLoss).to.equal(40n);
+          expect(precisionLoss).to.equal(0n);
 
           // Cancel pool - creator gets 0 refund because all rewards are "allocated"
           const creatorBalanceBefore = await RewardToken.balanceOf(
@@ -3055,9 +3054,9 @@ describe("Stake", function () {
 
           expect(creatorBalanceAfter - creatorBalanceBefore).to.equal(0n);
 
-          // The 40 tokens precision loss remains in contract
+          // No precision loss remains in contract
           const contractBalance = await RewardToken.balanceOf(Stake.target);
-          expect(contractBalance - this.originalRewardBalance).to.be.equal(40n);
+          expect(contractBalance - this.originalRewardBalance).to.be.equal(0n);
         });
       }); // Precision and Rounding Edge Cases
 
@@ -3083,6 +3082,163 @@ describe("Stake", function () {
           ).to.not.be.reverted;
         });
       }); // Boundary Conditions
+
+      describe("Extreme Precision Scenarios (USDC 6 decimals, huge stake)", function () {
+        beforeEach(async function () {
+          // Deploy a 6-decimal USDC-like reward token
+          this.USDC = await ethers.deployContract("TestToken", [
+            INITIAL_TOKEN_SUPPLY,
+            "USD Coin",
+            "USDC",
+            6n,
+          ]);
+          await this.USDC.waitForDeployment();
+
+          // Approve Stake to pull rewards
+          await this.USDC.connect(owner).approve(Stake.target, MAX_INT_256);
+
+          // Create a pool with 1 USDC total rewards over minimum valid duration
+          this.usdcRewardAmount = wei(1, 6); // 1 USDC in base units
+          this.usdcDuration = Number(MIN_REWARD_DURATION);
+          this.usdcStart = (await time.latest()) + 100; // future start time so multiple stakers begin equally
+          this.usdcPoolId = await Stake.poolCount();
+          await Stake.connect(owner).createPool(
+            StakingToken.target,
+            true,
+            this.USDC.target,
+            this.usdcRewardAmount,
+            this.usdcStart,
+            this.usdcDuration
+          );
+        });
+
+        it("should distribute full 1 USDC to a single massive staker", async function () {
+          const hugeStake = wei(100_000_000_000n); // 100B tokens (18 decimals)
+
+          // Top-up Alice to have enough balance to stake
+          await StakingToken.transfer(alice.address, hugeStake);
+
+          await Stake.connect(alice).stake(this.usdcPoolId, hugeStake);
+
+          // Advance to the end of the reward duration (from scheduled start)
+          await time.setNextBlockTimestamp(this.usdcStart + this.usdcDuration);
+
+          // Claim rewards
+          await Stake.connect(alice).claim(this.usdcPoolId);
+
+          const [claimable, , claimedTotal] = await Stake.claimableReward(
+            this.usdcPoolId,
+            alice.address
+          );
+
+          const pool = await Stake.pools(this.usdcPoolId);
+
+          // All rewards should be allocated and fully claimable by the sole staker
+          expect(pool.totalAllocatedRewards).to.equal(this.usdcRewardAmount);
+          expect(claimedTotal).to.equal(this.usdcRewardAmount);
+          expect(claimable).to.equal(0n);
+
+          // No dust should remain for USDC in the contract
+          const contractUSDCBalance = await this.USDC.balanceOf(Stake.target);
+          expect(contractUSDCBalance).to.equal(0n);
+        });
+
+        it("should split 1 USDC exactly between two massive stakers", async function () {
+          const hugeStake = wei(100_000_000_000n); // 100B tokens each
+
+          // Top-up both users
+          await StakingToken.transfer(alice.address, hugeStake);
+          await StakingToken.transfer(bob.address, hugeStake);
+
+          // Both stake before rewards start (equal opportunity)
+          await Stake.connect(alice).stake(this.usdcPoolId, hugeStake);
+          await Stake.connect(bob).stake(this.usdcPoolId, hugeStake);
+
+          // Jump to end of reward period
+          await time.setNextBlockTimestamp(this.usdcStart + this.usdcDuration);
+
+          // Claim for both
+          await Stake.connect(alice).claim(this.usdcPoolId);
+          await Stake.connect(bob).claim(this.usdcPoolId);
+
+          const [aliceClaimable, , aliceClaimedTotal] =
+            await Stake.claimableReward(this.usdcPoolId, alice.address);
+          const [bobClaimable, , bobClaimedTotal] = await Stake.claimableReward(
+            this.usdcPoolId,
+            bob.address
+          );
+
+          // Each should receive exactly 0.5 USDC = 500,000 (USDC base units)
+          expect(aliceClaimedTotal).to.equal(500000n);
+          expect(bobClaimedTotal).to.equal(500000n);
+          expect(aliceClaimable).to.equal(0n);
+          expect(bobClaimable).to.equal(0n);
+
+          // Pool allocated amount should match total distribution
+          const pool = await Stake.pools(this.usdcPoolId);
+          expect(pool.totalAllocatedRewards).to.equal(this.usdcRewardAmount);
+
+          // No USDC dust remains after both claims
+          const contractUSDCBalance = await this.USDC.balanceOf(Stake.target);
+          expect(contractUSDCBalance).to.equal(0n);
+        });
+
+        describe("Tiny rewards progression with minimum viable reward rate", function () {
+          it("should miss 1 wei USDC until accRewardPerShare set to 1 eventually", async function () {
+            // Create a new pool with 1 USDC rewards over 1,000,000 seconds (1 micro / sec)
+            const DURATION_SECONDS = 1_000_000;
+            const rewardAmount = wei(1, 6); // 1 USDC
+            const startAt = (await time.latest()) + 100; // future start
+            const poolId = await Stake.poolCount();
+            await Stake.connect(owner).createPool(
+              StakingToken.target,
+              true,
+              this.USDC.target,
+              rewardAmount,
+              startAt,
+              DURATION_SECONDS
+            );
+
+            // Single massive staker with 100B tokens
+            const hugeStake = wei(4_000_000_000_000n); // 4000B
+            await StakingToken.transfer(alice.address, hugeStake);
+            await Stake.connect(alice).stake(poolId, hugeStake);
+
+            // 1s after start -> 1 micro allocated, but accRewardPerShare remains 0 due to precision
+            await time.setNextBlockTimestamp(startAt + 1);
+            const aliceBalBefore1 = await this.USDC.balanceOf(alice.address);
+            await Stake.connect(alice).claim(poolId);
+            let pool = await Stake.pools(poolId);
+            expect(pool.totalAllocatedRewards).to.equal(1n);
+            expect(pool.accRewardPerShare).to.equal(0n);
+            expect(pool.lastRewardUpdatedAt).to.equal(startAt + 1);
+            const aliceBalAfter1 = await this.USDC.balanceOf(alice.address);
+            expect(aliceBalAfter1 - aliceBalBefore1).to.equal(0n);
+
+            // 2s after start -> total 2 micro allocated, still accRewardPerShare = 0
+            await time.setNextBlockTimestamp(startAt + 2);
+            await Stake.connect(alice).claim(poolId);
+            pool = await Stake.pools(poolId);
+            expect(pool.totalAllocatedRewards).to.equal(2n);
+            expect(pool.accRewardPerShare).to.equal(0n);
+            expect(pool.lastRewardUpdatedAt).to.equal(startAt + 2);
+
+            // 4s after start -> total 2 + 4 micro allocated, accRewardPerShare finally becomes 1n
+            await time.setNextBlockTimestamp(startAt + 6);
+            await Stake.connect(alice).claim(poolId);
+            pool = await Stake.pools(poolId);
+            expect(pool.totalAllocatedRewards).to.equal(6n);
+            expect(pool.accRewardPerShare).to.equal(1n);
+            expect(pool.lastRewardUpdatedAt).to.equal(startAt + 6);
+
+            const aliceBalAfter2 = await this.USDC.balanceOf(alice.address);
+            expect(aliceBalAfter2 - aliceBalBefore1).to.equal(4n);
+
+            // NOTE: We have lost 2 micro USDC due to precision loss
+            // Even with 1e30 precision, reward loss can happen with huge staking amounts
+          });
+        });
+      }); // Extreme Precision Scenarios
 
       describe("Pool State Transitions", function () {
         it("should handle created -> active -> cancelled transition", async function () {
