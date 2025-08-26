@@ -33,6 +33,8 @@ contract Stake is Ownable, ReentrancyGuard {
 
     uint256 private constant MAX_CLAIM_FEE = 2000; // 20% - for safety when admin privileges are abused
     uint256 private constant REWARD_PRECISION = 1e30;
+    uint256 private constant MAX_STAKING_TOKEN_SUPPLY = 1e32; // Supports 100T token supply, prevents precision loss/overflow
+    uint256 private constant MIN_REWARD_DECIMALS = 4; // Minimum decimals to prevent precision loss
     uint256 public constant MIN_REWARD_DURATION = 3600; // 1 hour in seconds
     uint256 public constant MAX_REWARD_DURATION =
         MIN_REWARD_DURATION * 24 * 365 * 10; // 10 years
@@ -63,6 +65,8 @@ contract Stake is Ownable, ReentrancyGuard {
     error Stake__RewardRateTooLow();
     error Stake__InvalidRewardStartsAt();
     error Stake__InvalidTokenType();
+    error Stake__StakingTokenTokenTooBig();
+    error Stake__RewardTokenTokenTooSmall();
 
     // MARK: - Structs
 
@@ -437,6 +441,16 @@ contract Stake is Ownable, ReentrancyGuard {
         }
         if (!_isTokenTypeValid(stakingToken, isStakingTokenERC20))
             revert Stake__InvalidTokenType();
+
+        if (isStakingTokenERC20) {
+            IERC20 sToken = IERC20(stakingToken);
+            if (sToken.totalSupply() > MAX_STAKING_TOKEN_SUPPLY)
+                revert Stake__StakingTokenTokenTooBig();
+        }
+
+        MCV2_ICommonToken rToken = MCV2_ICommonToken(rewardToken);
+        if (rToken.decimals() < MIN_REWARD_DECIMALS)
+            revert Stake__RewardTokenTokenTooSmall();
 
         poolId = poolCount;
         poolCount = poolId + 1;

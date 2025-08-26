@@ -8,7 +8,7 @@ const MIN_REWARD_DURATION = 3600n;
 const MAX_REWARD_DURATION = MIN_REWARD_DURATION * 24n * 365n * 10n; // 10 years
 
 // Token amount constants
-const INITIAL_TOKEN_SUPPLY = 2n ** 256n - 1n; // max(uint256)
+const INITIAL_TOKEN_SUPPLY = wei(100_000_000_000_000); // 100T tokens
 const INITIAL_USER_BALANCE = wei(1_000_000); // 1M tokens per user (enough for multiple pool creations)
 
 // Simplified test constants for easy manual calculation
@@ -1125,6 +1125,117 @@ describe("Stake", function () {
         }); // Reward Start Time Validations
       }); // Pool Creation Validations
 
+      describe("Staking and Reward Token Validations", function () {
+        beforeEach(async function () {
+          await RewardToken.connect(owner).approve(
+            Stake.target,
+            SIMPLE_POOL.rewardAmount
+          );
+        });
+
+        it("should revert when ERC20 staking token supply exceeds MAX_STAKING_TOKEN_SUPPLY", async function () {
+          // Deploy token with supply exceeding 1e32 limit
+          const HugeSupplyToken = await ethers.deployContract("TestToken", [
+            10n ** 32n + 1n,
+            "Huge Supply Token",
+            "HUGE",
+            18n,
+          ]);
+          await HugeSupplyToken.waitForDeployment();
+
+          await expect(
+            Stake.connect(owner).createPool(
+              HugeSupplyToken.target,
+              true, // isStakingTokenERC20 = true
+              SIMPLE_POOL.rewardToken,
+              SIMPLE_POOL.rewardAmount,
+              0,
+              SIMPLE_POOL.rewardDuration
+            )
+          ).to.be.revertedWithCustomError(
+            Stake,
+            "Stake__StakingTokenTokenTooBig"
+          );
+        });
+
+        it("should accept ERC20 staking token with supply at MAX_STAKING_TOKEN_SUPPLY", async function () {
+          // Deploy token with supply exactly at 1e32 limit
+          const ExactLimitToken = await ethers.deployContract("TestToken", [
+            10n ** 32n, // 1e32
+            "Exact Limit Token",
+            "EXACT",
+            18n,
+          ]);
+          await ExactLimitToken.waitForDeployment();
+
+          await expect(
+            Stake.connect(owner).createPool(
+              ExactLimitToken.target,
+              true,
+              SIMPLE_POOL.rewardToken,
+              SIMPLE_POOL.rewardAmount,
+              0,
+              SIMPLE_POOL.rewardDuration
+            )
+          ).to.not.be.reverted;
+        });
+
+        it("should revert when reward token has less than MIN_REWARD_DECIMALS", async function () {
+          // Deploy token with 3 decimals (below 4 minimum)
+          const LowDecimalsToken = await ethers.deployContract("TestToken", [
+            wei(1000000),
+            "Low Decimals Token",
+            "LOW",
+            3, // 3 decimals < 4 minimum
+          ]);
+          await LowDecimalsToken.waitForDeployment();
+          await LowDecimalsToken.connect(owner).approve(
+            Stake.target,
+            SIMPLE_POOL.rewardAmount
+          );
+
+          await expect(
+            Stake.connect(owner).createPool(
+              SIMPLE_POOL.stakingToken,
+              true,
+              LowDecimalsToken.target,
+              SIMPLE_POOL.rewardAmount,
+              0,
+              SIMPLE_POOL.rewardDuration
+            )
+          ).to.be.revertedWithCustomError(
+            Stake,
+            "Stake__RewardTokenTokenTooSmall"
+          );
+        });
+
+        it("should accept reward token with exactly MIN_REWARD_DECIMALS", async function () {
+          // Deploy token with exactly 4 decimals (minimum)
+          const MinDecimalsToken = await ethers.deployContract("TestToken", [
+            wei(1000000),
+            "Min Decimals Token",
+            "MIN",
+            4, // 4 decimals = minimum
+          ]);
+          await MinDecimalsToken.waitForDeployment();
+          await MinDecimalsToken.connect(owner).approve(
+            Stake.target,
+            SIMPLE_POOL.rewardAmount
+          );
+
+          await expect(
+            Stake.connect(owner).createPool(
+              SIMPLE_POOL.stakingToken,
+              true,
+              MinDecimalsToken.target,
+              SIMPLE_POOL.rewardAmount,
+              0,
+              SIMPLE_POOL.rewardDuration
+            )
+          ).to.not.be.reverted;
+        });
+      }); // New Token Validations
+
       describe("Token Type Validation", function () {
         let ERC1155ClaimingToBeERC20,
           WrongSupportsInterfaceReturn,
@@ -1136,6 +1247,8 @@ describe("Stake", function () {
           RevertingBalanceOf,
           GasConsumingContract,
           EmptyReturnData;
+        let NoTotalSupply, RevertingTotalSupply, WrongTotalSupplyReturnLength;
+        let NoDecimals, RevertingDecimals, WrongDecimalsReturnLength;
 
         beforeEach(async function () {
           await RewardToken.connect(owner).approve(
@@ -1170,6 +1283,22 @@ describe("Stake", function () {
             "GasConsumingContract"
           );
           EmptyReturnData = await ethers.deployContract("EmptyReturnData");
+
+          // Deploy mock contracts for testing totalSupply validation
+          NoTotalSupply = await ethers.deployContract("NoTotalSupply");
+          RevertingTotalSupply = await ethers.deployContract(
+            "RevertingTotalSupply"
+          );
+          WrongTotalSupplyReturnLength = await ethers.deployContract(
+            "WrongTotalSupplyReturnLength"
+          );
+
+          // Deploy mock contracts for testing decimals validation
+          NoDecimals = await ethers.deployContract("NoDecimals");
+          RevertingDecimals = await ethers.deployContract("RevertingDecimals");
+          WrongDecimalsReturnLength = await ethers.deployContract(
+            "WrongDecimalsReturnLength"
+          );
         });
 
         describe("ERC20 Validation Path", function () {
@@ -1372,6 +1501,106 @@ describe("Stake", function () {
                 SIMPLE_POOL.rewardDuration
               )
             ).to.be.revertedWithCustomError(Stake, "Stake__InvalidTokenType");
+          });
+        });
+
+        describe("Staking Token TotalSupply Validation", function () {
+          it("should revert when staking token doesn't have totalSupply method", async function () {
+            // First approve the reward token for the contract
+            await RewardToken.connect(owner).approve(
+              Stake.target,
+              SIMPLE_POOL.rewardAmount
+            );
+
+            await expect(
+              Stake.connect(owner).createPool(
+                NoTotalSupply.target,
+                true, // isStakingTokenERC20 = true
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.reverted; // Should revert due to missing totalSupply
+          });
+
+          it("should revert when staking token totalSupply reverts", async function () {
+            // First approve the reward token for the contract
+            await RewardToken.connect(owner).approve(
+              Stake.target,
+              SIMPLE_POOL.rewardAmount
+            );
+
+            await expect(
+              Stake.connect(owner).createPool(
+                RevertingTotalSupply.target,
+                true, // isStakingTokenERC20 = true
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.reverted; // Should revert due to totalSupply reverting
+          });
+
+          it("should revert when staking token totalSupply returns wrong data length", async function () {
+            // First approve the reward token for the contract
+            await RewardToken.connect(owner).approve(
+              Stake.target,
+              SIMPLE_POOL.rewardAmount
+            );
+
+            await expect(
+              Stake.connect(owner).createPool(
+                WrongTotalSupplyReturnLength.target,
+                true, // isStakingTokenERC20 = true
+                SIMPLE_POOL.rewardToken,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.reverted; // Should revert due to wrong return data length
+          });
+        });
+
+        describe("Reward Token Decimals Validation", function () {
+          it("should revert when reward token doesn't have decimals method", async function () {
+            await expect(
+              Stake.connect(owner).createPool(
+                StakingToken.target,
+                true, // isStakingTokenERC20 = true
+                NoDecimals.target,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.reverted; // Should revert due to missing decimals
+          });
+
+          it("should revert when reward token decimals reverts", async function () {
+            await expect(
+              Stake.connect(owner).createPool(
+                StakingToken.target,
+                true, // isStakingTokenERC20 = true
+                RevertingDecimals.target,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.reverted; // Should revert due to decimals reverting
+          });
+
+          it("should revert when reward token decimals returns wrong data length", async function () {
+            await expect(
+              Stake.connect(owner).createPool(
+                StakingToken.target,
+                true, // isStakingTokenERC20 = true
+                WrongDecimalsReturnLength.target,
+                SIMPLE_POOL.rewardAmount,
+                0,
+                SIMPLE_POOL.rewardDuration
+              )
+            ).to.be.reverted; // Should revert due to wrong return data length
           });
         });
 

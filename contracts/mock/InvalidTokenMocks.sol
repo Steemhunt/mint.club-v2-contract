@@ -29,6 +29,10 @@ contract WrongSupportsInterfaceReturn {
     function balanceOf(address) external pure returns (uint256) {
         return 100;
     }
+
+    function totalSupply() external pure returns (uint256) {
+        return 1000; // Add totalSupply to pass that validation
+    }
 }
 
 // Contract that reverts on supportsInterface but has valid balanceOf
@@ -39,6 +43,10 @@ contract RevertingSupportsInterface {
 
     function balanceOf(address) external pure returns (uint256) {
         return 100;
+    }
+
+    function totalSupply() external pure returns (uint256) {
+        return 1000; // Add totalSupply to pass that validation
     }
 }
 
@@ -127,6 +135,110 @@ contract EmptyReturnData {
     }
 
     function balanceOf(address, uint256) external pure {
+        assembly {
+            return(0, 0)
+        }
+    }
+}
+
+// Contract that doesn't implement totalSupply (for staking token validation)
+contract NoTotalSupply {
+    function balanceOf(address) external pure returns (uint256) {
+        return 100;
+    }
+
+    // Missing totalSupply() function
+}
+
+// Contract that reverts on totalSupply calls
+contract RevertingTotalSupply {
+    function balanceOf(address) external pure returns (uint256) {
+        return 100;
+    }
+
+    function totalSupply() external pure returns (uint256) {
+        revert("TotalSupply failed");
+    }
+}
+
+// Contract that returns wrong data length for totalSupply
+contract WrongTotalSupplyReturnLength {
+    function balanceOf(address) external pure returns (uint256) {
+        return 100;
+    }
+
+    function totalSupply() external pure {
+        // Return no data at all, which should cause ABI decoding to fail
+        assembly {
+            return(0, 0)
+        }
+    }
+}
+
+// Contract that doesn't implement decimals (for reward token validation)
+contract NoDecimals {
+    function balanceOf(address) external pure returns (uint256) {
+        return 100;
+    }
+
+    function transfer(address, uint256) external pure returns (bool) {
+        return true;
+    }
+
+    function transferFrom(
+        address,
+        address,
+        uint256
+    ) external pure returns (bool) {
+        return true;
+    }
+
+    // Missing decimals() function
+}
+
+// Contract that reverts on decimals calls
+contract RevertingDecimals {
+    function balanceOf(address) external pure returns (uint256) {
+        return 100;
+    }
+
+    function transfer(address, uint256) external pure returns (bool) {
+        return true;
+    }
+
+    function transferFrom(
+        address,
+        address,
+        uint256
+    ) external pure returns (bool) {
+        return true;
+    }
+
+    function decimals() external pure returns (uint8) {
+        revert("Decimals failed");
+    }
+}
+
+// Contract that returns wrong data length for decimals
+contract WrongDecimalsReturnLength {
+    function balanceOf(address) external pure returns (uint256) {
+        return 100;
+    }
+
+    function transfer(address, uint256) external pure returns (bool) {
+        return true;
+    }
+
+    function transferFrom(
+        address,
+        address,
+        uint256
+    ) external pure returns (bool) {
+        return true;
+    }
+
+    function decimals() external pure {
+        // Return no data at all, which should cause ABI decoding to fail
         assembly {
             return(0, 0)
         }
