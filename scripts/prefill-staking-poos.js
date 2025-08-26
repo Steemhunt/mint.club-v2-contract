@@ -3,11 +3,11 @@ const hre = require("hardhat");
 const { getCreationFee } = require("../test/utils/test-utils");
 
 async function main() {
-  const STAKE_CONTRACT_ADDRESS = "0x68f54a53d3E69e2191bCF586fB507c81E5353413";
+  const STAKE_CONTRACT_ADDRESS = "0x3460E2fD6cBC9aFB49BF970659AfDE2909cf3399";
   const REWARD_TOKEN_ADDRESS = "0xFf45161474C39cB00699070Dd49582e417b57a7E";
   const PLACEHOLDER_REWARD_AMOUNT = 3600n; // 3600 wei as minimum value
   const MIN_REWARD_DURATION = 3600; // 1 hour (minimum duration from contract)
-  const TARGET_POOL_ID = 19; // We want to fill up to poolId = 19
+  const TARGET_POOL_ID = 20; // We want to fill up to poolId = 20
 
   const accounts = await hre.ethers.getSigners();
   const deployer = accounts[0];
@@ -24,16 +24,22 @@ async function main() {
   const currentPoolCount = await stake.poolCount();
   console.log(`Current pool count: ${currentPoolCount}`);
 
-  if (currentPoolCount >= TARGET_POOL_ID) {
+  // poolCount is 1-indexed, poolId is 0-indexed
+  // If we want poolId up to TARGET_POOL_ID, we need poolCount to be TARGET_POOL_ID + 1
+  if (currentPoolCount > TARGET_POOL_ID + 1) {
     console.log(
-      `Pool count already at or above target (${TARGET_POOL_ID}). No pools to create.`
+      `Pool count already at or above target (${
+        TARGET_POOL_ID + 1
+      }). No pools to create.`
     );
     return;
   }
 
-  const poolsToCreate = TARGET_POOL_ID - Number(currentPoolCount);
+  const poolsToCreate = TARGET_POOL_ID + 1 - Number(currentPoolCount);
   console.log(
-    `Need to create ${poolsToCreate} pools to reach poolId ${TARGET_POOL_ID}`
+    `Need to create ${poolsToCreate} pools to reach poolId ${TARGET_POOL_ID} (poolCount ${
+      TARGET_POOL_ID + 1
+    })`
   );
 
   // Get current creation fee for restoration later
@@ -78,8 +84,13 @@ async function main() {
     );
 
     for (let i = 0; i < poolsToCreate; i++) {
-      const currentPoolId = Number(currentPoolCount) + i;
-      console.log(`Creating pool ${currentPoolId + 1}/${TARGET_POOL_ID}...`);
+      // poolId will be the current poolCount value (0-indexed)
+      const expectedPoolId = Number(currentPoolCount) + i;
+      console.log(
+        `Creating pool with poolId ${expectedPoolId} (${
+          i + 1
+        }/${poolsToCreate})...`
+      );
 
       const createPoolTx = await stake.createPool(
         REWARD_TOKEN_ADDRESS, // stakingToken (using reward token as staking token for placeholder)
@@ -91,7 +102,7 @@ async function main() {
       );
 
       await createPoolTx.wait();
-      console.log(`✓ Created placeholder pool ${currentPoolId}`);
+      console.log(`✓ Created placeholder pool with poolId ${expectedPoolId}`);
     }
 
     // Step 4: Restore normal creation fee
@@ -110,17 +121,15 @@ async function main() {
       `✓ Successfully pre-filled pools up to poolId ${finalPoolCount - 1n}`
     );
 
-    if (finalPoolCount >= TARGET_POOL_ID) {
+    if (finalPoolCount >= TARGET_POOL_ID + 1) {
       console.log(
-        `✅ SUCCESS: Pools are now pre-filled up to poolId ${
-          TARGET_POOL_ID - 1
-        }`
+        `✅ SUCCESS: Pools are now pre-filled up to poolId ${TARGET_POOL_ID}`
       );
     } else {
       console.log(
-        `⚠️  WARNING: Only reached poolId ${finalPoolCount - 1n}, target was ${
-          TARGET_POOL_ID - 1
-        }`
+        `⚠️  WARNING: Only reached poolId ${
+          finalPoolCount - 1n
+        }, target was ${TARGET_POOL_ID}`
       );
     }
   } catch (error) {
