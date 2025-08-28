@@ -2723,7 +2723,7 @@ describe("Stake", function () {
       describe("version", function () {
         it("should return correct version", async function () {
           const version = await Stake.version();
-          expect(version).to.equal("1.1.0");
+          expect(version).to.equal("1.2.0");
         });
       }); // version
 
@@ -4342,4 +4342,126 @@ describe("Stake", function () {
       ).to.not.be.reverted;
     });
   }); // Creation Fee
+
+  describe("Pre-start Cancellation Underflow", function () {
+    it("should not revert when endTime < lastRewardUpdatedAt", async function () {
+      // Create pool with future reward start (7 days from now - max allowed)
+      const currentTime = await time.latest();
+      const futureStartTime = currentTime + 7 * 24 * 3600; // 7 days in future
+
+      // Pool creator creates pool with future start time
+      await RewardToken.connect(owner).approve(Stake.target, MAX_INT_256);
+
+      const poolId = await Stake.poolCount(); // Get current pool count before creating
+      await Stake.connect(owner).createPool(
+        SIMPLE_POOL.stakingToken,
+        true, // isStakingTokenERC20
+        SIMPLE_POOL.rewardToken,
+        wei(1000),
+        futureStartTime,
+        30 * 24 * 3600 // 30 days duration
+      );
+
+      // User stakes tokens (pre-staking phase)
+      const stakeAmount = wei(100);
+      await StakingToken.connect(alice).approve(Stake.target, stakeAmount);
+      await Stake.connect(alice).stake(poolId, stakeAmount);
+
+      // Verify pool state after pre-staking
+      const poolAfterStake = await Stake.pools(poolId);
+      expect(poolAfterStake.rewardStartedAt).to.equal(futureStartTime);
+      expect(poolAfterStake.lastRewardUpdatedAt).to.equal(futureStartTime);
+
+      // Pool creator cancels pool BEFORE reward start time (3 days later)
+      const cancelTime = futureStartTime - 3 * 24 * 3600;
+      await time.setNextBlockTimestamp(cancelTime); // 3 days later
+      await Stake.connect(owner).cancelPool(poolId);
+
+      // Verify cancellation
+      const poolAfterCancel = await Stake.pools(poolId);
+      expect(poolAfterCancel.cancelledAt).to.equal(cancelTime);
+      expect(cancelTime).to.be.lessThan(futureStartTime); // Cancelled before reward start
+
+      // Wait until after the scheduled reward start time
+      await time.increaseTo(futureStartTime + 100); // Go past reward start time
+      const currentTimeAfterStart = await time.latest();
+
+      // Now try to unstake - with the fix, this should work
+      // The _updatePool function will now handle the edge case properly
+      await expect(Stake.connect(alice).unstake(poolId, stakeAmount)).to.not.be
+        .reverted; // Should succeed with the fix
+
+      // Verify tokens are no longer locked after regular unstake
+      const userStakeAfterUnstake = await Stake.userPoolStake(
+        alice.address,
+        poolId
+      );
+      expect(userStakeAfterUnstake.stakedAmount).to.equal(0); // Should be 0 after unstake
+    });
+
+    it("should allow emergency unstake even with underflow conditions", async function () {
+      // Create the same problematic scenario
+      const currentTime = await time.latest();
+      const futureStartTime = currentTime + 7 * 24 * 3600; // 7 days in future
+
+      await RewardToken.connect(owner).approve(Stake.target, MAX_INT_256);
+
+      const poolId = await Stake.poolCount();
+      await Stake.connect(owner).createPool(
+        SIMPLE_POOL.stakingToken,
+        true,
+        SIMPLE_POOL.rewardToken,
+        wei(1000),
+        futureStartTime,
+        30 * 24 * 3600
+      );
+
+      // User stakes
+      const stakeAmount = wei(100);
+      await Stake.connect(alice).stake(poolId, stakeAmount);
+
+      // Cancel before start time
+      const cancelTime = futureStartTime - 3 * 24 * 3600;
+      await time.setNextBlockTimestamp(cancelTime);
+      await Stake.connect(owner).cancelPool(poolId);
+
+      // Go past the original start time
+      await time.increaseTo(futureStartTime + 100);
+
+      // Emergency unstake should now work with our fix
+      await expect(Stake.connect(alice).emergencyUnstake(poolId)).to.not.be
+        .reverted;
+
+      // Verify user successfully unstaked
+      const userStake = await Stake.userPoolStake(alice.address, poolId);
+      expect(userStake.stakedAmount).to.equal(0);
+    });
+
+    it("should correctly update pool state even during emergency unstake to prevent accounting errors", async function () {
+      // Create a normal pool that starts immediately with known parameters
+      const poolId = await createSamplePool(owner, true, 0); // Start immediately
+
+      // Two users stake equal amounts with 1000s between each stake
+      const stakeAmount = wei(100);
+      await Stake.connect(alice).stake(poolId, stakeAmount);
+      await time.setNextBlockTimestamp((await time.latest()) + 1000);
+      await Stake.connect(bob).stake(poolId, stakeAmount);
+
+      // Alice does emergency unstake
+      await time.setNextBlockTimestamp((await time.latest()) + 1000);
+      await Stake.connect(alice).emergencyUnstake(poolId);
+      const emergencyUnstakeTime = await time.latest();
+
+      // Get Bob's claimable rewards after Alice's emergency unstake
+      const bobRewards = await Stake.claimableReward(poolId, bob.address);
+
+      // Bob's reward should be exactly what we calculated
+      expect(bobRewards.rewardClaimable).to.equal(wei(500));
+
+      // Verify pool state was updated correctly
+      const poolAfter = await Stake.pools(poolId);
+      expect(poolAfter.lastRewardUpdatedAt).to.equal(emergencyUnstakeTime);
+      expect(poolAfter.totalStaked).to.equal(stakeAmount); // Only Bob remains
+    });
+  });
 }); // Stake
