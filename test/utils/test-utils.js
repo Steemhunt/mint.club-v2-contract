@@ -17,7 +17,7 @@ exports.getCreationFee = function (network) {
     optimisticEthereum: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     arbitrumOne: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     base: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
-    polygon: 25n * 10n ** 17n, // 2.5 MATIC (~$2)
+    polygon: 8n * 10n ** 18n, // 8 MATIC (~$2) - TODO: should update existing bond
     bsc: 5n * 10n ** 15n, // 0.005 BNB (~$2)
     avalanche: 5n * 10n ** 16n, // 0.05 AVAX (~$2)
     blast: 7n * 10n ** 14n, // 0.0007 ETH (~$2)

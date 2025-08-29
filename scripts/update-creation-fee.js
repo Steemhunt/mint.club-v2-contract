@@ -1,18 +1,27 @@
 require("dotenv").config();
+const hre = require("hardhat");
+const { getCreationFee } = require("../test/utils/test-utils");
 
 async function main() {
+  const CONTRACTS = {
+    polygon: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+  };
   const Bond = await ethers.getContractFactory("MCV2_Bond");
-  const bond = Bond.attach("0xc5a076cad94176c2996B32d8466Be1cE757FAa27");
+  const bond = Bond.attach(CONTRACTS[hre.network.name]);
 
   const current = await bond.creationFee();
+  console.log(`Chain: ${hre.network.name}`);
+  console.log(
+    `Current fee: ${current} wei (${ethers.formatEther(current.toString())})`
+  );
 
-  console.log(`Current creation fee: ${current} wei`);
-
-  const newCreationFee = 0n;
-  await bond.updateCreationFee(7n * 10n ** 14n); // 0.0007 ETH (~$2)
+  const newCreationFee = getCreationFee(hre.network.name);
+  const tx = await bond.updateCreationFee(newCreationFee);
+  await tx.wait(2); // Wait for 2 confirmation to make sure other RPCs updated
 
   const updated = await bond.creationFee();
-  console.log(`Updated creation fee: ${updated} wei`);
+  console.log(`Updated fee: ${updated} wei (${ethers.formatEther(updated)})`);
+  console.log(`TX Hash: ${tx.hash}`);
 }
 
 main().catch((error) => {
@@ -20,4 +29,4 @@ main().catch((error) => {
   process.exitCode = 1;
 });
 
-// npx hardhat run --network base scripts/update-creation-fee.js
+// npx hardhat run --network polygon scripts/update-creation-fee.js
