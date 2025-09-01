@@ -2082,7 +2082,9 @@ describe("Stake", function () {
             const pool = await Stake.pools(poolId);
             expect(pool.totalAllocatedRewards).to.equal(wei(100)); // Only Alice's 100 seconds
 
-            // Pool creator can still cancel and recover remaining rewards
+            // Can cancel the pool 1000 seconds after reward period ended
+            const cancelledAt = startTime + shortDuration + 1000;
+            await time.setNextBlockTimestamp(cancelledAt);
             const rewardTokenBalanceBefore = await RewardToken.balanceOf(
               owner.address
             );
@@ -2094,6 +2096,10 @@ describe("Stake", function () {
             const returnedRewards =
               rewardTokenBalanceAfter - rewardTokenBalanceBefore;
             expect(returnedRewards).to.equal(wei(3500)); // 3600 - 100 allocated = 3500 returned
+
+            const poolAfter = await Stake.pools(poolId);
+            expect(poolAfter.totalAllocatedRewards).to.equal(wei(100)); // Only Alice's 100 seconds
+            expect(poolAfter.cancelledAt).to.equal(cancelledAt);
           });
         }); // Everyone Unstakes During Reward Period Tests
       }); // Staking Validations
