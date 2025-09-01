@@ -426,7 +426,7 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
    </tbody>
 </table>
 
-### Stake (V1.1)
+### Stake (V1.2)
 
 <table>
    <thead>
@@ -438,54 +438,58 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
    <tbody>
       <tr>
          <td>Ethereum</td>
-         <td><a href="https://etherscan.io/address/0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65#code">0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65</a></td>
+         <td><a href="https://etherscan.io/address/0x841A2bD2fc97DCB865b4Ddb352540148Bad2dB09#code">0x841A2bD2fc97DCB865b4Ddb352540148Bad2dB09</a></td>
       </tr>
       <tr>
          <td>Base</td>
          <td>
-         <a href="https://basescan.org/address/0x364e0f814a2c5524d26e82937815c574f8bB86C1#code">0x364e0f814a2c5524d26e82937815c574f8bB86C1 (V1.0)</a>
-         <a href="https://basescan.org/address/0x3460E2fD6cBC9aFB49BF970659AfDE2909cf3399#code">0x3460E2fD6cBC9aFB49BF970659AfDE2909cf3399 (V1.1)</a>
+            <a href="https://basescan.org/address/0x364e0f814a2c5524d26e82937815c574f8bB86C1#code">0x364e0f814a2c5524d26e82937815c574f8bB86C1 (V1.0)</a>
+            <a href="https://basescan.org/address/0x3460E2fD6cBC9aFB49BF970659AfDE2909cf3399#code">0x3460E2fD6cBC9aFB49BF970659AfDE2909cf3399 (V1.1)</a>
+            <a href="https://basescan.org/address/0x9Ab05EcA10d087f23a1B22A44A714cdbBA76E802#code">0x9Ab05EcA10d087f23a1B22A44A714cdbBA76E802 (V1.2)</a>
          </td>
       </tr>
       <tr>
          <td>Optimism</td>
-         <td><a href="https://optimistic.etherscan.io/address/0x5b64cECC5cF3E4B1A668Abd895D16BdDC0c77a17#code">0x5b64cECC5cF3E4B1A668Abd895D16BdDC0c77a17</a></td>
+         <td><a href="https://optimistic.etherscan.io/address/0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65#code">0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65</a></td>
       </tr>
       <tr>
          <td>Arbitrum One</td>
-         <td><a href="https://arbiscan.io/address/0x9a176d09b3824cf50417e348696cBbBc43d7818d#code">0x9a176d09b3824cf50417e348696cBbBc43d7818d</a></td>
+         <td><a href="https://arbiscan.io/address/0xf7e2cDe9E603F15118E6E389cF14f11f19C1afbc#code">0xf7e2cDe9E603F15118E6E389cF14f11f19C1afbc</a></td>
       </tr>
       <tr>
          <td>Polygon (PoS)</td>
-         <td><a href="https://polygonscan.com/address/0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65#code">0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65</a></td>
+         <td>
+            <a href="https://polygonscan.com/address/0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65#code">0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65 (V1.1)</a>
+            <a href="https://polygonscan.com/address/0x95BDA90196c4e737933360F4639c46Ace657AAb7#code">0x95BDA90196c4e737933360F4639c46Ace657AAb7 (V1.1)</a>
+         </td>
       </tr>
       <tr>
          <td>BNB Chain</td>
-         <td><a href="https://bscscan.com/address/0x841A2bD2fc97DCB865b4Ddb352540148Bad2dB09#code">0x841A2bD2fc97DCB865b4Ddb352540148Bad2dB09</a></td>
+         <td><a href="https://bscscan.com/address/0x7B09b728ee8c6a714dC3F10367b5DF9b217FE633#code">0x7B09b728ee8c6a714dC3F10367b5DF9b217FE633</a></td>
       </tr>
       <tr>
          <td>Avalanche (C-Chain)</td>
-         <td><a href="https://snowtrace.io/address/0x364e0f814a2c5524d26e82937815c574f8bB86C1#code">0x364e0f814a2c5524d26e82937815c574f8bB86C1</a></td>
+         <td><a href="https://snowtrace.io/address/0x68f54a53d3E69e2191bCF586fB507c81E5353413#code">0x68f54a53d3E69e2191bCF586fB507c81E5353413</a></td>
       </tr>
       <tr>
          <td>Blast</td>
-         <td><a href="https://blastexplorer.io/address/0x364e0f814a2c5524d26e82937815c574f8bB86C1#code">0x364e0f814a2c5524d26e82937815c574f8bB86C1</a></td>
+         <td><a href="https://blastexplorer.io/address/0x68f54a53d3E69e2191bCF586fB507c81E5353413#code">0x68f54a53d3E69e2191bCF586fB507c81E5353413</a></td>
       </tr>
       <tr>
          <td>Degen</td>
-         <td><a href="https://explorer.degen.tips/address/0xf7e2cDe9E603F15118E6E389cF14f11f19C1afbc?tab=contract">0xf7e2cDe9E603F15118E6E389cF14f11f19C1afbc</a></td>
+         <td><a href="https://explorer.degen.tips/address/0x5FBdC7941a735685eB08c51776bA77098ebe1eb7?tab=contract">0x5FBdC7941a735685eB08c51776bA77098ebe1eb7</a></td>
       </tr>
       <tr>
          <td>Zora</td>
-         <td><a href="https://explorer.zora.energy/address/0x06FD26c092Db44E5491abB7cDC580CE24D93030c?tab=contract">0x06FD26c092Db44E5491abB7cDC580CE24D93030c</a></td>
+         <td><a href="https://explorer.zora.energy/address/0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1?tab=contract">0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1</a></td>
       </tr>
       <tr>
          <td>Kaia</td>
-         <td><a href="https://kaiascan.io/account/0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1?tabId=contract">0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1</a></td>
+         <td><a href="https://kaiascan.io/account/0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724?tabId=contract">0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724</a></td>
       </tr>
       <tr>
          <td>Cyber</td>
-         <td><a href="https://cyberscan.co/address/0x06FD26c092Db44E5491abB7cDC580CE24D93030c#contract">0x06FD26c092Db44E5491abB7cDC580CE24D93030c</a></td>
+         <td><a href="https://cyberscan.co/address/0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1#contract">0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1</a></td>
       </tr>
       <tr>
          <td>Ham</td>
@@ -493,27 +497,27 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       </tr>
       <tr>
          <td>APEChain</td>
-         <td><a href="https://apescan.io/address/0x5DaE94e149CF2112Ec625D46670047814aA9aC2a?tab=contract#code">0x5DaE94e149CF2112Ec625D46670047814aA9aC2a</a></td>
+         <td><a href="https://apescan.io/address/0xa4021a8907197Df92341F1218B32E26b250F6798?tab=contract#code">0xa4021a8907197Df92341F1218B32E26b250F6798</a></td>
       </tr>
       <tr>
          <td>Shibarium</td>
-         <td><a href="https://www.shibariumscan.io/address/0x5DaE94e149CF2112Ec625D46670047814aA9aC2a?tab=contract">0x5DaE94e149CF2112Ec625D46670047814aA9aC2a</a></td>
+         <td><a href="https://www.shibariumscan.io/address/0xa4021a8907197Df92341F1218B32E26b250F6798?tab=contract">0xa4021a8907197Df92341F1218B32E26b250F6798</a></td>
       </tr>
       <tr>
          <td>HashKey</td>
-         <td><a href="https://explorer.hsk.xyz/address/0x5DaE94e149CF2112Ec625D46670047814aA9aC2a?tab=contract">0x5DaE94e149CF2112Ec625D46670047814aA9aC2a</a></td>
+         <td><a href="https://explorer.hsk.xyz/address/0xa4021a8907197Df92341F1218B32E26b250F6798?tab=contract">0xa4021a8907197Df92341F1218B32E26b250F6798</a></td>
       </tr>
       <tr>
          <td>Unichain</td>
-         <td><a href="https://uniscan.xyz/address/0x5DaE94e149CF2112Ec625D46670047814aA9aC2a?tab=contract">0x5DaE94e149CF2112Ec625D46670047814aA9aC2a</a></td>
+         <td><a href="https://uniscan.xyz/address/0xa4021a8907197Df92341F1218B32E26b250F6798?tab=contract">0xa4021a8907197Df92341F1218B32E26b250F6798</a></td>
       </tr>
       <tr>
          <td>Over</td>
-         <td><a href="https://scan.over.network/address/0xa4021a8907197Df92341F1218B32E26b250F6798?tab=contract">0xa4021a8907197Df92341F1218B32E26b250F6798</a></td>
+         <td><a href="https://scan.over.network/address/0x621c335b4BD8f2165E120DC70d3AfcAfc6628681?tab=contract">0x621c335b4BD8f2165E120DC70d3AfcAfc6628681</a></td>
       </tr>
       <tr>
          <td>Sepolia</td>
-         <td><a href="https://sepolia.etherscan.io/address/0x0d4C86C5Ef86dFd9B8f0cb87142b2cc74cbC7160#code">0x0d4C86C5Ef86dFd9B8f0cb87142b2cc74cbC7160</a></td>
+         <td><a href="https://sepolia.etherscan.io/address/0xd1cFAf476c8311792c329359B012bA515399f3a4#code">0xd1cFAf476c8311792c329359B012bA515399f3a4</a></td>
       </tr>
    </tbody>
 </table>

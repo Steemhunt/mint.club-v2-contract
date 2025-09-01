@@ -3,47 +3,77 @@ const hre = require("hardhat");
 const { getCreationFee } = require("../test/utils/test-utils");
 
 async function main() {
-  const STAKE_CONTRACT_ADDRESS = "0x3460E2fD6cBC9aFB49BF970659AfDE2909cf3399";
-  const REWARD_TOKEN_ADDRESS = "0xFf45161474C39cB00699070Dd49582e417b57a7E";
+  // Configuration for Base and Polygon chains
+  const configs = {
+    8453: {
+      // Base
+      STAKE_OLD: "0x3460E2fD6cBC9aFB49BF970659AfDE2909cf3399", // V1.1
+      STAKE_NEW: "0x", // V1.2
+      REWARD_TOKEN: "0xFf45161474C39cB00699070Dd49582e417b57a7E", // MT on Base
+    },
+    137: {
+      // Polygon
+      STAKE_OLD: "0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65", // V1.2
+      STAKE_NEW: "0x", // Same as old for now
+      REWARD_TOKEN: "0x6DF5e5692247A513ab74cB45AE8b0636A43b218E", // MOON on Polygon
+    },
+  };
+
   const PLACEHOLDER_REWARD_AMOUNT = 3600n; // 3600 wei as minimum value
   const MIN_REWARD_DURATION = 3600; // 1 hour (minimum duration from contract)
-  const TARGET_POOL_ID = 20; // We want to fill up to poolId = 20
 
   const accounts = await hre.ethers.getSigners();
   const deployer = accounts[0];
   console.log(`Operating from account: ${deployer.address}`);
   console.log(`Network: ${hre.network.name}`);
 
-  // Connect to deployed Stake contract
+  // Get network chain ID
+  const chainId = hre.network.config.chainId;
+  console.log(`Chain ID: ${chainId}`);
+
+  // Check if current network is supported
+  if (!configs[chainId]) {
+    console.error(
+      `❌ Unsupported network. Only Base (8453) and Polygon (137) are supported.`
+    );
+    console.error(`Current chain ID: ${chainId}`);
+    return;
+  }
+
+  const config = configs[chainId];
+  console.log(`Using config:`, config);
+
+  // Connect to deployed Stake contracts
   const Stake = await hre.ethers.getContractFactory("Stake");
-  const stake = Stake.attach(STAKE_CONTRACT_ADDRESS);
+  const stakeOld = Stake.attach(config.STAKE_OLD);
+  const stakeNew = Stake.attach(config.STAKE_NEW);
 
-  console.log(`Connected to Stake contract at: ${STAKE_CONTRACT_ADDRESS}`);
+  console.log(`Connected to old Stake contract at: ${config.STAKE_OLD}`);
+  console.log(`Connected to new Stake contract at: ${config.STAKE_NEW}`);
 
-  // Check current pool count
-  const currentPoolCount = await stake.poolCount();
-  console.log(`Current pool count: ${currentPoolCount}`);
+  // Get target pool count from old contract
+  const targetPoolCount = await stakeOld.poolCount();
+  console.log(`Target pool count from old contract: ${targetPoolCount}`);
+
+  // Check current pool count in new contract
+  const currentPoolCount = await stakeNew.poolCount();
+  console.log(`Current pool count in new contract: ${currentPoolCount}`);
 
   // poolCount is 1-indexed, poolId is 0-indexed
-  // If we want poolId up to TARGET_POOL_ID, we need poolCount to be TARGET_POOL_ID + 1
-  if (currentPoolCount > TARGET_POOL_ID + 1) {
+  if (currentPoolCount >= targetPoolCount) {
     console.log(
-      `Pool count already at or above target (${
-        TARGET_POOL_ID + 1
-      }). No pools to create.`
+      `✅ New contract already has sufficient pools (${currentPoolCount} >= ${targetPoolCount}). No pools to create.`
     );
     return;
   }
 
-  const poolsToCreate = TARGET_POOL_ID + 1 - Number(currentPoolCount);
+  const poolsToCreate = Number(targetPoolCount) - Number(currentPoolCount);
   console.log(
-    `Need to create ${poolsToCreate} pools to reach poolId ${TARGET_POOL_ID} (poolCount ${
-      TARGET_POOL_ID + 1
-    })`
+    `Need to create ${poolsToCreate} pools to match old contract (from poolCount ${currentPoolCount} to ${targetPoolCount})`
   );
 
   // Get current creation fee for restoration later
-  const originalCreationFee = await stake.creationFee();
+  const originalCreationFee = await stakeNew.creationFee();
   const normalCreationFee = getCreationFee(hre.network.name) * 5n; // creationFee x 5 = ~$10
   console.log(`Current creation fee: ${originalCreationFee}`);
   console.log(`Normal creation fee should be: ${normalCreationFee}`);
@@ -51,14 +81,14 @@ async function main() {
   // Connect to reward token to approve transfers
   const rewardToken = await hre.ethers.getContractAt(
     "IERC20",
-    REWARD_TOKEN_ADDRESS
+    config.REWARD_TOKEN
   );
 
   try {
     // Step 1: Set creation fee to 0
     console.log("\n=== Step 1: Setting creation fee to 0 ===");
     if (originalCreationFee > 0n) {
-      const setFeeToZeroTx = await stake.updateCreationFee(0);
+      const setFeeToZeroTx = await stakeNew.updateCreationFee(0);
       await setFeeToZeroTx.wait();
       console.log("✓ Creation fee set to 0");
     } else {
@@ -72,7 +102,7 @@ async function main() {
     );
 
     const approveTx = await rewardToken.approve(
-      STAKE_CONTRACT_ADDRESS,
+      config.STAKE_NEW,
       totalRewardNeeded
     );
     await approveTx.wait();
@@ -92,10 +122,10 @@ async function main() {
         }/${poolsToCreate})...`
       );
 
-      const createPoolTx = await stake.createPool(
-        REWARD_TOKEN_ADDRESS, // stakingToken (using reward token as staking token for placeholder)
+      const createPoolTx = await stakeNew.createPool(
+        config.REWARD_TOKEN, // stakingToken (using reward token as staking token for placeholder)
         true, // isStakingTokenERC20
-        REWARD_TOKEN_ADDRESS, // rewardToken
+        config.REWARD_TOKEN, // rewardToken
         PLACEHOLDER_REWARD_AMOUNT, // rewardAmount (3600 wei)
         0, // rewardStartsAt (0 = start immediately on first stake)
         MIN_REWARD_DURATION // rewardDuration (1 hour minimum)
@@ -109,27 +139,26 @@ async function main() {
     console.log(
       `\n=== Step 4: Restoring creation fee to ${normalCreationFee} ===`
     );
-    const restoreFeeTx = await stake.updateCreationFee(normalCreationFee);
+    const restoreFeeTx = await stakeNew.updateCreationFee(normalCreationFee);
     await restoreFeeTx.wait();
     console.log("✓ Creation fee restored");
 
     // Final verification
-    const finalPoolCount = await stake.poolCount();
+    const finalPoolCount = await stakeNew.poolCount();
     console.log(`\n=== Final Status ===`);
-    console.log(`✓ Final pool count: ${finalPoolCount}`);
+    console.log(`✓ Final pool count in new contract: ${finalPoolCount}`);
+    console.log(`✓ Target pool count from old contract: ${targetPoolCount}`);
     console.log(
       `✓ Successfully pre-filled pools up to poolId ${finalPoolCount - 1n}`
     );
 
-    if (finalPoolCount >= TARGET_POOL_ID + 1) {
+    if (finalPoolCount >= targetPoolCount) {
       console.log(
-        `✅ SUCCESS: Pools are now pre-filled up to poolId ${TARGET_POOL_ID}`
+        `✅ SUCCESS: New contract pools (${finalPoolCount}) now match or exceed old contract pools (${targetPoolCount})`
       );
     } else {
       console.log(
-        `⚠️  WARNING: Only reached poolId ${
-          finalPoolCount - 1n
-        }, target was ${TARGET_POOL_ID}`
+        `⚠️  WARNING: Only reached poolCount ${finalPoolCount}, target was ${targetPoolCount}`
       );
     }
   } catch (error) {
@@ -138,9 +167,11 @@ async function main() {
     // Try to restore creation fee even if something failed
     try {
       console.log("\n=== Emergency: Attempting to restore creation fee ===");
-      const currentFee = await stake.creationFee();
+      const currentFee = await stakeNew.creationFee();
       if (currentFee === 0n) {
-        const restoreFeeTx = await stake.updateCreationFee(normalCreationFee);
+        const restoreFeeTx = await stakeNew.updateCreationFee(
+          normalCreationFee
+        );
         await restoreFeeTx.wait();
         console.log("✓ Creation fee restored after error");
       }
@@ -160,5 +191,12 @@ main()
   });
 
 /* Deploy script
+Usage examples:
 npx hardhat compile && npx hardhat run --network base scripts/prefill-staking-poos.js
+npx hardhat compile && npx hardhat run --network polygon scripts/prefill-staking-poos.js
+
+This script will:
+1. Get the poolCount from the old Stake contract
+2. Fill the new Stake contract until it matches that poolCount
+3. Use minimal REWARD_TOKEN amounts for placeholder pools
 */
