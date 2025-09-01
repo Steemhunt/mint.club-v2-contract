@@ -1926,6 +1926,182 @@ describe("Stake", function () {
             expect(pool.totalStaked).to.equal(0);
           });
         }); // Reward Start Time Integration Tests
+
+        describe("Everyone Unstakes During Reward Period Tests", function () {
+          it("should handle multiple stake/unstake cycles with reward gaps", async function () {
+            const poolId = await createSamplePool(owner, true, 0);
+
+            // Cycle 1: Alice stakes for exactly 100 seconds
+            await Stake.connect(alice).stake(poolId, wei(100));
+            const startTime = await time.latest();
+
+            await time.setNextBlockTimestamp(startTime + 100);
+            await Stake.connect(alice).unstake(poolId, wei(100));
+            const aliceEndTime = await time.latest(); // startTime + 100
+
+            // Gap 1: exactly 50 seconds with no stakers
+            await time.setNextBlockTimestamp(aliceEndTime + 50);
+
+            // Cycle 2: Bob stakes for exactly 75 seconds
+            await Stake.connect(bob).stake(poolId, wei(200));
+            const bobStartTime = await time.latest(); // startTime + 150
+
+            await time.setNextBlockTimestamp(bobStartTime + 75);
+            await Stake.connect(bob).unstake(poolId, wei(200));
+            const bobEndTime = await time.latest(); // startTime + 225
+
+            // Gap 2: exactly 25 seconds with no stakers
+            await time.setNextBlockTimestamp(bobEndTime + 25);
+
+            // Cycle 3: Carol stakes for exactly 50 seconds
+            await Stake.connect(carol).stake(poolId, wei(150));
+            const carolStartTime = await time.latest(); // startTime + 250
+
+            await time.setNextBlockTimestamp(carolStartTime + 50);
+            await Stake.connect(carol).claim(poolId);
+
+            const pool = await Stake.pools(poolId);
+            // Total allocated should be: 100 (Alice) + 75 (Bob) + 50 (Carol) = 225
+            // NOT 300 (which would include the 75 seconds of gaps)
+            expect(pool.totalAllocatedRewards).to.equal(wei(225));
+          });
+
+          it("should continue reward timing even when totalStaked is zero", async function () {
+            const poolId = await createSamplePool(owner, true, 0);
+
+            // Alice stakes to start rewards
+            await Stake.connect(alice).stake(poolId, wei(100));
+            const rewardStartTime = await time.latest();
+
+            // Alice unstakes after exactly 100 seconds
+            await time.setNextBlockTimestamp(rewardStartTime + 100);
+            await Stake.connect(alice).unstake(poolId, wei(100));
+            const unstakeTime = await time.latest(); // Should be rewardStartTime + 100
+
+            // Bob stakes after exactly 1000 seconds gap
+            await time.setNextBlockTimestamp(unstakeTime + 1000);
+            await Stake.connect(bob).stake(poolId, wei(100));
+            const bobStakeTime = await time.latest(); // Should be rewardStartTime + 1100
+
+            // Bob stakes until the end of the reward period
+            const expectedEndTime =
+              rewardStartTime + SIMPLE_POOL.rewardDuration; // rewardStartTime + 10,000
+            await time.increaseTo(expectedEndTime); // bob staked 10000 - 1100 = 8900 seconds
+
+            // Bob should only get rewards for the 8900 seconds he was actually staked
+            const [claimableBob] = await Stake.claimableReward(
+              poolId,
+              bob.address
+            );
+            expect(claimableBob).to.equal(wei(8900));
+
+            await time.increase(100);
+
+            // Reward finished, so it should not increase reward anymore
+            const beforeClaim = await RewardToken.balanceOf(bob.address);
+            await Stake.connect(bob).claim(poolId);
+            const afterClaim = await RewardToken.balanceOf(bob.address);
+            expect(afterClaim - beforeClaim).to.equal(wei(8900));
+
+            const pool = await Stake.pools(poolId);
+            // Total allocated should be: 100 (Alice) + 8900 (Bob) = 9000
+            // NOT 10000 (which would include the 1000 seconds of gaps)
+            expect(pool.totalAllocatedRewards).to.equal(wei(9000));
+
+            const refundBefore = await RewardToken.balanceOf(owner.address);
+            await Stake.connect(owner).cancelPool(poolId);
+            const refundAfter = await RewardToken.balanceOf(owner.address);
+            // Creator should get back the unallocated rewards
+            expect(refundAfter - refundBefore).to.equal(wei(1000)); // 1000 unallocated gaps
+          });
+
+          it("should allow pool creator to cancel and recover unallocated rewards after everyone unstakes", async function () {
+            const poolId = await createSamplePool(owner, true, 0);
+
+            // Alice stakes briefly then leaves
+            await Stake.connect(alice).stake(poolId, wei(100));
+            const startTime = await time.latest();
+
+            // Alice stakes for exactly 100 seconds
+            await time.setNextBlockTimestamp(startTime + 100);
+            await Stake.connect(alice).unstake(poolId, wei(100));
+            const unstakeTime = await time.latest(); // startTime + 100
+
+            // Long gap with no stakers - exactly 400 seconds of "lost" rewards
+            await time.setNextBlockTimestamp(unstakeTime + 400);
+
+            // Pool creator cancels the pool
+            const rewardTokenBalanceBefore = await RewardToken.balanceOf(
+              owner.address
+            );
+            await Stake.connect(owner).cancelPool(poolId);
+            const rewardTokenBalanceAfter = await RewardToken.balanceOf(
+              owner.address
+            );
+
+            // Creator should get back the unallocated rewards
+            const returnedRewards =
+              rewardTokenBalanceAfter - rewardTokenBalanceBefore;
+            expect(returnedRewards).to.equal(wei(9900)); // 10000 - 100 allocated = 9900 returned
+
+            // Verify pool state
+            const pool = await Stake.pools(poolId);
+            expect(pool.cancelledAt).to.not.equal(0);
+            expect(pool.totalAllocatedRewards).to.equal(wei(100)); // Only what was actually allocated
+          });
+
+          it("should handle reward period ending while no one is staked", async function () {
+            // Create a pool with minimum allowed duration (3600 seconds)
+            const shortDuration = 3600; // 1 hour (minimum allowed)
+            const poolId = await Stake.poolCount();
+            await Stake.connect(owner).createPool(
+              SIMPLE_POOL.stakingToken,
+              true,
+              SIMPLE_POOL.rewardToken,
+              wei(3600), // 3600 tokens for 3600 seconds = 1 token per second
+              0, // Start immediately
+              shortDuration
+            );
+
+            // Alice stakes for exactly 100 seconds
+            await Stake.connect(alice).stake(poolId, wei(100));
+            const startTime = await time.latest();
+
+            await time.setNextBlockTimestamp(startTime + 100);
+            await Stake.connect(alice).unstake(poolId, wei(100));
+
+            // Let the reward period end with no stakers
+            await time.setNextBlockTimestamp(startTime + shortDuration + 1);
+
+            // Bob tries to stake 1 second after reward period ended
+            await expect(
+              Stake.connect(bob).stake(poolId, wei(100))
+            ).to.be.revertedWithCustomError(Stake, "Stake__PoolFinished");
+
+            // Verify final state
+            const pool = await Stake.pools(poolId);
+            expect(pool.totalAllocatedRewards).to.equal(wei(100)); // Only Alice's 100 seconds
+
+            // Can cancel the pool 1000 seconds after reward period ended
+            const cancelledAt = startTime + shortDuration + 1000;
+            await time.setNextBlockTimestamp(cancelledAt);
+            const rewardTokenBalanceBefore = await RewardToken.balanceOf(
+              owner.address
+            );
+            await Stake.connect(owner).cancelPool(poolId);
+            const rewardTokenBalanceAfter = await RewardToken.balanceOf(
+              owner.address
+            );
+
+            const returnedRewards =
+              rewardTokenBalanceAfter - rewardTokenBalanceBefore;
+            expect(returnedRewards).to.equal(wei(3500)); // 3600 - 100 allocated = 3500 returned
+
+            const poolAfter = await Stake.pools(poolId);
+            expect(poolAfter.totalAllocatedRewards).to.equal(wei(100)); // Only Alice's 100 seconds
+            expect(poolAfter.cancelledAt).to.equal(cancelledAt);
+          });
+        }); // Everyone Unstakes During Reward Period Tests
       }); // Staking Validations
 
       describe("Unstaking Validations", function () {
@@ -2723,7 +2899,7 @@ describe("Stake", function () {
       describe("version", function () {
         it("should return correct version", async function () {
           const version = await Stake.version();
-          expect(version).to.equal("1.1.0");
+          expect(version).to.equal("1.2.0");
         });
       }); // version
 
@@ -4342,4 +4518,126 @@ describe("Stake", function () {
       ).to.not.be.reverted;
     });
   }); // Creation Fee
+
+  describe("Pre-start Cancellation Underflow", function () {
+    it("should not revert when endTime < lastRewardUpdatedAt", async function () {
+      // Create pool with future reward start (7 days from now - max allowed)
+      const currentTime = await time.latest();
+      const futureStartTime = currentTime + 7 * 24 * 3600; // 7 days in future
+
+      // Pool creator creates pool with future start time
+      await RewardToken.connect(owner).approve(Stake.target, MAX_INT_256);
+
+      const poolId = await Stake.poolCount(); // Get current pool count before creating
+      await Stake.connect(owner).createPool(
+        SIMPLE_POOL.stakingToken,
+        true, // isStakingTokenERC20
+        SIMPLE_POOL.rewardToken,
+        wei(1000),
+        futureStartTime,
+        30 * 24 * 3600 // 30 days duration
+      );
+
+      // User stakes tokens (pre-staking phase)
+      const stakeAmount = wei(100);
+      await StakingToken.connect(alice).approve(Stake.target, stakeAmount);
+      await Stake.connect(alice).stake(poolId, stakeAmount);
+
+      // Verify pool state after pre-staking
+      const poolAfterStake = await Stake.pools(poolId);
+      expect(poolAfterStake.rewardStartedAt).to.equal(futureStartTime);
+      expect(poolAfterStake.lastRewardUpdatedAt).to.equal(futureStartTime);
+
+      // Pool creator cancels pool BEFORE reward start time (3 days later)
+      const cancelTime = futureStartTime - 3 * 24 * 3600;
+      await time.setNextBlockTimestamp(cancelTime); // 3 days later
+      await Stake.connect(owner).cancelPool(poolId);
+
+      // Verify cancellation
+      const poolAfterCancel = await Stake.pools(poolId);
+      expect(poolAfterCancel.cancelledAt).to.equal(cancelTime);
+      expect(cancelTime).to.be.lessThan(futureStartTime); // Cancelled before reward start
+
+      // Wait until after the scheduled reward start time
+      await time.increaseTo(futureStartTime + 100); // Go past reward start time
+      const currentTimeAfterStart = await time.latest();
+
+      // Now try to unstake - with the fix, this should work
+      // The _updatePool function will now handle the edge case properly
+      await expect(Stake.connect(alice).unstake(poolId, stakeAmount)).to.not.be
+        .reverted; // Should succeed with the fix
+
+      // Verify tokens are no longer locked after regular unstake
+      const userStakeAfterUnstake = await Stake.userPoolStake(
+        alice.address,
+        poolId
+      );
+      expect(userStakeAfterUnstake.stakedAmount).to.equal(0); // Should be 0 after unstake
+    });
+
+    it("should allow emergency unstake even with underflow conditions", async function () {
+      // Create the same problematic scenario
+      const currentTime = await time.latest();
+      const futureStartTime = currentTime + 7 * 24 * 3600; // 7 days in future
+
+      await RewardToken.connect(owner).approve(Stake.target, MAX_INT_256);
+
+      const poolId = await Stake.poolCount();
+      await Stake.connect(owner).createPool(
+        SIMPLE_POOL.stakingToken,
+        true,
+        SIMPLE_POOL.rewardToken,
+        wei(1000),
+        futureStartTime,
+        30 * 24 * 3600
+      );
+
+      // User stakes
+      const stakeAmount = wei(100);
+      await Stake.connect(alice).stake(poolId, stakeAmount);
+
+      // Cancel before start time
+      const cancelTime = futureStartTime - 3 * 24 * 3600;
+      await time.setNextBlockTimestamp(cancelTime);
+      await Stake.connect(owner).cancelPool(poolId);
+
+      // Go past the original start time
+      await time.increaseTo(futureStartTime + 100);
+
+      // Emergency unstake should now work with our fix
+      await expect(Stake.connect(alice).emergencyUnstake(poolId)).to.not.be
+        .reverted;
+
+      // Verify user successfully unstaked
+      const userStake = await Stake.userPoolStake(alice.address, poolId);
+      expect(userStake.stakedAmount).to.equal(0);
+    });
+
+    it("should correctly update pool state even during emergency unstake to prevent accounting errors", async function () {
+      // Create a normal pool that starts immediately with known parameters
+      const poolId = await createSamplePool(owner, true, 0); // Start immediately
+
+      // Two users stake equal amounts with 1000s between each stake
+      const stakeAmount = wei(100);
+      await Stake.connect(alice).stake(poolId, stakeAmount);
+      await time.setNextBlockTimestamp((await time.latest()) + 1000);
+      await Stake.connect(bob).stake(poolId, stakeAmount);
+
+      // Alice does emergency unstake
+      await time.setNextBlockTimestamp((await time.latest()) + 1000);
+      await Stake.connect(alice).emergencyUnstake(poolId);
+      const emergencyUnstakeTime = await time.latest();
+
+      // Get Bob's claimable rewards after Alice's emergency unstake
+      const bobRewards = await Stake.claimableReward(poolId, bob.address);
+
+      // Bob's reward should be exactly what we calculated
+      expect(bobRewards.rewardClaimable).to.equal(wei(500));
+
+      // Verify pool state was updated correctly
+      const poolAfter = await Stake.pools(poolId);
+      expect(poolAfter.lastRewardUpdatedAt).to.equal(emergencyUnstakeTime);
+      expect(poolAfter.totalStaked).to.equal(stakeAmount); // Only Bob remains
+    });
+  });
 }); // Stake
