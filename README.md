@@ -460,7 +460,7 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
          <td>Polygon (PoS)</td>
          <td>
             <a href="https://polygonscan.com/address/0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65#code">0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65 (V1.1)</a>
-            <a href="https://polygonscan.com/address/0x95BDA90196c4e737933360F4639c46Ace657AAb7#code">0x95BDA90196c4e737933360F4639c46Ace657AAb7 (V1.1)</a>
+            <a href="https://polygonscan.com/address/0x95BDA90196c4e737933360F4639c46Ace657AAb7#code">0x95BDA90196c4e737933360F4639c46Ace657AAb7 (V1.2)</a>
          </td>
       </tr>
       <tr>

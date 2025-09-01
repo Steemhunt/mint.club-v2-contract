@@ -69,7 +69,9 @@ async function main() {
 
   const poolsToCreate = Number(targetPoolCount) - Number(currentPoolCount);
   console.log(
-    `Need to create ${poolsToCreate} pools to match old contract (from poolCount ${currentPoolCount} to ${targetPoolCount})`
+    `Need to create ${poolsToCreate} pools to match old contract (from poolCount ${currentPoolCount} to ${
+      targetPoolCount - 1n
+    })`
   );
 
   // Get current creation fee for restoration later
