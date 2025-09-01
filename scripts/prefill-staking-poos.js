@@ -8,13 +8,13 @@ async function main() {
     8453: {
       // Base
       STAKE_OLD: "0x3460E2fD6cBC9aFB49BF970659AfDE2909cf3399", // V1.1
-      STAKE_NEW: "0x", // V1.2
+      STAKE_NEW: "0x9Ab05EcA10d087f23a1B22A44A714cdbBA76E802", // V1.2
       REWARD_TOKEN: "0xFf45161474C39cB00699070Dd49582e417b57a7E", // MT on Base
     },
     137: {
       // Polygon
       STAKE_OLD: "0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65", // V1.2
-      STAKE_NEW: "0x", // Same as old for now
+      STAKE_NEW: "0x95BDA90196c4e737933360F4639c46Ace657AAb7", // Same as old for now
       REWARD_TOKEN: "0x6DF5e5692247A513ab74cB45AE8b0636A43b218E", // MOON on Polygon
     },
   };
