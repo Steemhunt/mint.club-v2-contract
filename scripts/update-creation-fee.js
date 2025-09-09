@@ -4,6 +4,7 @@ const { getCreationFee } = require("../test/utils/test-utils");
 
 async function main() {
   const CONTRACTS = {
+    base: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     polygon: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
   };
   const Bond = await ethers.getContractFactory("MCV2_Bond");
@@ -15,6 +16,7 @@ async function main() {
     `Current fee: ${current} wei (${ethers.formatEther(current.toString())})`
   );
 
+  // const newCreationFee = 1n * 10n ** 13n; // 0.00001 ETH temporary
   const newCreationFee = getCreationFee(hre.network.name);
   const tx = await bond.updateCreationFee(newCreationFee);
   await tx.wait(2); // Wait for 2 confirmation to make sure other RPCs updated
@@ -29,4 +31,4 @@ main().catch((error) => {
   process.exitCode = 1;
 });
 
-// npx hardhat run --network polygon scripts/update-creation-fee.js
+// npx hardhat run --network base scripts/update-creation-fee.js

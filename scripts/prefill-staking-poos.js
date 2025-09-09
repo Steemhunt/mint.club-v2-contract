@@ -202,6 +202,7 @@ main()
 Usage examples:
 npx hardhat compile && npx hardhat run --network base scripts/prefill-staking-poos.js
 npx hardhat compile && npx hardhat run --network polygon scripts/prefill-staking-poos.js
+npx hardhat compile && npx hardhat run --network bsc scripts/prefill-staking-poos.js
 
 This script will:
 1. Get the poolCount from the old Stake contract
