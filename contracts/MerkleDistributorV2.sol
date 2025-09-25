@@ -18,6 +18,7 @@ import {IERC1155MetadataURI} from "@openzeppelin/contracts/token/ERC1155/extensi
  * 3. Added `getDistributionsByCreator` and `getDistributionsByToken` to save read calls for each distribution.
  * 4. Remove `getDistributionIdsByCreator` and `getDistributionIdsByToken`
  * 5. Rename `distributionCount` -> `getDistributionsCount`
+ * 6. Added `creationFee` to charge a fee for creating distributions to prevent spamming.
  */
 contract MerkleDistributorV2 is Ownable {
     using SafeERC20 for IERC20;
@@ -33,6 +34,8 @@ contract MerkleDistributorV2 is Ownable {
     error MerkleDistributorV2__InvalidParams(string param);
     error MerkleDistributorV2__InvalidClaimFee();
     error MerkleDistributorV2__ClaimFeeTransactionFailed();
+    error MerkleDistributorV2__InvalidCreationFee();
+    error MerkleDistributorV2__CreationFeeTransactionFailed();
     error MerkleDistributorV2__NothingToRefund();
     error MerkleDistributorV2__InvalidPaginationParams();
 
@@ -50,6 +53,7 @@ contract MerkleDistributorV2 is Ownable {
     event Claimed(uint256 indexed distributionId, address account);
     event ProtocolBeneficiaryUpdated(address protocolBeneficiary);
     event ClaimFeeUpdated(uint256 amount);
+    event CreationFeeUpdated(uint256 amount);
 
     // Struct to store distribution details
     struct Distribution {
@@ -73,13 +77,16 @@ contract MerkleDistributorV2 is Ownable {
     mapping(address => uint256[]) private _creatorDistributions;
 
     address public protocolBeneficiary;
+    uint256 public creationFee;
     uint256 public claimFee;
 
     constructor(
         address protocolBeneficiary_,
+        uint256 creationFee_,
         uint256 claimFee_
     ) Ownable(msg.sender) {
         protocolBeneficiary = protocolBeneficiary_;
+        creationFee = creationFee_;
         claimFee = claimFee_;
     }
 
@@ -110,6 +117,12 @@ contract MerkleDistributorV2 is Ownable {
         emit ProtocolBeneficiaryUpdated(protocolBeneficiary_);
     }
 
+    function updateCreationFee(uint256 amount) external onlyOwner {
+        creationFee = amount;
+
+        emit CreationFeeUpdated(amount);
+    }
+
     function updateClaimFee(uint256 amount) external onlyOwner {
         claimFee = amount;
 
@@ -130,6 +143,7 @@ contract MerkleDistributorV2 is Ownable {
      *
      * @notice If the Merkle root is not provided, there will be no verification on claims,
      * anyone can claim all tokens with multiple accounts.
+     * @notice Requires payment of creationFee to prevent spam distributions.
      */
     struct MetadataParams {
         string title;
@@ -145,7 +159,7 @@ contract MerkleDistributorV2 is Ownable {
         uint40 endTime,
         bytes32 merkleRoot,
         MetadataParams calldata metaData
-    ) external {
+    ) external payable {
         if (token == address(0))
             revert MerkleDistributorV2__InvalidParams("token");
         if (amountPerClaim == 0)
@@ -156,6 +170,10 @@ contract MerkleDistributorV2 is Ownable {
             revert MerkleDistributorV2__InvalidParams("endTime");
         if (startTime >= endTime)
             revert MerkleDistributorV2__InvalidParams("startTime");
+
+        // Check creation fee payment
+        if (msg.value != creationFee)
+            revert MerkleDistributorV2__InvalidCreationFee();
 
         // Validate if the token supports `symbol` and `decimals` interface to prevent crashing on list functions
         if (!_checkMethodExists(token, "decimals()", MIN_UINT8_LENGTH))
@@ -203,6 +221,15 @@ contract MerkleDistributorV2 is Ownable {
         // Update mappings
         _tokenDistributions[token].push(distributionId);
         _creatorDistributions[msg.sender].push(distributionId);
+
+        // Transfer creation fee to protocol beneficiary
+        if (creationFee > 0) {
+            (bool success, ) = payable(protocolBeneficiary).call{
+                value: creationFee
+            }("");
+            if (!success)
+                revert MerkleDistributorV2__CreationFeeTransactionFailed();
+        }
 
         emit Created(distributionId, token, isERC20, startTime);
     }

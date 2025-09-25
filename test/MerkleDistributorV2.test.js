@@ -10,7 +10,8 @@ const {
   wei,
 } = require("./utils/test-utils");
 
-const CLAIM_FEE = 330000000000000n; // 0.00033 ETH
+const CREATION_FEE = 250000000000000n; // 0.0002 ETH (~ $1.0)
+const CLAIM_FEE = 25000000000000n; // 0.000025 ETH ($~ $0.1)
 const ORIGINAL_BALANCE = wei(10000000000000);
 const TEST_DATA = {
   amountPerClaim: wei(1000000),
@@ -45,7 +46,7 @@ describe("MerkleDistributorV2", function () {
 
     const MerkleDistributorV2 = await ethers.deployContract(
       "MerkleDistributorV2",
-      [PROTOCOL_BENEFICIARY, CLAIM_FEE]
+      [PROTOCOL_BENEFICIARY, CREATION_FEE, CLAIM_FEE]
     );
     await MerkleDistributorV2.waitForDeployment();
 
@@ -85,7 +86,8 @@ describe("MerkleDistributorV2", function () {
           TEST_DATA.startTime,
           TEST_DATA.endTime,
           ZERO_BYTES32,
-          TEST_DATA.metaData
+          TEST_DATA.metaData,
+          { value: CREATION_FEE }
         );
         this.distribution = await MerkleDistributorV2.distributions(0);
       });
@@ -169,7 +171,8 @@ describe("MerkleDistributorV2", function () {
 
         await expect(
           MerkleDistributorV2.connect(creator).createDistribution(
-            ...this.testParams
+            ...this.testParams,
+            { value: CREATION_FEE }
           )
         )
           .to.be.revertedWithCustomError(
@@ -183,7 +186,8 @@ describe("MerkleDistributorV2", function () {
         this.testParams[2] = 0;
         await expect(
           MerkleDistributorV2.connect(creator).createDistribution(
-            ...this.testParams
+            ...this.testParams,
+            { value: CREATION_FEE }
           )
         )
           .to.be.revertedWithCustomError(
@@ -197,7 +201,8 @@ describe("MerkleDistributorV2", function () {
         this.testParams[3] = 0;
         await expect(
           MerkleDistributorV2.connect(creator).createDistribution(
-            ...this.testParams
+            ...this.testParams,
+            { value: CREATION_FEE }
           )
         )
           .to.be.revertedWithCustomError(
@@ -211,7 +216,8 @@ describe("MerkleDistributorV2", function () {
         this.testParams[5] = (await time.latest()) - 1;
         await expect(
           MerkleDistributorV2.connect(creator).createDistribution(
-            ...this.testParams
+            ...this.testParams,
+            { value: CREATION_FEE }
           )
         )
           .to.be.revertedWithCustomError(
@@ -219,6 +225,29 @@ describe("MerkleDistributorV2", function () {
             "MerkleDistributorV2__InvalidParams"
           )
           .withArgs("endTime");
+      });
+
+      it("should revert if creation fee is not paid", async function () {
+        await expect(
+          MerkleDistributorV2.connect(creator).createDistribution(
+            ...this.testParams
+          )
+        ).to.be.revertedWithCustomError(
+          MerkleDistributorV2,
+          "MerkleDistributorV2__InvalidCreationFee"
+        );
+      });
+
+      it("should revert if wrong creation fee amount is paid", async function () {
+        await expect(
+          MerkleDistributorV2.connect(creator).createDistribution(
+            ...this.testParams,
+            { value: CREATION_FEE + 1n }
+          )
+        ).to.be.revertedWithCustomError(
+          MerkleDistributorV2,
+          "MerkleDistributorV2__InvalidCreationFee"
+        );
       });
 
       describe("Claim edge cases", function () {
@@ -231,7 +260,8 @@ describe("MerkleDistributorV2", function () {
             TEST_DATA.startTime,
             TEST_DATA.endTime,
             ZERO_BYTES32,
-            TEST_DATA.metaData
+            TEST_DATA.metaData,
+            { value: CREATION_FEE }
           );
         });
 
@@ -296,7 +326,8 @@ describe("MerkleDistributorV2", function () {
           TEST_DATA.startTime,
           TEST_DATA.endTime,
           ZERO_BYTES32,
-          TEST_DATA.metaData
+          TEST_DATA.metaData,
+          { value: CREATION_FEE }
         );
         this.distribution = await MerkleDistributorV2.distributions(0);
       });
@@ -380,7 +411,8 @@ describe("MerkleDistributorV2", function () {
         TEST_DATA.startTime,
         TEST_DATA.endTime,
         bufferToHex(this.tree.getRoot()),
-        TEST_DATA.metaData
+        TEST_DATA.metaData,
+        { value: CREATION_FEE }
       );
       this.distribution = await MerkleDistributorV2.distributions(0);
     });
@@ -521,7 +553,8 @@ describe("MerkleDistributorV2", function () {
           (await time.latest()) + 9999,
           TEST_DATA.endTime,
           bufferToHex(tree.getRoot()),
-          TEST_DATA.metaData
+          TEST_DATA.metaData,
+          { value: CREATION_FEE }
         );
 
         await expect(
@@ -663,7 +696,8 @@ describe("MerkleDistributorV2", function () {
         TEST_DATA.startTime,
         TEST_DATA.endTime,
         bufferToHex(this.tree.getRoot()),
-        TEST_DATA.metaData
+        TEST_DATA.metaData,
+        { value: CREATION_FEE }
       );
       this.distribution = await MerkleDistributorV2.distributions(0);
     });
@@ -801,7 +835,8 @@ describe("MerkleDistributorV2", function () {
           (await time.latest()) + 9999,
           TEST_DATA.endTime,
           bufferToHex(tree.getRoot()),
-          TEST_DATA.metaData
+          TEST_DATA.metaData,
+          { value: CREATION_FEE }
         );
 
         await expect(
@@ -941,7 +976,8 @@ describe("MerkleDistributorV2", function () {
         TEST_DATA.startTime,
         TEST_DATA.endTime,
         bufferToHex(this.tree.getRoot()),
-        TEST_DATA.metaData
+        TEST_DATA.metaData,
+        { value: CREATION_FEE }
       );
       this.distribution = await MerkleDistributorV2.distributions(0);
     });
@@ -1029,15 +1065,18 @@ describe("MerkleDistributorV2", function () {
       beforeEach(async function () {
         await MerkleDistributorV2.connect(alice).createDistribution(
           Token.target,
-          ...this.RANDOM_PARAMS
+          ...this.RANDOM_PARAMS,
+          { value: CREATION_FEE }
         );
         await MerkleDistributorV2.connect(alice).createDistribution(
           this.Token2.target,
-          ...this.RANDOM_PARAMS
+          ...this.RANDOM_PARAMS,
+          { value: CREATION_FEE }
         );
         await MerkleDistributorV2.connect(bob).createDistribution(
           this.Token2.target,
-          ...this.RANDOM_PARAMS
+          ...this.RANDOM_PARAMS,
+          { value: CREATION_FEE }
         );
       });
 
@@ -1109,7 +1148,8 @@ describe("MerkleDistributorV2", function () {
           if (i % 2 === 0) {
             await MerkleDistributorV2.connect(alice).createDistribution(
               Token.target,
-              ...this.RANDOM_PARAMS
+              ...this.RANDOM_PARAMS,
+              { value: CREATION_FEE }
             );
             this.evenIds.push(BigInt(i));
             this.evenOutputs.push(
@@ -1118,7 +1158,8 @@ describe("MerkleDistributorV2", function () {
           } else {
             await MerkleDistributorV2.connect(bob).createDistribution(
               this.Token2.target,
-              ...this.RANDOM_PARAMS
+              ...this.RANDOM_PARAMS,
+              { value: CREATION_FEE }
             );
             this.oddIds.push(BigInt(i));
             this.oddOutputs.push(

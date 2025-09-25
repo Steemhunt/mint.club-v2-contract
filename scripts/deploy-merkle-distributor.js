@@ -3,6 +3,7 @@ const hre = require("hardhat");
 const { getCreationFee } = require("../test/utils/test-utils");
 
 const PROTOCOL_BENEFICIARY = process.env.PROTOCOL_BENEFICIARY;
+const CREATION_FEE = getCreationFee(hre.network.name) / 10n; // 10% of creation fee for bond
 const CLAIM_FEE = getCreationFee(hre.network.name) / 20n;
 
 async function main() {
@@ -12,13 +13,13 @@ async function main() {
 
   console.log(`-------------------------------------------------`);
   console.log(
-    `PROTOCOL_BENEFICIARY: ${PROTOCOL_BENEFICIARY} | CLAIM_FEE: ${CLAIM_FEE}`
+    `PROTOCOL_BENEFICIARY: ${PROTOCOL_BENEFICIARY} | CREATION_FEE: ${CREATION_FEE} | CLAIM_FEE: ${CLAIM_FEE}`
   );
   console.log(`-------------------------------------------------`);
 
   const merkleDistributor = await hre.ethers.deployContract(
     "MerkleDistributorV2",
-    [PROTOCOL_BENEFICIARY, CLAIM_FEE]
+    [PROTOCOL_BENEFICIARY, CREATION_FEE, CLAIM_FEE]
   );
   await merkleDistributor.waitForDeployment();
   console.log(
@@ -31,7 +32,7 @@ async function main() {
   console.log("```");
 
   console.log(`
-    npx hardhat verify --network ${hre.network.name} ${merkleDistributor.target} '${PROTOCOL_BENEFICIARY}' '${CLAIM_FEE}'
+    npx hardhat verify --network ${hre.network.name} ${merkleDistributor.target} '${PROTOCOL_BENEFICIARY}' '${CREATION_FEE}' '${CLAIM_FEE}'
   `);
 }
 
