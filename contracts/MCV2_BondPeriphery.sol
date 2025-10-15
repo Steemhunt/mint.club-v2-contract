@@ -28,7 +28,7 @@ contract MCV2_BondPeriphery {
         uint256 reserveAmount,
         uint256 minTokensToMint,
         address receiver
-    ) external returns (uint256) {
+    ) external returns (uint256 tokensMinted) {
         (uint256 tokensToMint, address reserveAddress) = getTokensForReserve(
             token,
             reserveAmount,
@@ -37,31 +37,34 @@ contract MCV2_BondPeriphery {
         if (tokensToMint < minTokensToMint)
             revert MCV2_BondPeriphery__SlippageLimitExceeded();
 
-        // Verify that the calculated tokens can actually be minted with the reserve amount
-        (uint256 actualReserveNeeded, ) = BOND.getReserveForToken(
-            token,
-            tokensToMint
-        );
-        if (actualReserveNeeded > reserveAmount) {
-            // Adjust tokensToMint to ensure we don't exceed the available reserve
-            tokensToMint = tokensToMint > 0 ? tokensToMint - 1 : 0;
-            if (tokensToMint < minTokensToMint)
-                revert MCV2_BondPeriphery__SlippageLimitExceeded();
-        }
-
         IERC20 reserveToken = IERC20(reserveAddress);
         reserveToken.transferFrom(msg.sender, address(this), reserveAmount);
-
         reserveToken.approve(address(BOND), reserveAmount);
-        BOND.mint(token, tokensToMint, reserveAmount, receiver);
 
-        // Send the leftover reserve tokens to the receiver (potentially few weis left due to roundings)
-        uint256 reserveBalance = reserveToken.balanceOf(address(this));
-        if (reserveBalance > 0) {
-            reserveToken.transfer(receiver, reserveBalance);
+        // Try minting with ceiling division result first
+        try BOND.mint(token, tokensToMint, reserveAmount, receiver) {
+            // Success - send any leftover reserve tokens to receiver
+            uint256 reserveBalance = reserveToken.balanceOf(address(this));
+            if (reserveBalance > 0) {
+                reserveToken.transfer(receiver, reserveBalance);
+            }
+            return tokensToMint;
+        } catch {
+            // If minting fails, try reducing by 1 token
+            tokensToMint -= 1;
+            if (tokensToMint < minTokensToMint) {
+                revert MCV2_BondPeriphery__SlippageLimitExceeded();
+            }
+
+            // Try minting with reduced amount
+            BOND.mint(token, tokensToMint, reserveAmount, receiver);
+            uint256 reserveBalance = reserveToken.balanceOf(address(this));
+            if (reserveBalance > 0) {
+                reserveToken.transfer(receiver, reserveBalance);
+            }
+
+            return tokensToMint;
         }
-
-        return reserveAmount;
     }
 
     /**
