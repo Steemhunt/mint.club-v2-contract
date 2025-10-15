@@ -559,6 +559,46 @@ This provides reverse calculations for the `MCV2_Bond.mint()` function, similar 
          <td><a href="https://polygonscan.com/address/0x6C0E6C7F1C97bB4bA7DF001D30A939425D9846f1#code">0x6C0E6C7F1C97bB4bA7DF001D30A939425D9846f1</a></td>
       </tr>
       <tr>
+         <td>Avalanche (C-Chain)</td>
+         <td><a href="https://snowtrace.io/address/0x5dff49313d616c30599F6007b04BAB71619C5687#code">0x5dff49313d616c30599F6007b04BAB71619C5687</a></td>
+      </tr>
+      <tr>
+         <td>Blast</td>
+         <td><a href="https://blastexplorer.io/address/0x5dff49313d616c30599F6007b04BAB71619C5687#code">0x5dff49313d616c30599F6007b04BAB71619C5687</a></td>
+      </tr>
+      <tr>
+         <td>Degen</td>
+         <td><a href="https://explorer.degen.tips/address/0x3a8a4BFCC487d0FE9D342B6180bf0323989f251B#code">0x3a8a4BFCC487d0FE9D342B6180bf0323989f251B</a></td>
+      </tr>
+      <tr>
+         <td>Zora</td>
+         <td><a href="https://explorer.zora.energy/address/0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724#code">0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724</a></td>
+      </tr>
+      <tr>
+         <td>Cyber</td>
+         <td><a href="https://cyberscan.co/address/0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724#code">0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724</a></td>
+      </tr>
+      <tr>
+         <td>APEChain</td>
+         <td><a href="https://apescan.io/address/0x621c335b4BD8f2165E120DC70d3AfcAfc6628681#code">0x621c335b4BD8f2165E120DC70d3AfcAfc6628681</a></td>
+      </tr>
+      <tr>
+         <td>Shibarium</td>
+         <td><a href="https://www.shibariumscan.io/address/0x621c335b4BD8f2165E120DC70d3AfcAfc6628681#code">0x621c335b4BD8f2165E120DC70d3AfcAfc6628681</a></td>
+      </tr>
+      <tr>
+         <td>HashKey</td>
+         <td><a href="https://explorer.hsk.xyz/address/0x621c335b4BD8f2165E120DC70d3AfcAfc6628681#code">0x621c335b4BD8f2165E120DC70d3AfcAfc6628681</a></td>
+      </tr>
+      <tr>
+         <td>Unichain</td>
+         <td><a href="https://uniscan.xyz/address/0x621c335b4BD8f2165E120DC70d3AfcAfc6628681#code">0x621c335b4BD8f2165E120DC70d3AfcAfc6628681</a></td>
+      </tr>
+      <tr>
+         <td>Over</td>
+         <td><a href="https://scan.over.network/address/0x06FD26c092Db44E5491abB7cDC580CE24D93030c#code">0x06FD26c092Db44E5491abB7cDC580CE24D93030c</a></td>
+      </tr>
+      <tr>
          <td>Sepolia</td>
          <td><a href="https://sepolia.etherscan.io/address/0xb58CF50D37c00902C5f07c8510fDF77C9325965B#code">0xb58CF50D37c00902C5f07c8510fDF77C9325965B</a></td>
       </tr>

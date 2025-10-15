@@ -99,7 +99,7 @@ exports.getBondAddress = function (network) {
     avalanche: "0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1",
     degen: "0x3bc6B601196752497a68B2625DB4f2205C3b150b",
     zora: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
-    kaia: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+    klaytn: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     cyber: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     ham: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     apechain: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
