@@ -195,33 +195,7 @@ module.exports = {
   },
   etherscan: {
     // network list: npx hardhat verify --list-networks
-    apiKey: {
-      mainnet: process.env.ETHERSCAN_API_KEY,
-      optimisticEthereum: process.env.OPTIMISM_ETHERSCAN_API_KEY,
-      arbitrumOne: process.env.ARBISCAN_API_KEY,
-      base: process.env.BASESCAN_API_KEY,
-      polygon: process.env.POLYGONSCAN_API_KEY,
-      bsc: process.env.BSCSCAN_API_KEY,
-      blast: process.env.BLASTSCAN_API_KEY,
-      avalanche: "unnecessary",
-      degen: "TODO:",
-      zora: "TODO:",
-      klaytn: "unnecessary",
-      cyber: "unnecessary",
-      ham: "unnecessary",
-      apechain: process.env.APESCAN_API_KEY,
-      hashkey: "unnecessary",
-      unichain: process.env.UNICHAINSCAN_API_KEY,
-
-      sepolia: process.env.ETHERSCAN_API_KEY,
-      baseSepolia: process.env.BASESCAN_API_KEY,
-      blastSepolia: "unnecessary",
-      avalancheFujiTestnet: "unnecessary",
-      cyberTestnet: "unnecessary",
-      overTestnet: "unnecessary",
-      shibarium: "unnecessary",
-      puppynet: "unnecessary",
-    },
+    apiKey: process.env.ETHERSCAN_API_KEY,
     customChains: [
       {
         network: "blast",

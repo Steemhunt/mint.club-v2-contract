@@ -29,11 +29,13 @@ contract MCV2_BondPeriphery {
         uint256 minTokensToMint,
         address receiver
     ) external returns (uint256) {
-        uint256 tokensToMint = getTokensForReserve(token, reserveAmount);
+        (
+            uint256 tokensToMint,
+            address reserveAddress
+        ) = getTokensForReserveWithData(token, reserveAmount);
         if (tokensToMint < minTokensToMint)
             revert MCV2_BondPeriphery__SlippageLimitExceeded();
 
-        (, , , , address reserveAddress, ) = BOND.tokenBond(token);
         IERC20 reserveToken = IERC20(reserveAddress);
         reserveToken.transferFrom(msg.sender, address(this), reserveAmount);
 
@@ -63,17 +65,39 @@ contract MCV2_BondPeriphery {
         address tokenAddress,
         uint256 reserveAmount
     ) public view returns (uint256 tokensToMint) {
+        (tokensToMint, ) = getTokensForReserveWithData(
+            tokenAddress,
+            reserveAmount
+        );
+    }
+
+    /**
+     * @dev Internal function that calculates tokens to mint and returns additional data.
+     * @param tokenAddress The address of the token.
+     * @param reserveAmount The amount of reserve tokens to pay.
+     * @return tokensToMint The number of tokens that can be minted.
+     * @return reserveAddress The address of the reserve token.
+     */
+    function getTokensForReserveWithData(
+        address tokenAddress,
+        uint256 reserveAmount
+    ) internal view returns (uint256 tokensToMint, address reserveAddress) {
         if (!BOND.exists(tokenAddress))
             revert MCV2_BondPeriphery__InvalidParams("token");
         if (reserveAmount == 0)
             revert MCV2_BondPeriphery__InvalidParams("reserveAmount");
 
-        (, uint16 mintRoyalty, , , , ) = BOND.tokenBond(tokenAddress);
+        // Cache external calls to avoid repeated storage reads
+        (, uint16 mintRoyalty, , , address reserveTokenAddr, ) = BOND.tokenBond(
+            tokenAddress
+        );
+        reserveAddress = reserveTokenAddr;
         IMCV2_Bond.BondStep[] memory steps = BOND.getSteps(tokenAddress);
-
         MCV2_ICommonToken t = MCV2_ICommonToken(tokenAddress);
+
         uint256 currentSupply = t.totalSupply();
-        uint256 maxTokenSupply = steps[steps.length - 1].rangeTo;
+        uint256 stepsLength = steps.length;
+        uint256 maxTokenSupply = steps[stepsLength - 1].rangeTo;
 
         if (currentSupply >= maxTokenSupply)
             revert MCV2_BondPeriphery__ExceedMaxSupply();
@@ -85,56 +109,56 @@ contract MCV2_BondPeriphery {
         // reserveToBond = reserveAmount / (1 + (mintRoyalty) / 10000)
         uint256 reserveLeft = (reserveAmount * 10000) / (10000 + mintRoyalty);
 
-        // Cache steps.length to avoid multiple storage reads
-        uint256 stepsLength = steps.length;
+        // Find starting step index
+        uint256 i = _getCurrentStep(steps, currentSupply);
 
-        for (
-            uint256 i = _getCurrentStep(steps, currentSupply);
-            i < stepsLength;
-            ++i
-        ) {
-            IMCV2_Bond.BondStep memory step = steps[i];
-            if (step.price == 0) continue; // Skip free minting ranges
+        // Unchecked arithmetic for loop increment to save gas
+        unchecked {
+            for (; i < stepsLength; ++i) {
+                IMCV2_Bond.BondStep memory step = steps[i];
+                if (step.price == 0) continue; // Skip free minting ranges
 
-            uint256 supplyLeft = step.rangeTo - currentSupply;
-            if (supplyLeft == 0) continue;
+                uint256 supplyLeft = step.rangeTo - currentSupply;
+                if (supplyLeft == 0) continue;
 
-            // Calculate how many tokens can be minted with the available reserve at this step
-            // Using floor division since we can't mint partial tokens
-            uint256 tokensAtStep = (reserveLeft * multiFactor) / step.price;
+                // Calculate how many tokens can be minted with the available reserve at this step
+                // Using floor division since we can't mint partial tokens
+                uint256 tokensAtStep = (reserveLeft * multiFactor) / step.price;
 
-            if (tokensAtStep > supplyLeft) {
-                // Can mint all tokens in this step and have reserve left
-                tokensToMint += supplyLeft;
+                if (tokensAtStep > supplyLeft) {
+                    // Can mint all tokens in this step and have reserve left
+                    tokensToMint += supplyLeft;
 
-                // Calculate how much reserve is used for this step (with ceiling division)
-                uint256 reserveRequired = Math.ceilDiv(
-                    supplyLeft * step.price,
-                    multiFactor
-                );
-                reserveLeft -= reserveRequired;
-                currentSupply += supplyLeft;
-            } else {
-                // Can mint only a portion of this step
-                tokensToMint += tokensAtStep;
-                // Don't need to calculate reserveRequired as we're using all available reserve
-                break;
+                    // Calculate how much reserve is used for this step (with ceiling division)
+                    uint256 reserveRequired = Math.ceilDiv(
+                        supplyLeft * step.price,
+                        multiFactor
+                    );
+                    reserveLeft -= reserveRequired;
+                    currentSupply += supplyLeft;
+                } else {
+                    // Can mint only a portion of this step
+                    tokensToMint += tokensAtStep;
+                    // Don't need to calculate reserveRequired as we're using all available reserve
+                    break;
+                }
+
+                if (currentSupply >= maxTokenSupply || reserveLeft == 0) break;
             }
-
-            if (currentSupply >= maxTokenSupply || reserveLeft == 0) break;
         }
 
         if (tokensToMint == 0) revert MCV2_BondPeriphery__InvalidTokenAmount();
 
-        return tokensToMint;
+        return (tokensToMint, reserveAddress);
     }
 
     function _getCurrentStep(
         IMCV2_Bond.BondStep[] memory steps,
         uint256 currentSupply
     ) internal pure returns (uint256) {
+        uint256 stepsLength = steps.length;
         unchecked {
-            for (uint256 i = 0; i < steps.length; ++i) {
+            for (uint256 i = 0; i < stepsLength; ++i) {
                 if (currentSupply <= steps[i].rangeTo) {
                     return i;
                 }
