@@ -522,6 +522,53 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
    </tbody>
 </table>
 
+### MCV2_BondPeriphery
+
+This provides reverse calculations for the `MCV2_Bond.mint()` function, similar to the `exactInput` function on Uniswap. It also exposes the interface for the 0x Settler.
+
+<table>
+   <thead>
+      <tr>
+         <th>Chain / Contract</th>
+         <th>Contract Address</th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td>Ethereum</td>
+         <td><a href="https://etherscan.io/address/0x7b09b728ee8c6a714dc3f10367b5df9b217fe633#code">0x7b09b728ee8c6a714dc3f10367b5df9b217fe633</a></td>
+      </tr>
+      <tr>
+         <td>Optimism</td>
+         <td><a href="https://optimistic.etherscan.io/address/0x841A2bD2fc97DCB865b4Ddb352540148Bad2dB09#code">0x841A2bD2fc97DCB865b4Ddb352540148Bad2dB09</a></td>
+      </tr>
+      <tr>
+         <td>Arbitrum One</td>
+         <td><a href="https://arbiscan.io/address/0x5FBdC7941a735685eB08c51776bA77098ebe1eb7#code">0x5FBdC7941a735685eB08c51776bA77098ebe1eb7</a></td>
+      </tr>
+      <tr>
+         <td>Base</td>
+         <td><a href="https://basescan.org/address/0x492C412369Db76C9cdD9939e6C521579301473a3#code">0x492C412369Db76C9cdD9939e6C521579301473a3</a></td>
+      </tr>
+      <tr>
+         <td>BNB Chain</td>
+         <td><a href="https://bscscan.com/address/0x364e0f814a2c5524d26e82937815c574f8bB86C1#code">0x364e0f814a2c5524d26e82937815c574f8bB86C1</a></td>
+      </tr>
+      <tr>
+         <td>Polygon (PoS)</td>
+         <td><a href="https://polygonscan.com/address/0x6C0E6C7F1C97bB4bA7DF001D30A939425D9846f1#code">0x6C0E6C7F1C97bB4bA7DF001D30A939425D9846f1</a></td>
+      </tr>
+      <tr>
+         <td>Sepolia</td>
+         <td><a href="https://sepolia.etherscan.io/address/0xb58CF50D37c00902C5f07c8510fDF77C9325965B#code">0xb58CF50D37c00902C5f07c8510fDF77C9325965B</a></td>
+      </tr>
+      <tr>
+         <td>Base Sepolia</td>
+         <td><a href="https://sepolia.basescan.org/address/0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89#code">0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89</a></td>
+      </tr>
+   </tbody>
+</table>
+
 ### BuyBackBurner (Base)
 
 [0xcEF6a6AB0f74c9cE97f7D1EB9bD99EA49E71Ec1d](https://basescan.org/address/0xcEF6a6AB0f74c9cE97f7D1EB9bD99EA49E71Ec1d)

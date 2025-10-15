@@ -90,8 +90,8 @@ exports.getWETHAddress = function (network) {
 exports.getBondAddress = function (network) {
   const BOND_ADDRESS = {
     mainnet: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
-    optimism: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
-    arbitrum: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+    optimisticEthereum: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+    arbitrumOne: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     base: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     bsc: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     polygon: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
