@@ -87,6 +87,37 @@ exports.getWETHAddress = function (network) {
   return WETH_ADDRESS[network];
 };
 
+exports.getBondAddress = function (network) {
+  const BOND_ADDRESS = {
+    mainnet: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+    optimism: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+    arbitrum: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+    base: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+    bsc: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+    polygon: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+    blast: "0x621c335b4BD8f2165E120DC70d3AfcAfc6628681",
+    avalanche: "0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1",
+    degen: "0x3bc6B601196752497a68B2625DB4f2205C3b150b",
+    zora: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+    kaia: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+    cyber: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+    ham: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+    apechain: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+    shibarium: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+    hashkey: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+    unichain: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+    over: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+    sepolia: "0x8dce343A86Aa950d539eeE0e166AFfd0Ef515C0c",
+    baseSepolia: "0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d",
+    // skip other testnets
+  };
+  if (!BOND_ADDRESS[network]) {
+    throw new Error(`BOND_ADDRESS is not defined for ${network}`);
+  }
+
+  return BOND_ADDRESS[network];
+};
+
 exports.getMaxSteps = function (network) {
   // 1,000 steps reqruies about 15M gas
   const MAX_STEPS = {
