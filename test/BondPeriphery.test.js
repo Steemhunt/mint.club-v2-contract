@@ -97,7 +97,8 @@ describe("BondPeriphery", function () {
         const [tokensToMint, reserveAddress] =
           await BondPeriphery.getTokensForReserve(
             this.token.target,
-            reserveAmount
+            reserveAmount,
+            false // Use floor division for safe calculation
           );
 
         expect(tokensToMint).to.equal(expectedTokens);
@@ -131,7 +132,8 @@ describe("BondPeriphery", function () {
         const [tokensToMint, reserveAddress] =
           await BondPeriphery.getTokensForReserve(
             this.token.target,
-            reserveAmount
+            reserveAmount,
+            false // Use floor division for safe calculation
           );
 
         expect(tokensToMint).to.equal(expectedTokens);
@@ -150,7 +152,8 @@ describe("BondPeriphery", function () {
         const [tokensToMint, reserveAddress] =
           await BondPeriphery.getTokensForReserve(
             this.token.target,
-            reserveAmount
+            reserveAmount,
+            false // Use floor division for safe calculation
           );
 
         expect(tokensToMint).to.equal(expectedTokens);
@@ -161,7 +164,11 @@ describe("BondPeriphery", function () {
     describe("Edge cases and validations", function () {
       it("should revert if token does not exist", async function () {
         await expect(
-          BondPeriphery.getTokensForReserve(ReserveToken.target, wei(1000))
+          BondPeriphery.getTokensForReserve(
+            ReserveToken.target,
+            wei(1000),
+            false
+          )
         )
           .to.be.revertedWithCustomError(
             BondPeriphery,
@@ -171,7 +178,9 @@ describe("BondPeriphery", function () {
       });
 
       it("should revert if reserve amount is zero", async function () {
-        await expect(BondPeriphery.getTokensForReserve(this.token.target, 0))
+        await expect(
+          BondPeriphery.getTokensForReserve(this.token.target, 0, false)
+        )
           .to.be.revertedWithCustomError(
             BondPeriphery,
             "MCV2_BondPeriphery__InvalidParams"
@@ -200,7 +209,7 @@ describe("BondPeriphery", function () {
         );
 
         await expect(
-          BondPeriphery.getTokensForReserve(this.token.target, wei(100))
+          BondPeriphery.getTokensForReserve(this.token.target, wei(100), false)
         ).to.be.revertedWithCustomError(
           BondPeriphery,
           "MCV2_BondPeriphery__ExceedMaxSupply"
@@ -215,7 +224,8 @@ describe("BondPeriphery", function () {
         const [tokensToMint, reserveAddress] =
           await BondPeriphery.getTokensForReserve(
             this.token.target,
-            reserveAmount
+            reserveAmount,
+            false // Use floor division for safe calculation
           );
 
         expect(tokensToMint).to.equal(expectedTokens);
@@ -241,6 +251,31 @@ describe("BondPeriphery", function () {
       );
       // BondPeriphery needs to approve Bond contract to spend reserve tokens
       await ReserveToken.connect(alice).approve(Bond.target, MAX_INT_256);
+
+      // Create STEP_TOKEN for tests that need it
+      const STEP_TOKEN = {
+        tokenParams: { name: "Step Token", symbol: "STEP" },
+        bondParams: {
+          mintRoyalty: 0n, // No royalty for simplicity
+          burnRoyalty: 0n,
+          reserveToken: ReserveToken.target,
+          maxSupply: 1000n,
+          stepRanges: [
+            500n, // step 0
+            1000n, // step 1
+          ],
+          stepPrices: [
+            1n * 10n ** 20n, // 100 wei reserveToken per 1 token (multiFactor = 1e18)
+            2n * 10n ** 20n, // 200 wei reserveToken per 1 token (multiFactor = 1e18)
+          ],
+        },
+      };
+
+      await Bond.createToken(
+        Object.values(STEP_TOKEN.tokenParams),
+        Object.values(STEP_TOKEN.bondParams)
+      );
+      this.stepToken = await Token.attach(await Bond.tokens(1));
     });
 
     describe("Normal flow", function () {
@@ -286,32 +321,7 @@ describe("BondPeriphery", function () {
       });
 
       it("should handle leftover reserve tokens correctly", async function () {
-        // Create a simple token with free minting step to guarantee leftover
-        const STEP_TOKEN = {
-          tokenParams: { name: "Step Token", symbol: "STEP" },
-          bondParams: {
-            mintRoyalty: 0n, // No royalty for simplicity
-            burnRoyalty: 0n,
-            reserveToken: ReserveToken.target,
-            maxSupply: 1000n,
-            stepRanges: [
-              500n, // step 0
-              1000n, // step 1
-            ],
-            stepPrices: [
-              1n * 10n ** 20n, // 100 wei reserveToken per 1 token (multiFactor = 1e18)
-              2n * 10n ** 20n, // 200 wei reserveToken per 1 token (multiFactor = 1e18)
-            ],
-          },
-        };
-
-        // Create the step token as regular ERC20
-        const Token = await ethers.getContractFactory("MCV2_Token");
-        await Bond.createToken(
-          Object.values(STEP_TOKEN.tokenParams),
-          Object.values(STEP_TOKEN.bondParams)
-        );
-        const stepToken = await Token.attach(await Bond.tokens(1)); // Second token
+        // Use the step token created in beforeEach
 
         // To mint 123 wei token on step 1, it costs 123 * 100 wei reserveToken
         // Provide 12345 wei reserveToken - should mint 123 wei token with 45 wei reserveToken leftover
@@ -322,8 +332,9 @@ describe("BondPeriphery", function () {
         const expectedReserveLeftover = 45n;
 
         const [calculatedTokens] = await BondPeriphery.getTokensForReserve(
-          stepToken.target,
-          reserveAmount
+          this.stepToken.target,
+          reserveAmount,
+          false
         );
 
         expect(calculatedTokens).to.equal(expectedTokens);
@@ -337,7 +348,7 @@ describe("BondPeriphery", function () {
 
         // Calculate what the Bond contract actually needs for 123 tokens
         const [actualReserveNeeded] = await Bond.getReserveForToken(
-          stepToken.target,
+          this.stepToken.target,
           calculatedTokens
         );
         expect(actualReserveNeeded).to.equal(actualReserveAmount);
@@ -349,8 +360,8 @@ describe("BondPeriphery", function () {
           BondPeriphery.target,
           reserveAmount
         );
-        await await BondPeriphery.connect(alice).mintWithReserveAmount(
-          stepToken.target,
+        await BondPeriphery.connect(alice).mintWithReserveAmount(
+          this.stepToken.target,
           reserveAmount,
           calculatedTokens,
           bob.address
@@ -362,7 +373,7 @@ describe("BondPeriphery", function () {
         const bobReserveBalanceAfter = await ReserveToken.balanceOf(
           bob.address
         );
-        const bobTokenBalance = await stepToken.balanceOf(bob.address);
+        const bobTokenBalance = await this.stepToken.balanceOf(bob.address);
 
         // Alice should have paid the full reserve amount
         expect(aliceReserveBalanceAfter).to.equal(
@@ -385,6 +396,31 @@ describe("BondPeriphery", function () {
           0n,
           "BondPeriphery should have no remaining reserve tokens"
         );
+      }); // handle leftover reserve tokens correctly
+
+      it("should show difference between floor and ceiling division", async function () {
+        // Test that demonstrates the difference between floor and ceiling division
+        // Use the step token created in beforeEach
+
+        const reserveAmount = 12345n;
+        // Floor division: 12345 / 100 = 123 tokens
+        // Ceiling division: ceil(12345 / 100) = 124 tokens
+
+        const [tokensFloor] = await BondPeriphery.getTokensForReserve(
+          this.stepToken.target,
+          reserveAmount,
+          false // Floor division
+        );
+
+        const [tokensCeil] = await BondPeriphery.getTokensForReserve(
+          this.stepToken.target,
+          reserveAmount,
+          true // Ceiling division
+        );
+
+        expect(tokensFloor).to.equal(123n);
+        expect(tokensCeil).to.equal(124n);
+        expect(tokensCeil).to.be.gt(tokensFloor);
       });
     }); // Normal flow
 
@@ -489,7 +525,8 @@ describe("BondPeriphery", function () {
       // Calculate expected tokens using periphery
       const [expectedTokens] = await BondPeriphery.getTokensForReserve(
         this.token.target,
-        reserveAmount
+        reserveAmount,
+        false // Use floor division for safe calculation
       );
 
       // Mint using periphery

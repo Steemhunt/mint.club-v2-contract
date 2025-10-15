@@ -31,10 +31,23 @@ contract MCV2_BondPeriphery {
     ) external returns (uint256) {
         (uint256 tokensToMint, address reserveAddress) = getTokensForReserve(
             token,
-            reserveAmount
+            reserveAmount,
+            true // Use ceiling division to minimize leftover reserves
         );
         if (tokensToMint < minTokensToMint)
             revert MCV2_BondPeriphery__SlippageLimitExceeded();
+
+        // Verify that the calculated tokens can actually be minted with the reserve amount
+        (uint256 actualReserveNeeded, ) = BOND.getReserveForToken(
+            token,
+            tokensToMint
+        );
+        if (actualReserveNeeded > reserveAmount) {
+            // Adjust tokensToMint to ensure we don't exceed the available reserve
+            tokensToMint = tokensToMint > 0 ? tokensToMint - 1 : 0;
+            if (tokensToMint < minTokensToMint)
+                revert MCV2_BondPeriphery__SlippageLimitExceeded();
+        }
 
         IERC20 reserveToken = IERC20(reserveAddress);
         reserveToken.transferFrom(msg.sender, address(this), reserveAmount);
@@ -52,15 +65,21 @@ contract MCV2_BondPeriphery {
     }
 
     /**
-     * @dev Internal function that calculates tokens to mint and returns additional data.
+     * @dev Calculates the number of tokens that can be minted with a given amount of reserve tokens.
+     * @notice This wasn't implemented in the original Bond contract, due to *rounding errors*
+     *         and it is impossible to calculate the exact number of tokens that can be minted
+     *         without using binary search (too expensive, often reverts due to gas limit).
+     *         Use this function just for estimating the number of tokens that can be minted.
      * @param tokenAddress The address of the token.
      * @param reserveAmount The amount of reserve tokens to pay.
+     * @param useCeilDivision Whether to use ceiling division (true) or floor division (false).
      * @return tokensToMint The number of tokens that can be minted.
      * @return reserveAddress The address of the reserve token.
      */
     function getTokensForReserve(
         address tokenAddress,
-        uint256 reserveAmount
+        uint256 reserveAmount,
+        bool useCeilDivision
     ) public view returns (uint256 tokensToMint, address reserveAddress) {
         if (!BOND.exists(tokenAddress))
             revert MCV2_BondPeriphery__InvalidParams("token");
@@ -105,8 +124,9 @@ contract MCV2_BondPeriphery {
                 if (supplyLeft == 0) continue;
 
                 // Calculate how many tokens can be minted with the available reserve at this step
-                // Using floor division since we can't mint partial tokens
-                uint256 tokensAtStep = (reserveLeft * multiFactor) / step.price;
+                uint256 tokensAtStep = useCeilDivision
+                    ? Math.ceilDiv(reserveLeft * multiFactor, step.price)
+                    : (reserveLeft * multiFactor) / step.price;
 
                 if (tokensAtStep > supplyLeft) {
                     // Can mint all tokens in this step and have reserve left
