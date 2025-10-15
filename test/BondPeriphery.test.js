@@ -94,12 +94,14 @@ describe("BondPeriphery", function () {
         const reserveAmount = wei(50);
         const expectedTokens = wei(50);
 
-        const tokensToMint = await BondPeriphery.getTokensForReserve(
-          this.token.target,
-          reserveAmount
-        );
+        const [tokensToMint, reserveAddress] =
+          await BondPeriphery.getTokensForReserve(
+            this.token.target,
+            reserveAmount
+          );
 
         expect(tokensToMint).to.equal(expectedTokens);
+        expect(reserveAddress).to.equal(ReserveToken.target);
       });
 
       it("should calculate correct tokens across multiple steps", async function () {
@@ -126,12 +128,14 @@ describe("BondPeriphery", function () {
         const reserveAmount = wei(100);
         const expectedTokens = wei(50);
 
-        const tokensToMint = await BondPeriphery.getTokensForReserve(
-          this.token.target,
-          reserveAmount
-        );
+        const [tokensToMint, reserveAddress] =
+          await BondPeriphery.getTokensForReserve(
+            this.token.target,
+            reserveAmount
+          );
 
         expect(tokensToMint).to.equal(expectedTokens);
+        expect(reserveAddress).to.equal(ReserveToken.target);
       });
 
       it("should handle reserve amount that spans multiple steps", async function () {
@@ -143,12 +147,14 @@ describe("BondPeriphery", function () {
         const reserveAmount = wei(600);
         const expectedTokens = wei(500); // 400 from step 1 + 100 from step 2
 
-        const tokensToMint = await BondPeriphery.getTokensForReserve(
-          this.token.target,
-          reserveAmount
-        );
+        const [tokensToMint, reserveAddress] =
+          await BondPeriphery.getTokensForReserve(
+            this.token.target,
+            reserveAmount
+          );
 
         expect(tokensToMint).to.equal(expectedTokens);
+        expect(reserveAddress).to.equal(ReserveToken.target);
       });
     });
 
@@ -206,12 +212,14 @@ describe("BondPeriphery", function () {
         const reserveAmount = 1n;
         const expectedTokens = 1n;
 
-        const tokensToMint = await BondPeriphery.getTokensForReserve(
-          this.token.target,
-          reserveAmount
-        );
+        const [tokensToMint, reserveAddress] =
+          await BondPeriphery.getTokensForReserve(
+            this.token.target,
+            reserveAmount
+          );
 
         expect(tokensToMint).to.equal(expectedTokens);
+        expect(reserveAddress).to.equal(ReserveToken.target);
       });
     }); // Edge cases and validations
   }); // getTokensForReserve
@@ -313,7 +321,7 @@ describe("BondPeriphery", function () {
         const actualReserveAmount = 12300n;
         const expectedReserveLeftover = 45n;
 
-        const calculatedTokens = await BondPeriphery.getTokensForReserve(
+        const [calculatedTokens] = await BondPeriphery.getTokensForReserve(
           stepToken.target,
           reserveAmount
         );
@@ -479,7 +487,7 @@ describe("BondPeriphery", function () {
       const reserveAmount = wei(1010);
 
       // Calculate expected tokens using periphery
-      const expectedTokens = await BondPeriphery.getTokensForReserve(
+      const [expectedTokens] = await BondPeriphery.getTokensForReserve(
         this.token.target,
         reserveAmount
       );

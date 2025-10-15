@@ -29,10 +29,10 @@ contract MCV2_BondPeriphery {
         uint256 minTokensToMint,
         address receiver
     ) external returns (uint256) {
-        (
-            uint256 tokensToMint,
-            address reserveAddress
-        ) = getTokensForReserveWithData(token, reserveAmount);
+        (uint256 tokensToMint, address reserveAddress) = getTokensForReserve(
+            token,
+            reserveAmount
+        );
         if (tokensToMint < minTokensToMint)
             revert MCV2_BondPeriphery__SlippageLimitExceeded();
 
@@ -52,36 +52,16 @@ contract MCV2_BondPeriphery {
     }
 
     /**
-     * @dev Calculates the number of tokens that can be minted with a given amount of reserve tokens.
-     * @notice This wasn't implemented in the original Bond contract, due to *rounding errors*
-     *         and it is impossible to calculate the exact number of tokens that can be minted
-     *         without using binary search (too expensive, often reverts due to gas limit).
-     *         Use this function just for estimating the number of tokens that can be minted.
-     * @param tokenAddress The address of the token.
-     * @param reserveAmount The amount of reserve tokens to pay.
-     * @return tokensToMint The number of tokens that can be minted.
-     */
-    function getTokensForReserve(
-        address tokenAddress,
-        uint256 reserveAmount
-    ) public view returns (uint256 tokensToMint) {
-        (tokensToMint, ) = getTokensForReserveWithData(
-            tokenAddress,
-            reserveAmount
-        );
-    }
-
-    /**
      * @dev Internal function that calculates tokens to mint and returns additional data.
      * @param tokenAddress The address of the token.
      * @param reserveAmount The amount of reserve tokens to pay.
      * @return tokensToMint The number of tokens that can be minted.
      * @return reserveAddress The address of the reserve token.
      */
-    function getTokensForReserveWithData(
+    function getTokensForReserve(
         address tokenAddress,
         uint256 reserveAmount
-    ) internal view returns (uint256 tokensToMint, address reserveAddress) {
+    ) public view returns (uint256 tokensToMint, address reserveAddress) {
         if (!BOND.exists(tokenAddress))
             revert MCV2_BondPeriphery__InvalidParams("token");
         if (reserveAmount == 0)
