@@ -115,6 +115,9 @@ contract MCV2_BondPeriphery {
         // Unchecked arithmetic for loop increment to save gas
         unchecked {
             for (; i < stepsLength; ++i) {
+                // Early termination if no reserve left
+                if (reserveLeft == 0) break;
+
                 IMCV2_Bond.BondStep memory step = steps[i];
                 if (step.price == 0) continue; // Skip free minting ranges
 
@@ -143,7 +146,7 @@ contract MCV2_BondPeriphery {
                     break;
                 }
 
-                if (currentSupply >= maxTokenSupply || reserveLeft == 0) break;
+                if (currentSupply >= maxTokenSupply) break;
             }
         }
 
@@ -156,14 +159,22 @@ contract MCV2_BondPeriphery {
         IMCV2_Bond.BondStep[] memory steps,
         uint256 currentSupply
     ) internal pure returns (uint256) {
-        uint256 stepsLength = steps.length;
+        uint256 left = 0;
+        uint256 right = steps.length;
+
         unchecked {
-            for (uint256 i = 0; i < stepsLength; ++i) {
-                if (currentSupply <= steps[i].rangeTo) {
-                    return i;
+            while (left < right) {
+                uint256 mid = (left + right) / 2;
+                if (steps[mid].rangeTo < currentSupply) {
+                    left = mid + 1;
+                } else {
+                    right = mid;
                 }
             }
         }
-        revert MCV2_BondPeriphery__InvalidCurrentSupply();
+
+        if (left >= steps.length)
+            revert MCV2_BondPeriphery__InvalidCurrentSupply();
+        return left;
     }
 }

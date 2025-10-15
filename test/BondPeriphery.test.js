@@ -575,4 +575,93 @@ describe("BondPeriphery", function () {
       expect(await usdcToken.balanceOf(alice.address)).to.equal(expectedTokens);
     });
   }); // Integration with Bond contract
+
+  describe("Tests with larget steps to measure gas usage", function () {
+    let largeStepToken;
+    let largeStepBond;
+
+    beforeEach(async function () {
+      // Create a token with 500 steps for gas testing
+      const stepRanges = [];
+      const stepPrices = [];
+
+      // Create 500 steps with increasing ranges and prices
+      for (let i = 1; i <= 500; i++) {
+        stepRanges.push(wei(i * 2000)); // Each step covers 2000 tokens
+        stepPrices.push(wei(i, 9)); // Price increases by 1e9 wei per step
+      }
+
+      const bondParams = {
+        mintRoyalty: 100n, // 1%
+        burnRoyalty: 150n, // 1.5%
+        reserveToken: ReserveToken.target,
+        maxSupply: wei(1000000), // 1M tokens max supply (matches last step range)
+        stepRanges: stepRanges,
+        stepPrices: stepPrices,
+      };
+
+      const tokenParams = {
+        name: "Large Step Token",
+        symbol: "LST",
+      };
+
+      await Bond.createToken(tokenParams, bondParams, {
+        value: await Bond.creationFee(),
+      });
+
+      largeStepToken = await ethers.getContractAt(
+        "MCV2_Token",
+        await Bond.tokens(0)
+      );
+      largeStepBond = Bond;
+    });
+
+    it("should handle 500 steps efficiently for small mint", async function () {
+      const reserveAmount = wei(100); // Small amount
+
+      // Measure gas for mintWithReserveAmount
+      await ReserveToken.approve(BondPeriphery.target, reserveAmount);
+      await BondPeriphery.mintWithReserveAmount(
+        largeStepToken.target,
+        reserveAmount,
+        0, // No slippage protection for this test
+        alice.address
+      );
+
+      // Verify the mint was successful
+      expect(await largeStepToken.balanceOf(alice.address)).to.be.gt(0);
+    });
+
+    it("should handle 500 steps efficiently for medium mint", async function () {
+      const reserveAmount = wei(10000); // Medium amount
+
+      // Measure gas for mintWithReserveAmount
+      await ReserveToken.approve(BondPeriphery.target, reserveAmount);
+      await BondPeriphery.mintWithReserveAmount(
+        largeStepToken.target,
+        reserveAmount,
+        0, // No slippage protection for this test
+        alice.address
+      );
+
+      // Verify the mint was successful
+      expect(await largeStepToken.balanceOf(alice.address)).to.be.gt(0);
+    });
+
+    it("should handle 500 steps efficiently for large mint", async function () {
+      const reserveAmount = wei(100000); // Large amount
+
+      // Measure gas for mintWithReserveAmount
+      await ReserveToken.approve(BondPeriphery.target, reserveAmount);
+      await BondPeriphery.mintWithReserveAmount(
+        largeStepToken.target,
+        reserveAmount,
+        0, // No slippage protection for this test
+        alice.address
+      );
+
+      // Verify the mint was successful
+      expect(await largeStepToken.balanceOf(alice.address)).to.be.gt(0);
+    });
+  }); // Gas optimization tests
 }); // BondPeriphery
