@@ -1328,8 +1328,8 @@ describe("Bond", function () {
           stepRanges: [wei(11, 8), wei(12, 8)],
           stepPrices: [wei(1, 9), wei(2, 9)],
         },
-        // step 1 => 1.1e9 * 1e9 = 1.1e18 -> reserveToBond = Math.ceildev(1.1e18, 1e18) = 2
-        // step 2 => (1.2 - 1.1)e9 * 2e9 = 0.1e18 -> reserveToBond = Math.ceildev(0.1e18, 1e18) = 1
+        // step 1 => 1.1e9 * 1e9 = 1.1e18 -> reserveToBond = Math.ceildev(1.1e18, 1e18) = 2 (ceil of 1.1)
+        // step 2 => (1.2 - 1.1)e9 * 2e9 = 0.1e18 -> reserveToBond = Math.ceildev(0.1e18, 1e18) = 1 (ceil of 0.1)
       };
 
       await Bond.createToken(

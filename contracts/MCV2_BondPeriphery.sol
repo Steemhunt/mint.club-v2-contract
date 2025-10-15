@@ -5,6 +5,7 @@ pragma solidity =0.8.20;
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IMCV2_Bond} from "./interfaces/IMCV2_Bond.sol";
 import {MCV2_ICommonToken} from "./interfaces/MCV2_ICommonToken.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title Mint Club V2 Bond Periphery
@@ -14,6 +15,39 @@ contract MCV2_BondPeriphery {
     error MCV2_BondPeriphery__ExceedMaxSupply();
     error MCV2_BondPeriphery__InvalidCurrentSupply();
     error MCV2_BondPeriphery__InvalidTokenAmount();
+    error MCV2_BondPeriphery__SlippageLimitExceeded();
+
+    IMCV2_Bond public immutable BOND;
+
+    constructor(address bond_) {
+        BOND = IMCV2_Bond(bond_);
+    }
+
+    function mintWithReserveAmount(
+        address token,
+        uint256 reserveAmount,
+        uint256 minTokensToMint,
+        address receiver
+    ) external returns (uint256) {
+        uint256 tokensToMint = getTokensForReserve(token, reserveAmount);
+        if (tokensToMint < minTokensToMint)
+            revert MCV2_BondPeriphery__SlippageLimitExceeded();
+
+        (, , , , address reserveAddress, ) = BOND.tokenBond(token);
+        IERC20 reserveToken = IERC20(reserveAddress);
+        reserveToken.transferFrom(msg.sender, address(this), reserveAmount);
+
+        reserveToken.approve(address(BOND), reserveAmount);
+        BOND.mint(token, tokensToMint, reserveAmount, receiver);
+
+        // Send the leftover reserve tokens to the receiver (potentially few weis left due to roundings)
+        uint256 reserveBalance = reserveToken.balanceOf(address(this));
+        if (reserveBalance > 0) {
+            reserveToken.transfer(receiver, reserveBalance);
+        }
+
+        return reserveAmount;
+    }
 
     /**
      * @dev Calculates the number of tokens that can be minted with a given amount of reserve tokens.
@@ -21,27 +55,23 @@ contract MCV2_BondPeriphery {
      *         and it is impossible to calculate the exact number of tokens that can be minted
      *         without using binary search (too expensive, often reverts due to gas limit).
      *         Use this function just for estimating the number of tokens that can be minted.
-     * @param bond_ The address of the Bond contract.
-     * @param token_ The address of the token.
-     * @param reserveAmount_ The amount of reserve tokens to pay.
+     * @param tokenAddress The address of the token.
+     * @param reserveAmount The amount of reserve tokens to pay.
      * @return tokensToMint The number of tokens that can be minted.
      */
     function getTokensForReserve(
-        address bond_,
-        address token_,
-        uint256 reserveAmount_
+        address tokenAddress,
+        uint256 reserveAmount
     ) public view returns (uint256 tokensToMint) {
-        IMCV2_Bond bond = IMCV2_Bond(bond_);
-
-        if (!bond.exists(token_))
+        if (!BOND.exists(tokenAddress))
             revert MCV2_BondPeriphery__InvalidParams("token");
-        if (reserveAmount_ == 0)
+        if (reserveAmount == 0)
             revert MCV2_BondPeriphery__InvalidParams("reserveAmount");
 
-        (, uint16 mintRoyalty, , , , ) = bond.tokenBond(token_);
-        IMCV2_Bond.BondStep[] memory steps = bond.getSteps(token_);
+        (, uint16 mintRoyalty, , , , ) = BOND.tokenBond(tokenAddress);
+        IMCV2_Bond.BondStep[] memory steps = BOND.getSteps(tokenAddress);
 
-        MCV2_ICommonToken t = MCV2_ICommonToken(token_);
+        MCV2_ICommonToken t = MCV2_ICommonToken(tokenAddress);
         uint256 currentSupply = t.totalSupply();
         uint256 maxTokenSupply = steps[steps.length - 1].rangeTo;
 
@@ -53,7 +83,7 @@ contract MCV2_BondPeriphery {
         // reserveAmount = reserveToBond + royalty
         // reserveAmount = reserveToBond + (reserveToBond * mintRoyalty) / 10000
         // reserveToBond = reserveAmount / (1 + (mintRoyalty) / 10000)
-        uint256 reserveLeft = (reserveAmount_ * 10000) / (10000 + mintRoyalty);
+        uint256 reserveLeft = (reserveAmount * 10000) / (10000 + mintRoyalty);
 
         // Cache steps.length to avoid multiple storage reads
         uint256 stepsLength = steps.length;
