@@ -709,4 +709,275 @@ describe("BondPeriphery", function () {
       expect(await largeStepToken.balanceOf(alice.address)).to.be.gt(0);
     });
   }); // Gas optimization tests
+
+  describe("swap", function () {
+    let mintClubToken;
+
+    beforeEach(async function () {
+      // Create a Mint Club token for testing
+      await Bond.createToken(
+        SIMPLE_TOKEN.tokenParams,
+        SIMPLE_TOKEN.bondParams,
+        {
+          value: await Bond.creationFee(),
+        }
+      );
+
+      mintClubToken = await ethers.getContractAt(
+        "MCV2_Token",
+        await Bond.tokens(0)
+      );
+
+      // Mint some tokens first to establish liquidity
+      const reserveAmount = wei(400); // Will mint 400 tokens (range: 100 - 500 => 1 reserve per token)
+      await ReserveToken.approve(Bond.target, reserveAmount);
+      await Bond.mint(
+        mintClubToken.target,
+        wei(400),
+        reserveAmount,
+        owner.address
+      );
+    });
+
+    describe("Swap Mint Club token -> Reserve token", function () {
+      let tokensToBurn = wei(100);
+      let expectedReserveReceived = wei(100); // 100 tokens * 1 reserve per token
+      let initialReserveBalance;
+
+      beforeEach(async function () {
+        initialReserveBalance = await ReserveToken.balanceOf(alice.address);
+
+        // Transfer some Mint Club tokens to alice
+        await mintClubToken.transfer(alice.address, tokensToBurn);
+
+        // Alice approves the BondPeriphery contract
+        await mintClubToken
+          .connect(alice)
+          .approve(BondPeriphery.target, tokensToBurn);
+      });
+
+      it("should swap Mint Club token for reserve token", async function () {
+        // Perform the swap
+        await BondPeriphery.connect(alice).swap(
+          mintClubToken.target,
+          tokensToBurn,
+          ReserveToken.target,
+          0, // No slippage protection for this test
+          alice.address
+        );
+
+        // Verify alice received reserve tokens
+        const finalReserveBalance = await ReserveToken.balanceOf(alice.address);
+        expect(finalReserveBalance).to.equal(
+          initialReserveBalance + expectedReserveReceived
+        );
+
+        // Verify alice's Mint Club token balance decreased
+        expect(await mintClubToken.balanceOf(alice.address)).to.equal(0);
+      });
+
+      it("should respect minBuyAmount (slippage protection)", async function () {
+        // Try to swap with an unrealistic minBuyAmount
+        await expect(
+          BondPeriphery.connect(alice).swap(
+            mintClubToken.target,
+            tokensToBurn,
+            ReserveToken.target,
+            expectedReserveReceived + 1n,
+            alice.address
+          )
+        ).to.be.revertedWithCustomError(
+          Bond,
+          "MCV2_Bond__SlippageLimitExceeded"
+        );
+      });
+
+      it("should estimate swap amount correctly", async function () {
+        // Estimate the swap
+        const estimatedBuyAmount = await BondPeriphery.estimateSwap(
+          mintClubToken.target,
+          tokensToBurn,
+          ReserveToken.target
+        );
+
+        // Verify the estimation matches expected amount
+        expect(estimatedBuyAmount).to.equal(expectedReserveReceived);
+
+        // Perform actual swap to verify estimate matches reality
+        const initialReserveBalance = await ReserveToken.balanceOf(
+          alice.address
+        );
+
+        await BondPeriphery.connect(alice).swap(
+          mintClubToken.target,
+          tokensToBurn,
+          ReserveToken.target,
+          0,
+          alice.address
+        );
+
+        // Verify actual swap result matches estimate
+        const finalReserveBalance = await ReserveToken.balanceOf(alice.address);
+        expect(finalReserveBalance).to.equal(
+          initialReserveBalance + estimatedBuyAmount
+        );
+      });
+    }); // Swap Mint Club token -> Reserve token
+
+    describe("Swap Reserve token -> Mint Club token", function () {
+      let reserveAmount = wei(100);
+      let expectedTokensToMint = wei(50); // 100 / 2 reserve per token
+      let initialTokenBalance;
+
+      beforeEach(async function () {
+        initialTokenBalance = await mintClubToken.balanceOf(bob.address);
+
+        // Transfer some reserve tokens to bob
+        await ReserveToken.transfer(bob.address, reserveAmount);
+
+        // Bob approves the BondPeriphery contract
+        await ReserveToken.connect(bob).approve(
+          BondPeriphery.target,
+          reserveAmount
+        );
+      });
+
+      it("should swap reserve token for Mint Club token", async function () {
+        // Perform the swap
+        await BondPeriphery.connect(bob).swap(
+          ReserveToken.target,
+          reserveAmount,
+          mintClubToken.target,
+          expectedTokensToMint, // No slippage protection for this test
+          bob.address
+        );
+
+        // Verify bob received Mint Club tokens
+        const finalTokenBalance = await mintClubToken.balanceOf(bob.address);
+        expect(finalTokenBalance).to.equal(
+          initialTokenBalance + expectedTokensToMint
+        );
+
+        // Verify bob's reserve token balance is zero due to the swap
+        expect(await ReserveToken.balanceOf(bob.address)).to.equal(0);
+      });
+
+      it("should respect minBuyAmount (slippage protection)", async function () {
+        // Try to swap with an unrealistic minBuyAmount
+        await expect(
+          BondPeriphery.connect(bob).swap(
+            ReserveToken.target,
+            reserveAmount,
+            mintClubToken.target,
+            expectedTokensToMint + 1n,
+            bob.address
+          )
+        ).to.be.revertedWithCustomError(
+          BondPeriphery,
+          "MCV2_BondPeriphery__SlippageLimitExceeded"
+        );
+      });
+
+      it("should estimate swap amount correctly", async function () {
+        // Estimate the swap
+        const estimatedBuyAmount = await BondPeriphery.estimateSwap(
+          ReserveToken.target,
+          reserveAmount,
+          mintClubToken.target
+        );
+
+        // Verify the estimation matches expected amount
+        expect(estimatedBuyAmount).to.equal(expectedTokensToMint);
+
+        // Perform actual swap to verify estimate matches reality
+        const initialMintClubBalance = await mintClubToken.balanceOf(
+          bob.address
+        );
+
+        await BondPeriphery.connect(bob).swap(
+          ReserveToken.target,
+          reserveAmount,
+          mintClubToken.target,
+          expectedTokensToMint,
+          bob.address
+        );
+
+        // Verify actual swap result matches estimate
+        const finalMintClubBalance = await mintClubToken.balanceOf(bob.address);
+        expect(finalMintClubBalance).to.equal(
+          initialMintClubBalance + estimatedBuyAmount
+        );
+      });
+    }); // Swap Reserve token -> Mint Club token
+
+    it("should revert if sellToken and buyToken don't match bond pair", async function () {
+      // Create another reserve token
+      const AnotherReserveToken = await ethers.deployContract("TestToken", [
+        wei(200000000),
+        "Another Token",
+        "ANOTHER",
+        18n,
+      ]);
+      await AnotherReserveToken.waitForDeployment();
+
+      const tokensToBurn = wei(100);
+
+      // Transfer some Mint Club tokens to alice
+      await mintClubToken.transfer(alice.address, tokensToBurn);
+
+      // Alice approves the BondPeriphery contract
+      await mintClubToken
+        .connect(alice)
+        .approve(BondPeriphery.target, tokensToBurn);
+
+      // Try to swap with wrong buyToken
+      await expect(
+        BondPeriphery.connect(alice).swap(
+          mintClubToken.target,
+          tokensToBurn,
+          AnotherReserveToken.target,
+          0,
+          alice.address
+        )
+      ).to.be.revertedWithCustomError(
+        BondPeriphery,
+        "MCV2_BondPeriphery__NoLiquidityAvailable"
+      );
+    });
+
+    it("should revert if neither token is a Mint Club token", async function () {
+      // Create two random tokens
+      const Token1 = await ethers.deployContract("TestToken", [
+        wei(200000000),
+        "Token 1",
+        "TK1",
+        18n,
+      ]);
+      await Token1.waitForDeployment();
+
+      const Token2 = await ethers.deployContract("TestToken", [
+        wei(200000000),
+        "Token 2",
+        "TK2",
+        18n,
+      ]);
+      await Token2.waitForDeployment();
+
+      await Token1.approve(BondPeriphery.target, wei(100));
+
+      // Try to swap two non-Mint Club tokens
+      await expect(
+        BondPeriphery.swap(
+          Token1.target,
+          wei(100),
+          Token2.target,
+          0,
+          alice.address
+        )
+      ).to.be.revertedWithCustomError(
+        BondPeriphery,
+        "MCV2_BondPeriphery__NoLiquidityAvailable"
+      );
+    });
+  }); // swap
 }); // BondPeriphery

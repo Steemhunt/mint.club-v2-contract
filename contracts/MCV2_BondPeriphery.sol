@@ -16,6 +16,7 @@ contract MCV2_BondPeriphery {
     error MCV2_BondPeriphery__InvalidCurrentSupply();
     error MCV2_BondPeriphery__InvalidTokenAmount();
     error MCV2_BondPeriphery__SlippageLimitExceeded();
+    error MCV2_BondPeriphery__NoLiquidityAvailable();
 
     IMCV2_Bond public immutable BOND;
 
@@ -23,12 +24,138 @@ contract MCV2_BondPeriphery {
         BOND = IMCV2_Bond(bond_);
     }
 
+    function version() external pure returns (uint8) {
+        return 2;
+    }
+
+    /**
+     * @dev Estimate swap results between Mint Club tokens and their reserve tokens.
+     * @param sellToken The address of the token to sell.
+     * @param sellAmount The amount of tokens to sell.
+     * @param buyToken The address of the token to buy.
+     * @return buyAmount The amount of tokens that can be bought.
+     */
+    function estimateSwap(
+        address sellToken,
+        uint256 sellAmount,
+        address buyToken
+    ) external view returns (uint256 buyAmount) {
+        // Check if sellToken is a Mint Club token and buyToken is the reserve token
+        if (BOND.exists(sellToken)) {
+            (, , , , address reserveToken, ) = BOND.tokenBond(sellToken);
+
+            // Verify that buyToken matches the reserve token
+            if (buyToken != reserveToken) {
+                revert MCV2_BondPeriphery__NoLiquidityAvailable();
+            }
+
+            // Estimate burning: get refund amount for selling (burning) the Mint Club token
+            (uint256 refundAmount, ) = BOND.getRefundForTokens(
+                sellToken,
+                sellAmount
+            );
+
+            return refundAmount;
+        }
+        // Check if buyToken is a Mint Club token and sellToken is the reserve token
+        else if (BOND.exists(buyToken)) {
+            (, , , , address reserveToken, ) = BOND.tokenBond(buyToken);
+
+            // Verify that sellToken matches the reserve token
+            if (sellToken != reserveToken) {
+                revert MCV2_BondPeriphery__NoLiquidityAvailable();
+            }
+
+            // Estimate minting: get tokens that can be minted with the reserve amount
+            (uint256 tokensToMint, ) = getTokensForReserve(
+                buyToken,
+                sellAmount,
+                false // Use floor division for conservative estimation
+            );
+
+            return tokensToMint;
+        } else {
+            // Neither token is a Mint Club token - liquidity not available
+            revert MCV2_BondPeriphery__NoLiquidityAvailable();
+        }
+    }
+
+    /**
+     * @dev Aggregated swap function that handles swaps between Mint Club tokens and their reserve tokens.
+     * @param sellToken The address of the token to sell.
+     * @param sellAmount The amount of tokens to sell.
+     * @param buyToken The address of the token to buy.
+     * @param minBuyAmount The minimum amount of tokens to receive.
+     * @param receiver The address to receive the bought tokens.
+     * @return buyAmount The actual amount of tokens bought.
+     */
+    function swap(
+        address sellToken,
+        uint256 sellAmount,
+        address buyToken,
+        uint256 minBuyAmount,
+        address receiver
+    ) external returns (uint256 buyAmount) {
+        // Check if sellToken is a Mint Club token and buyToken is the reserve token
+        if (BOND.exists(sellToken)) {
+            (, , , , address reserveToken, ) = BOND.tokenBond(sellToken);
+
+            // Verify that buyToken matches the reserve token
+            if (buyToken != reserveToken) {
+                revert MCV2_BondPeriphery__NoLiquidityAvailable();
+            }
+
+            // Transfer the Mint Club token from sender to this contract
+            IERC20(sellToken).transferFrom(
+                msg.sender,
+                address(this),
+                sellAmount
+            );
+
+            // Approve the Bond contract to burn the tokens
+            IERC20(sellToken).approve(address(BOND), sellAmount);
+
+            // Burn the Mint Club token to get reserve tokens
+            buyAmount = BOND.burn(
+                sellToken,
+                sellAmount,
+                minBuyAmount,
+                receiver
+            );
+
+            return buyAmount;
+        }
+        // Check if buyToken is a Mint Club token and sellToken is the reserve token
+        else if (BOND.exists(buyToken)) {
+            (, , , , address reserveToken, ) = BOND.tokenBond(buyToken);
+
+            // Verify that sellToken matches the reserve token
+            if (sellToken != reserveToken) {
+                revert MCV2_BondPeriphery__NoLiquidityAvailable();
+            }
+
+            // Use the existing mintWithReserveAmount logic
+            // Note: mintWithReserveAmount already handles transferFrom internally
+            buyAmount = mintWithReserveAmount(
+                buyToken,
+                sellAmount,
+                minBuyAmount,
+                receiver
+            );
+
+            return buyAmount;
+        } else {
+            // Neither token is a Mint Club token - liquidity not available
+            revert MCV2_BondPeriphery__NoLiquidityAvailable();
+        }
+    }
+
     function mintWithReserveAmount(
         address token,
         uint256 reserveAmount,
         uint256 minTokensToMint,
         address receiver
-    ) external returns (uint256 tokensMinted) {
+    ) public returns (uint256 tokensMinted) {
         (uint256 tokensToMint, address reserveAddress) = getTokensForReserve(
             token,
             reserveAmount,
@@ -84,8 +211,6 @@ contract MCV2_BondPeriphery {
         uint256 reserveAmount,
         bool useCeilDivision
     ) public view returns (uint256 tokensToMint, address reserveAddress) {
-        if (!BOND.exists(tokenAddress))
-            revert MCV2_BondPeriphery__InvalidParams("token");
         if (reserveAmount == 0)
             revert MCV2_BondPeriphery__InvalidParams("reserveAmount");
 
@@ -93,6 +218,9 @@ contract MCV2_BondPeriphery {
         (, uint16 mintRoyalty, , , address reserveTokenAddr, ) = BOND.tokenBond(
             tokenAddress
         );
+        if (reserveTokenAddr == address(0))
+            revert MCV2_BondPeriphery__InvalidParams("token");
+
         reserveAddress = reserveTokenAddr;
         IMCV2_Bond.BondStep[] memory steps = BOND.getSteps(tokenAddress);
         MCV2_ICommonToken t = MCV2_ICommonToken(tokenAddress);

@@ -32,12 +32,24 @@ interface IMCV2_Bond {
         address receiver
     ) external returns (uint256);
 
+    function burn(
+        address token,
+        uint256 tokensToBurn,
+        uint256 minRefund,
+        address receiver
+    ) external returns (uint256);
+
     function creationFee() external view returns (uint256);
 
     function getReserveForToken(
         address token,
         uint256 tokensToMint
     ) external view returns (uint256 reserveAmount, uint256 royalty);
+
+    function getRefundForTokens(
+        address token,
+        uint256 tokensToBurn
+    ) external view returns (uint256 refundAmount, uint256 royalty);
 
     struct MultiTokenParams {
         string name;
