@@ -112,11 +112,6 @@ module.exports = {
       chainId: 7560,
       accounts: [process.env.MAINNET_PRIVATE_KEY],
     },
-    ham: {
-      url: "https://ham.calderachain.xyz/http",
-      chainId: 5112,
-      accounts: [process.env.MAINNET_PRIVATE_KEY],
-    },
     apechain: {
       url: "https://apechain.calderachain.xyz/http",
       chainId: 33139,
@@ -237,14 +232,6 @@ module.exports = {
           apiURL:
             "https://api.socialscan.io/cyber/v1/explorer/command_api/contract",
           browserURL: "https://cyberscan.co/",
-        },
-      },
-      {
-        network: "ham",
-        chainId: 5112,
-        urls: {
-          apiURL: "https://ham.calderaexplorer.xyz/api", // TODO: API verification?
-          browserURL: "https://ham.calderaexplorer.xyz",
         },
       },
       {

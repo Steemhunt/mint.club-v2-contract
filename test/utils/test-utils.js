@@ -25,7 +25,6 @@ exports.getCreationFee = function (network) {
     zora: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     klaytn: 8n * 10n ** 18n, // 8 KLAY (~$2)
     cyber: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
-    ham: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     apechain: 10n ** 18n, // 1.0 APE (~$1.6)
     shibarium: 5n * 10n ** 18n, // 5 BONE (~$2)
     hashkey: 10n ** 18n, // 1 HSK (~$2)
@@ -63,7 +62,6 @@ exports.getWETHAddress = function (network) {
     zora: "0x4200000000000000000000000000000000000006", // WETH
     klaytn: "0x19Aac5f612f524B754CA7e7c41cbFa2E981A4432", // WKLAY - (ref: https://hrl.sh/g6ccv7)
     cyber: "0x4200000000000000000000000000000000000006", // WETH
-    ham: "0x4200000000000000000000000000000000000006", // WETH
     apechain: "0x48b62137EdfA95a428D35C09E44256a739F6B557", // WAPE
     shibarium: "0xC76F4c819D820369Fb2d7C1531aB3Bb18e6fE8d8", // WBONE
     hashkey: "0xB210D2120d57b758EE163cFfb43e73728c471Cf1", // WHSK
@@ -101,7 +99,6 @@ exports.getBondAddress = function (network) {
     zora: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     klaytn: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     cyber: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
-    ham: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     apechain: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     shibarium: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     hashkey: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
@@ -133,7 +130,6 @@ exports.getMaxSteps = function (network) {
     zora: 1000n, // 30M gas limit
     klaytn: 1000n, // 100M execution cost (ref: https://hrl.sh/eylozo)
     cyber: 1000n, // 30M gas limit
-    ham: 1000n, // 30M gas limit
     apechain: 1000n, // 1T gas limit??
     shibarium: 1000n, // 20M gas limit
     hashkey: 1000n, // 30M gas limit

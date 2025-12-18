@@ -52,7 +52,6 @@ npx hardhat compile && npx hardhat run --network degen scripts/deploy-bond-perip
 npx hardhat compile && npx hardhat run --network zora scripts/deploy-bond-periphery.js
 npx hardhat compile && npx hardhat run --network klaytn scripts/deploy-bond-periphery.js
 npx hardhat compile && npx hardhat run --network cyber scripts/deploy-bond-periphery.js
-// npx hardhat compile && npx hardhat run --network ham scripts/deploy-bond-periphery.js
 npx hardhat compile && npx hardhat run --network apechain scripts/deploy-bond-periphery.js
 npx hardhat compile && npx hardhat run --network shibarium scripts/deploy-bond-periphery.js
 npx hardhat compile && npx hardhat run --network hashkey scripts/deploy-bond-periphery.js

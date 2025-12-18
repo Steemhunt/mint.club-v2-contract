@@ -57,7 +57,6 @@ npx hardhat compile && npx hardhat run --network degen scripts/deploy-stake.js
 npx hardhat compile && npx hardhat run --network zora scripts/deploy-stake.js
 npx hardhat compile && npx hardhat run --network klaytn scripts/deploy-stake.js
 npx hardhat compile && npx hardhat run --network cyber scripts/deploy-stake.js
-// npx hardhat compile && npx hardhat run --network ham scripts/deploy-stake.js // DEPRECATED
 npx hardhat compile && npx hardhat run --network apechain scripts/deploy-stake.js
 npx hardhat compile && npx hardhat run --network shibarium scripts/deploy-stake.js
 npx hardhat compile && npx hardhat run --network hashkey scripts/deploy-stake.js

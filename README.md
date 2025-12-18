@@ -195,7 +195,6 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
          <th><a href="https://explorer.zora.energy/">Zora</a></th>
          <th><a href="https://kaiascan.io/">Kaia</a></th>
          <th><a href="https://cyberscan.co/">Cyber</a></th>
-         <th><a href="https://ham.calderaexplorer.xyz/">Ham</a></th>
          <th><a href="https://apescan.io/">APEChain</a></th>
          <th><a href="https://shibariumscan.io/">Shibarium</a></th>
          <th><a href="https://explorer.hsk.xyz/">HashKey</a></th>
@@ -206,27 +205,27 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
    <tbody>
       <tr>
          <td>MCV2_Token</td>
-         <td colspan="9">0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df</td>
+         <td colspan="8">0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df</td>
       </tr>
       <tr>
          <td>MCV2_MultiToken</td>
-         <td colspan="9">0x6c61918eECcC306D35247338FDcf025af0f6120A</td>
+         <td colspan="8">0x6c61918eECcC306D35247338FDcf025af0f6120A</td>
       </tr>
       <tr>
          <td>MCV2_Bond</td>
-         <td colspan="9">0xc5a076cad94176c2996B32d8466Be1cE757FAa27</td>
+         <td colspan="8">0xc5a076cad94176c2996B32d8466Be1cE757FAa27</td>
       </tr>
       <tr>
          <td>MCV2_ZapV1</td>
-         <td colspan="9">0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa</td>
+         <td colspan="8">0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa</td>
       </tr>
       <tr>
          <td>Locker</td>
-         <td colspan="9">0xA3dCf3Ca587D9929d540868c924f208726DC9aB6</td>
+         <td colspan="8">0xA3dCf3Ca587D9929d540868c924f208726DC9aB6</td>
       </tr>
       <tr>
          <td>MerkleDistributor</td>
-         <td colspan="9">0x3bc6B601196752497a68B2625DB4f2205C3b150b</td>
+         <td colspan="8">0x3bc6B601196752497a68B2625DB4f2205C3b150b</td>
       </tr>
    </tbody>
 </table>
@@ -396,10 +395,6 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
          <td><a href="https://cyberscan.co/address/0xa4021a8907197Df92341F1218B32E26b250F6798#contract">0xa4021a8907197Df92341F1218B32E26b250F6798</a></td>
       </tr>
       <tr>
-         <td>Ham</td>
-         <td><a href="https://ham.calderaexplorer.xyz/address/0xa4021a8907197Df92341F1218B32E26b250F6798?tab=read_contract">0xa4021a8907197Df92341F1218B32E26b250F6798</a></td>
-      </tr>
-      <tr>
          <td>APEChain</td>
          <td><a href="https://apescan.io/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4?tab=contract#code">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</a></td>
       </tr>
@@ -490,10 +485,6 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       <tr>
          <td>Cyber</td>
          <td><a href="https://cyberscan.co/address/0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1#contract">0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1</a></td>
-      </tr>
-      <tr>
-         <td>Ham</td>
-         <td>Not Deployed</td>
       </tr>
       <tr>
          <td>APEChain</td>
