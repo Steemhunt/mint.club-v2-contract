@@ -21,7 +21,7 @@ describe("MCV2_ZapV2", function () {
     ]);
     await ZapV2.waitForDeployment();
 
-    const Bond = await ethers.getContractAt("IMCV2_Bond", BOND_ADDRESS);
+    const Bond = await ethers.getContractAt("MCV2_Bond", BOND_ADDRESS);
     const WETH = await ethers.getContractAt("IWETH", WETH_ADDRESS);
     const USDC = await ethers.getContractAt("IERC20", USDC_ADDRESS);
 
@@ -45,7 +45,7 @@ describe("MCV2_ZapV2", function () {
     });
 
     it("should set UNIVERSAL_ROUTER address correctly", async function () {
-      expect(await ZapV2.UNIVERSAL_ROUTER()).to.equal(UNIVERSAL_ROUTER_ADDRESS);
+      expect((await ZapV2.UNIVERSAL_ROUTER()).toLowerCase()).to.equal(UNIVERSAL_ROUTER_ADDRESS.toLowerCase());
     });
 
     it("should set deployer as owner", async function () {
