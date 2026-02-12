@@ -29,13 +29,12 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
     error MCV2_ZapV2__InvalidAmount();
     error MCV2_ZapV2__InvalidReceiver();
     error MCV2_ZapV2__SlippageLimitExceeded();
-    error MCV2_ZapV2__SwapFailed();
     error MCV2_ZapV2__EthTransferFailed();
     error MCV2_ZapV2__InvalidSwapPath();
     error MCV2_ZapV2__MsgValueMismatch();
     error MCV2_ZapV2__NothingToRescue();
 
-    // Immutables
+    // Immutables — stored in bytecode, zero SLOAD cost
     MCV2_Bond public immutable BOND;
     IWETH public immutable WETH;
     IUniversalRouter public immutable UNIVERSAL_ROUTER;
@@ -85,8 +84,8 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
         (,,,,reserveToken,) = BOND.tokenBond(token);
     }
 
-    /// @dev Check if an MC token is ERC-20 (vs ERC-1155) by checking decimals
-    function _isMCTokenERC20(address token) private pure returns (bool) {
+    /// @dev Check if an MC token is ERC-20 (vs ERC-1155). All MC ERC-20s have 18 decimals.
+    function _isMCTokenERC20(address token) private view returns (bool) {
         return MCV2_ICommonToken(token).decimals() == 18;
     }
 
@@ -102,53 +101,66 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
     ) private returns (uint256 outputAmount) {
         if (commands.length == 0) revert MCV2_ZapV2__InvalidSwapPath();
 
-        bool isEthInput = (inputToken == address(0));
         bool isEthOutput = (outputToken == address(0));
 
-        // Measure balance before
-        uint256 balanceBefore = isEthOutput
-            ? address(this).balance
-            : IERC20(outputToken).balanceOf(address(this));
+        // Measure balance before — single SLOAD/BALANCE
+        uint256 balanceBefore;
+        unchecked {
+            balanceBefore = isEthOutput
+                ? address(this).balance
+                : IERC20(outputToken).balanceOf(address(this));
+        }
 
-        if (isEthInput) {
+        if (inputToken == address(0)) {
+            // ETH input — forward value to router
             UNIVERSAL_ROUTER.execute{value: inputAmount}(commands, inputs, deadline);
         } else {
-            // Exact approval, then execute, then reset to 0
+            // ERC-20 input — exact approve → execute → zero-out
             IERC20(inputToken).forceApprove(address(UNIVERSAL_ROUTER), inputAmount);
             UNIVERSAL_ROUTER.execute(commands, inputs, deadline);
+            // Reset allowance to 0 to close approval attack surface
             IERC20(inputToken).forceApprove(address(UNIVERSAL_ROUTER), 0);
         }
 
         // Measure balance after
-        outputAmount = isEthOutput
-            ? address(this).balance - balanceBefore
-            : IERC20(outputToken).balanceOf(address(this)) - balanceBefore;
-
-        if (outputAmount < minOutputAmount) {
-            revert MCV2_ZapV2__SlippageLimitExceeded();
+        unchecked {
+            outputAmount = isEthOutput
+                ? address(this).balance - balanceBefore
+                : IERC20(outputToken).balanceOf(address(this)) - balanceBefore;
         }
+
+        if (outputAmount < minOutputAmount) revert MCV2_ZapV2__SlippageLimitExceeded();
     }
 
-    /// @dev Calculate maximum mintable tokens within a reserve budget (binary search)
+    /// @dev Calculate maximum mintable tokens within a reserve budget via binary search.
+    ///      Uses unchecked arithmetic where overflow is impossible (bounded by maxSupply).
     function _calculateMaxMintable(address token, uint256 reserveAmount)
         private view returns (uint256 maxTokens, uint256 actualReserveNeeded)
     {
         uint256 currentSupply = MCV2_ICommonToken(token).totalSupply();
         uint256 maxSupply = BOND.maxSupply(token);
 
-        uint256 left = 0;
-        uint256 right = maxSupply - currentSupply;
+        if (currentSupply >= maxSupply) return (0, 0);
+
+        uint256 left;
+        uint256 right;
+        unchecked {
+            right = maxSupply - currentSupply;
+        }
 
         while (left < right) {
-            uint256 mid = left + (right - left + 1) / 2;
+            uint256 mid;
+            unchecked {
+                mid = left + (right - left + 1) / 2;
+            }
             try BOND.getReserveForToken(token, mid) returns (uint256 required, uint256) {
                 if (required <= reserveAmount) {
                     left = mid;
                 } else {
-                    right = mid - 1;
+                    unchecked { right = mid - 1; }
                 }
             } catch {
-                right = mid - 1;
+                unchecked { right = mid - 1; }
             }
         }
 
@@ -199,27 +211,26 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
             inputToken, reserveToken, inputAmount, commands, inputs, deadline
         );
 
-        // Step 2: Mint MC tokens
-        (uint256 maxTokens, uint256 actualReserveNeeded) = _calculateMaxMintable(token, reserveObtained);
-        if (maxTokens < minTokensOut) revert MCV2_ZapV2__SlippageLimitExceeded();
+        // Step 2: Calculate max mintable and mint
+        (tokensReceived, reserveUsed) = _calculateMaxMintable(token, reserveObtained);
+        if (tokensReceived < minTokensOut) revert MCV2_ZapV2__SlippageLimitExceeded();
 
-        // Exact approval to Bond, then mint
-        IERC20(reserveToken).forceApprove(address(BOND), actualReserveNeeded);
-        BOND.mint(token, maxTokens, actualReserveNeeded, receiver);
+        // Exact approval → mint → zero-out (CEI: approve is state, mint is external)
+        IERC20(reserveToken).forceApprove(address(BOND), reserveUsed);
+        BOND.mint(token, tokensReceived, reserveUsed, receiver);
         IERC20(reserveToken).forceApprove(address(BOND), 0);
 
-        tokensReceived = maxTokens;
-        reserveUsed = actualReserveNeeded;
-
         // Step 3: Refund leftover reserve
-        uint256 leftover = reserveObtained - actualReserveNeeded;
-        if (leftover > 0) {
-            if (reserveToken == address(WETH) && inputToken == address(0)) {
-                WETH.withdraw(leftover);
-                (bool sent, ) = msg.sender.call{value: leftover}("");
-                if (!sent) revert MCV2_ZapV2__EthTransferFailed();
-            } else {
-                IERC20(reserveToken).safeTransfer(msg.sender, leftover);
+        unchecked {
+            uint256 leftover = reserveObtained - reserveUsed;
+            if (leftover > 0) {
+                if (reserveToken == address(WETH) && inputToken == address(0)) {
+                    WETH.withdraw(leftover);
+                    (bool sent, ) = msg.sender.call{value: leftover}("");
+                    if (!sent) revert MCV2_ZapV2__EthTransferFailed();
+                } else {
+                    IERC20(reserveToken).safeTransfer(msg.sender, leftover);
+                }
             }
         }
 
@@ -236,25 +247,21 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
         uint256 deadline
     ) private returns (uint256) {
         if (inputToken == address(0)) {
-            // Native ETH input
             if (reserveToken == address(WETH)) {
-                // Wrap ETH → WETH directly
+                // Wrap ETH → WETH directly — cheapest path, no router needed
                 WETH.deposit{value: inputAmount}();
                 return inputAmount;
-            } else {
-                // Swap ETH → reserveToken via router
-                return _executeSwap(address(0), reserveToken, inputAmount, 1, commands, inputs, deadline);
             }
-        } else {
-            // ERC-20 input
-            IERC20(inputToken).safeTransferFrom(msg.sender, address(this), inputAmount);
-
-            if (inputToken == reserveToken) {
-                return inputAmount;
-            } else {
-                return _executeSwap(inputToken, reserveToken, inputAmount, 1, commands, inputs, deadline);
-            }
+            // Swap ETH → reserveToken via router
+            return _executeSwap(address(0), reserveToken, inputAmount, 1, commands, inputs, deadline);
         }
+
+        // ERC-20 input
+        IERC20(inputToken).safeTransferFrom(msg.sender, address(this), inputAmount);
+
+        if (inputToken == reserveToken) return inputAmount;
+
+        return _executeSwap(inputToken, reserveToken, inputAmount, 1, commands, inputs, deadline);
     }
 
     // ─── zapBurn ─────────────────────────────────────────────────────
@@ -287,7 +294,7 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
         address reserveToken = _getReserveToken(token);
         if (reserveToken == address(0)) revert MCV2_ZapV2__InvalidToken();
 
-        // Step 1: Transfer MC tokens from user and burn
+        // Step 1: Get expected refund, transfer MC tokens, burn
         (uint256 refundAmount, ) = BOND.getRefundForTokens(token, tokensToBurn);
 
         if (_isMCTokenERC20(token)) {
@@ -323,38 +330,37 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
         address receiver
     ) private returns (uint256) {
         if (outputToken == reserveToken) {
-            // Direct transfer, no swap
             if (reserveAmount < minOutputAmount) revert MCV2_ZapV2__SlippageLimitExceeded();
             IERC20(reserveToken).safeTransfer(receiver, reserveAmount);
             return reserveAmount;
-        } else if (outputToken == address(0) && reserveToken == address(WETH)) {
-            // Unwrap WETH → ETH, no swap
+        }
+
+        if (outputToken == address(0) && reserveToken == address(WETH)) {
+            // Unwrap WETH → ETH directly — no router needed
             if (reserveAmount < minOutputAmount) revert MCV2_ZapV2__SlippageLimitExceeded();
             WETH.withdraw(reserveAmount);
             (bool sent, ) = receiver.call{value: reserveAmount}("");
             if (!sent) revert MCV2_ZapV2__EthTransferFailed();
             return reserveAmount;
-        } else {
-            // Swap reserve → output via router
-            uint256 outputAmount = _executeSwap(
-                reserveToken, outputToken, reserveAmount, minOutputAmount, commands, inputs, deadline
-            );
-
-            if (outputToken == address(0)) {
-                (bool sent, ) = receiver.call{value: outputAmount}("");
-                if (!sent) revert MCV2_ZapV2__EthTransferFailed();
-            } else {
-                IERC20(outputToken).safeTransfer(receiver, outputAmount);
-            }
-            return outputAmount;
         }
+
+        // Swap reserve → output via router
+        uint256 outputAmount = _executeSwap(
+            reserveToken, outputToken, reserveAmount, minOutputAmount, commands, inputs, deadline
+        );
+
+        if (outputToken == address(0)) {
+            (bool sent, ) = receiver.call{value: outputAmount}("");
+            if (!sent) revert MCV2_ZapV2__EthTransferFailed();
+        } else {
+            IERC20(outputToken).safeTransfer(receiver, outputAmount);
+        }
+        return outputAmount;
     }
 
     // ─── View Functions ──────────────────────────────────────────────
 
-    /**
-     * @dev Estimate output for zapMint (off-chain helper, assumes 1:1 swap for estimation)
-     */
+    /// @dev Estimate output for zapMint (off-chain helper, assumes 1:1 swap for estimation)
     function estimateZapMint(address token, uint256 inputAmount)
         external view returns (uint256 estimatedTokensOut, uint256 estimatedReserveNeeded)
     {
@@ -363,9 +369,7 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
         return _calculateMaxMintable(token, inputAmount);
     }
 
-    /**
-     * @dev Estimate output for zapBurn (off-chain helper)
-     */
+    /// @dev Estimate output for zapBurn (off-chain helper)
     function estimateZapBurn(address token, uint256 tokensToBurn)
         external view returns (uint256 estimatedReserveOut)
     {
@@ -374,9 +378,7 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
 
     // ─── Admin Functions ─────────────────────────────────────────────
 
-    /**
-     * @dev Emergency rescue stuck ETH
-     */
+    /// @dev Emergency rescue stuck ETH
     function rescueETH(address recipient) external onlyOwner {
         if (recipient == address(0)) revert MCV2_ZapV2__InvalidReceiver();
         uint256 balance = address(this).balance;
@@ -386,9 +388,7 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
         emit EmergencyTokenRescue(address(0), recipient, balance);
     }
 
-    /**
-     * @dev Emergency rescue stuck ERC-20 tokens
-     */
+    /// @dev Emergency rescue stuck ERC-20 tokens
     function rescueTokens(address tokenAddress, address recipient) external onlyOwner {
         if (recipient == address(0)) revert MCV2_ZapV2__InvalidReceiver();
         uint256 balance = IERC20(tokenAddress).balanceOf(address(this));
