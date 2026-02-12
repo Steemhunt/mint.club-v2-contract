@@ -22,11 +22,6 @@ const WHALE = "0xCB3f3e0E992435390e686D7b638FCb8baBa6c5c7";
 
 // UniversalRouter command constants
 const V3_SWAP_EXACT_IN = 0x00;
-const SWEEP = 0x04;
-
-// Special address constants for UniversalRouter
-const MSG_SENDER = "0x0000000000000000000000000000000000000001";
-const ADDRESS_THIS = "0x0000000000000000000000000000000000000002";
 
 /**
  * Encode a V3 swap path: token0 + fee + token1 + fee + token2 ...
@@ -46,36 +41,24 @@ function encodeV3Path(tokens, fees) {
 /**
  * Build UniversalRouter commands + inputs for a V3 exact-in swap.
  * Uses payerIsUser=false since ZapV2 transfers tokens to the router before calling execute.
- * Then SWEEP to send output tokens from router to a recipient.
+ * Uses exact amountIn and sends output directly to recipient (no SWEEP needed).
  *
- * @param {string} recipient - who receives output (use ADDRESS_THIS for router, then sweep)
- * @param {bigint} amountIn - input amount (use ethers.MaxUint256 for CONTRACT_BALANCE)
+ * @param {bigint} amountIn - exact input amount
  * @param {bigint} amountOutMin - minimum output
  * @param {string} path - encoded V3 path
- * @param {string} sweepToken - token to sweep from router to recipient
- * @param {string} sweepRecipient - final recipient of swept tokens
+ * @param {string} recipient - who receives the swap output
  */
-function buildV3SwapCommands(amountIn, amountOutMin, path, sweepToken, sweepRecipient) {
+function buildV3SwapCommands(amountIn, amountOutMin, path, recipient) {
   const abiCoder = ethers.AbiCoder.defaultAbiCoder();
 
-  // Command 1: V3_SWAP_EXACT_IN - swap on router's balance, output stays in router
   const swapInput = abiCoder.encode(
     ["address", "uint256", "uint256", "bytes", "bool"],
-    [ADDRESS_THIS, amountIn, amountOutMin, path, false] // payerIsUser=false
+    [recipient, amountIn, amountOutMin, path, false] // payerIsUser=false
   );
 
-  // Command 2: SWEEP - send output token from router to recipient
-  const sweepInput = abiCoder.encode(
-    ["address", "address", "uint256"],
-    [sweepToken, sweepRecipient, amountOutMin]
-  );
+  const commands = new Uint8Array([V3_SWAP_EXACT_IN]);
 
-  const commands = ethers.concat([
-    new Uint8Array([V3_SWAP_EXACT_IN]),
-    new Uint8Array([SWEEP]),
-  ]);
-
-  return { commands, inputs: [swapInput, sweepInput] };
+  return { commands, inputs: [swapInput] };
 }
 
 describe("MCV2_ZapV2", function () {
@@ -427,11 +410,10 @@ describe("MCV2_ZapV2", function () {
 
       const zapV2Address = await ZapV2.getAddress();
       const { commands, inputs } = buildV3SwapCommands(
-        ethers.MaxUint256, // CONTRACT_BALANCE - use all tokens transferred to router
-        1n, // minOutputAmount (1 wei min, slippage handled by zapMint)
+        inputAmount, // exact amount (CONTRACT_BALANCE/MaxUint256 not supported)
+        1n,
         path,
-        HUNT_ADDRESS,
-        zapV2Address
+        zapV2Address // output goes directly to ZapV2
       );
 
       const deadline = Math.floor(Date.now() / 1000) + 3600;
@@ -478,10 +460,9 @@ describe("MCV2_ZapV2", function () {
 
       const zapV2Address = await ZapV2.getAddress();
       const { commands, inputs } = buildV3SwapCommands(
-        ethers.MaxUint256, // CONTRACT_BALANCE
+        inputAmount,
         1n,
         path,
-        HUNT_ADDRESS,
         zapV2Address
       );
 
@@ -529,13 +510,15 @@ describe("MCV2_ZapV2", function () {
         [3000, 500]
       );
 
+      // Get the exact HUNT amount that will be received from burning
+      const [refundAmount] = await Bond.getRefundForTokens(MT_ADDRESS, tokensToBurn);
+
       const zapV2Address = await ZapV2.getAddress();
       const { commands, inputs } = buildV3SwapCommands(
-        ethers.MaxUint256, // CONTRACT_BALANCE
+        refundAmount, // exact HUNT amount from burn
         1n,
         path,
-        CBBTC_ADDRESS,
-        zapV2Address
+        zapV2Address // output to ZapV2, which then forwards to receiver
       );
 
       const deadline = Math.floor(Date.now() / 1000) + 3600;
