@@ -8,7 +8,75 @@ const { wei } = require("./utils/test-utils");
 const BOND_ADDRESS = "0xc5a076cad94176c2996B32d8466Be1cE757FAa27";
 const WETH_ADDRESS = "0x4200000000000000000000000000000000000006";
 const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-const UNIVERSAL_ROUTER_ADDRESS = "0x6ff5693b99212da76ad316178a184ab56d299b43";
+const UNIVERSAL_ROUTER_ADDRESS = "0x6fF5693b99212Da76ad316178A184AB56D299b43";
+const HUNT_ADDRESS = "0x37f0c2915CeCC7e977183B8543Fc0864d03E064C";
+const TN100X_ADDRESS = "0x5B5dee44552546ECEA05EDeA01DCD7Be7aa6144A";
+const CBBTC_ADDRESS = "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf";
+
+// MC tokens
+const SIGNET_ADDRESS = "0xDF2B673Ec06d210C8A8Be89441F8de60B5C679c9";
+const MT_ADDRESS = "0xFf45161474C39cB00699070Dd49582e417b57a7E";
+
+// Impersonated wallet
+const WHALE = "0xCB3f3e0E992435390e686D7b638FCb8baBa6c5c7";
+
+// UniversalRouter command constants
+const V3_SWAP_EXACT_IN = 0x00;
+const SWEEP = 0x04;
+
+// Special address constants for UniversalRouter
+const MSG_SENDER = "0x0000000000000000000000000000000000000001";
+const ADDRESS_THIS = "0x0000000000000000000000000000000000000002";
+
+/**
+ * Encode a V3 swap path: token0 + fee + token1 + fee + token2 ...
+ * Each token is 20 bytes, each fee is 3 bytes (uint24)
+ */
+function encodeV3Path(tokens, fees) {
+  let encoded = "0x";
+  for (let i = 0; i < tokens.length; i++) {
+    encoded += tokens[i].slice(2).toLowerCase();
+    if (i < fees.length) {
+      encoded += fees[i].toString(16).padStart(6, "0");
+    }
+  }
+  return encoded;
+}
+
+/**
+ * Build UniversalRouter commands + inputs for a V3 exact-in swap.
+ * Uses payerIsUser=false since ZapV2 transfers tokens to the router before calling execute.
+ * Then SWEEP to send output tokens from router to a recipient.
+ *
+ * @param {string} recipient - who receives output (use ADDRESS_THIS for router, then sweep)
+ * @param {bigint} amountIn - input amount (use ethers.MaxUint256 for CONTRACT_BALANCE)
+ * @param {bigint} amountOutMin - minimum output
+ * @param {string} path - encoded V3 path
+ * @param {string} sweepToken - token to sweep from router to recipient
+ * @param {string} sweepRecipient - final recipient of swept tokens
+ */
+function buildV3SwapCommands(amountIn, amountOutMin, path, sweepToken, sweepRecipient) {
+  const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+
+  // Command 1: V3_SWAP_EXACT_IN - swap on router's balance, output stays in router
+  const swapInput = abiCoder.encode(
+    ["address", "uint256", "uint256", "bytes", "bool"],
+    [ADDRESS_THIS, amountIn, amountOutMin, path, false] // payerIsUser=false
+  );
+
+  // Command 2: SWEEP - send output token from router to recipient
+  const sweepInput = abiCoder.encode(
+    ["address", "address", "uint256"],
+    [sweepToken, sweepRecipient, amountOutMin]
+  );
+
+  const commands = ethers.concat([
+    new Uint8Array([V3_SWAP_EXACT_IN]),
+    new Uint8Array([SWEEP]),
+  ]);
+
+  return { commands, inputs: [swapInput, sweepInput] };
+}
 
 describe("MCV2_ZapV2", function () {
   async function deployFixtures() {
@@ -24,14 +92,32 @@ describe("MCV2_ZapV2", function () {
     const Bond = await ethers.getContractAt("MCV2_Bond", BOND_ADDRESS);
     const WETH = await ethers.getContractAt("IWETH", WETH_ADDRESS);
     const USDC = await ethers.getContractAt("IERC20", USDC_ADDRESS);
+    const HUNT = await ethers.getContractAt("IERC20", HUNT_ADDRESS);
+    const TN100X = await ethers.getContractAt("IERC20", TN100X_ADDRESS);
+    const MT = await ethers.getContractAt("IERC20", MT_ADDRESS);
+    const SIGNET = await ethers.getContractAt("IERC20", SIGNET_ADDRESS);
+    const cbBTC = await ethers.getContractAt("IERC20", CBBTC_ADDRESS);
 
-    return { ZapV2, Bond, WETH, USDC, deployer, alice, bob };
+    return { ZapV2, Bond, WETH, USDC, HUNT, TN100X, MT, SIGNET, cbBTC, deployer, alice, bob };
   }
 
-  let ZapV2, Bond, WETH, USDC, deployer, alice, bob;
+  async function deployWithWhale() {
+    const base = await deployFixtures();
+
+    // Impersonate whale wallet
+    await ethers.provider.send("hardhat_impersonateAccount", [WHALE]);
+    const whale = await ethers.getSigner(WHALE);
+
+    // Fund whale with ETH for gas
+    await base.deployer.sendTransaction({ to: WHALE, value: wei(10) });
+
+    return { ...base, whale };
+  }
+
+  let ZapV2, Bond, WETH, USDC, HUNT, TN100X, MT, SIGNET, cbBTC, deployer, alice, bob;
 
   beforeEach(async function () {
-    ({ ZapV2, Bond, WETH, USDC, deployer, alice, bob } =
+    ({ ZapV2, Bond, WETH, USDC, HUNT, TN100X, MT, SIGNET, cbBTC, deployer, alice, bob } =
       await loadFixture(deployFixtures));
   });
 
@@ -116,8 +202,7 @@ describe("MCV2_ZapV2", function () {
     });
 
     it("should refund leftover ETH", async function () {
-      // Mint a specific amount worth of tokens, sending excess ETH
-      const inputAmount = wei(2, 15); // send more than needed
+      const inputAmount = wei(2, 15);
       const ethBefore = await ethers.provider.getBalance(alice.address);
 
       const tx = await ZapV2.connect(alice).zapMint(
@@ -135,10 +220,7 @@ describe("MCV2_ZapV2", function () {
       const gasCost = receipt.gasUsed * receipt.gasPrice;
       const ethAfter = await ethers.provider.getBalance(alice.address);
 
-      // User should get leftover reserve refunded as ETH
-      // Total cost = reserveUsed + gas (leftover refunded)
       const totalSpent = ethBefore - ethAfter;
-      // Should be less than inputAmount + gas (because of refund)
       expect(totalSpent).to.be.lte(inputAmount + gasCost);
     });
 
@@ -231,7 +313,6 @@ describe("MCV2_ZapV2", function () {
       });
       mcToken = Bond.interface.parseLog(event).args.token;
 
-      // Mint some tokens first
       const inputAmount = wei(2, 15);
       await ZapV2.connect(alice).zapMint(
         mcToken,
@@ -245,7 +326,6 @@ describe("MCV2_ZapV2", function () {
         { value: inputAmount }
       );
 
-      // Approve ZapV2 to spend MC tokens
       const MCToken = await ethers.getContractAt("IERC20", mcToken);
       await MCToken.connect(alice).approve(ZapV2.target, ethers.MaxUint256);
     });
@@ -261,8 +341,8 @@ describe("MCV2_ZapV2", function () {
       await ZapV2.connect(alice).zapBurn(
         mcToken,
         tokensToBurn,
-        ethers.ZeroAddress, // output ETH
-        refundAmount,       // minOutputAmount
+        ethers.ZeroAddress,
+        refundAmount,
         "0x",
         [],
         0,
@@ -284,7 +364,7 @@ describe("MCV2_ZapV2", function () {
           mcToken,
           tokensToBurn,
           ethers.ZeroAddress,
-          refundAmount + 1n, // more than available
+          refundAmount + 1n,
           "0x",
           [],
           0,
@@ -324,11 +404,167 @@ describe("MCV2_ZapV2", function () {
     });
   });
 
+  describe("zapMint with UniswapV3 swap (forked mainnet)", function () {
+    let whale;
+
+    beforeEach(async function () {
+      const fixtures = await loadFixture(deployWithWhale);
+      ({ ZapV2, Bond, WETH, USDC, HUNT, TN100X, MT, SIGNET, cbBTC, deployer, alice, bob, whale } = fixtures);
+    });
+
+    it("Test Case 1: Buy SIGNET with USDC (V3 multi-hop: USDC → WETH → HUNT → SIGNET)", async function () {
+      const inputAmount = wei(5000, 6); // 5000 USDC (6 decimals)
+
+      // Approve ZapV2 to spend USDC
+      await USDC.connect(whale).approve(ZapV2.target, inputAmount);
+
+      // V3 multi-hop path: USDC → WETH (fee 500) → HUNT (fee 3000)
+      // USDC/HUNT has zero liquidity, so we route through WETH
+      const path = encodeV3Path(
+        [USDC_ADDRESS, WETH_ADDRESS, HUNT_ADDRESS],
+        [500, 3000]
+      );
+
+      const zapV2Address = await ZapV2.getAddress();
+      const { commands, inputs } = buildV3SwapCommands(
+        ethers.MaxUint256, // CONTRACT_BALANCE - use all tokens transferred to router
+        1n, // minOutputAmount (1 wei min, slippage handled by zapMint)
+        path,
+        HUNT_ADDRESS,
+        zapV2Address
+      );
+
+      const deadline = Math.floor(Date.now() / 1000) + 3600;
+
+      const signetBefore = await SIGNET.balanceOf(whale.address);
+
+      const tx = await ZapV2.connect(whale).zapMint(
+        SIGNET_ADDRESS,
+        USDC_ADDRESS,
+        inputAmount,
+        1n, // minTokensOut
+        commands,
+        inputs,
+        deadline,
+        whale.address
+      );
+
+      const receipt = await tx.wait();
+      const signetAfter = await SIGNET.balanceOf(whale.address);
+      const tokensReceived = signetAfter - signetBefore;
+
+      console.log(`    SIGNET received: ${ethers.formatEther(tokensReceived)}`);
+      expect(tokensReceived).to.be.gt(0);
+
+      // Check ZapMint event
+      const zapMintEvent = receipt.logs.find((log) => {
+        try { return ZapV2.interface.parseLog(log)?.name === "ZapMint"; }
+        catch { return false; }
+      });
+      expect(zapMintEvent).to.not.be.undefined;
+    });
+
+    it("Test Case 2: Buy MT with TN100X (V3 multi-hop: TN100X → WETH → HUNT → MT)", async function () {
+      const inputAmount = wei(50000); // 50,000 TN100X (18 decimals)
+
+      // Approve ZapV2 to spend TN100X
+      await TN100X.connect(whale).approve(ZapV2.target, inputAmount);
+
+      // V3 multi-hop path: TN100X → WETH (fee 3000) → HUNT (fee 3000)
+      const path = encodeV3Path(
+        [TN100X_ADDRESS, WETH_ADDRESS, HUNT_ADDRESS],
+        [3000, 3000]
+      );
+
+      const zapV2Address = await ZapV2.getAddress();
+      const { commands, inputs } = buildV3SwapCommands(
+        ethers.MaxUint256, // CONTRACT_BALANCE
+        1n,
+        path,
+        HUNT_ADDRESS,
+        zapV2Address
+      );
+
+      const deadline = Math.floor(Date.now() / 1000) + 3600;
+
+      const mtBefore = await MT.balanceOf(whale.address);
+
+      const tx = await ZapV2.connect(whale).zapMint(
+        MT_ADDRESS,
+        TN100X_ADDRESS,
+        inputAmount,
+        1n,
+        commands,
+        inputs,
+        deadline,
+        whale.address
+      );
+
+      const receipt = await tx.wait();
+      const mtAfter = await MT.balanceOf(whale.address);
+      const tokensReceived = mtAfter - mtBefore;
+
+      console.log(`    MT received: ${ethers.formatEther(tokensReceived)}`);
+      expect(tokensReceived).to.be.gt(0);
+    });
+  });
+
+  describe("zapBurn with UniswapV3 swap (forked mainnet)", function () {
+    let whale;
+
+    beforeEach(async function () {
+      const fixtures = await loadFixture(deployWithWhale);
+      ({ ZapV2, Bond, WETH, USDC, HUNT, TN100X, MT, SIGNET, cbBTC, deployer, alice, bob, whale } = fixtures);
+    });
+
+    it("Test Case 3: Sell MT to cbBTC (V3 multi-hop: MT → HUNT → USDC → cbBTC)", async function () {
+      const tokensToBurn = wei(10000); // 10,000 MT
+
+      // Approve ZapV2 to spend MT
+      await MT.connect(whale).approve(ZapV2.target, tokensToBurn);
+
+      // V3 multi-hop path: HUNT → WETH (fee 3000) → cbBTC (fee 500)
+      const path = encodeV3Path(
+        [HUNT_ADDRESS, WETH_ADDRESS, CBBTC_ADDRESS],
+        [3000, 500]
+      );
+
+      const zapV2Address = await ZapV2.getAddress();
+      const { commands, inputs } = buildV3SwapCommands(
+        ethers.MaxUint256, // CONTRACT_BALANCE
+        1n,
+        path,
+        CBBTC_ADDRESS,
+        zapV2Address
+      );
+
+      const deadline = Math.floor(Date.now() / 1000) + 3600;
+
+      const cbBTCBefore = await cbBTC.balanceOf(whale.address);
+
+      const tx = await ZapV2.connect(whale).zapBurn(
+        MT_ADDRESS,
+        tokensToBurn,
+        CBBTC_ADDRESS,
+        1n, // minOutputAmount
+        commands,
+        inputs,
+        deadline,
+        whale.address
+      );
+
+      const receipt = await tx.wait();
+      const cbBTCAfter = await cbBTC.balanceOf(whale.address);
+      const cbBTCReceived = cbBTCAfter - cbBTCBefore;
+
+      console.log(`    cbBTC received: ${ethers.formatUnits(cbBTCReceived, 8)}`);
+      expect(cbBTCReceived).to.be.gt(0);
+    });
+  });
+
   describe("Admin functions", function () {
     describe("rescueETH", function () {
       it("should rescue ETH stuck in contract", async function () {
-        // Force-send ETH to contract via selfdestruct workaround
-        // The receive() is open now, so we can send directly
         await deployer.sendTransaction({
           to: ZapV2.target,
           value: wei(1),

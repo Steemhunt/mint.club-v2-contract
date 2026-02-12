@@ -115,11 +115,12 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
             // ETH input — forward value to router
             UNIVERSAL_ROUTER.execute{value: inputAmount}(commands, inputs, deadline);
         } else {
-            // ERC-20 input — exact approve → execute → zero-out
-            IERC20(inputToken).forceApprove(address(UNIVERSAL_ROUTER), inputAmount);
+            // ERC-20 input — transfer tokens to router, then execute
+            // The UniversalRouter pulls tokens via Permit2, but since we are a contract
+            // (cannot sign Permit2 messages), we transfer tokens directly to the router
+            // and use payerIsUser=false in swap commands so the router uses its own balance.
+            IERC20(inputToken).safeTransfer(address(UNIVERSAL_ROUTER), inputAmount);
             UNIVERSAL_ROUTER.execute(commands, inputs, deadline);
-            // Reset allowance to 0 to close approval attack surface
-            IERC20(inputToken).forceApprove(address(UNIVERSAL_ROUTER), 0);
         }
 
         // Measure balance after

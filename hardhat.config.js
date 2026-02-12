@@ -50,7 +50,17 @@ module.exports = {
     hardhat: {
       forking: {
         url: process.env.RPC_BASE,
-        blockNumber: 27276515,
+        blockNumber: 42039200, // 2026-02-12 12:42 PM KST
+      },
+      chains: {
+        8453: {
+          hardforkHistory: {
+            london: 0,
+            merge: 0,
+            shanghai: 0,
+            cancun: 0,
+          },
+        },
       },
     },
     mainnet: {
