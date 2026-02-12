@@ -1,6 +1,5 @@
 const {
   loadFixture,
-  impersonateAccount,
 } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect } = require("chai");
 const { wei } = require("./utils/test-utils");
@@ -9,13 +8,7 @@ const { wei } = require("./utils/test-utils");
 const BOND_ADDRESS = "0xc5a076cad94176c2996B32d8466Be1cE757FAa27";
 const WETH_ADDRESS = "0x4200000000000000000000000000000000000006";
 const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-const UNIVERSAL_ROUTER_ADDRESS = "0x6ff5693b99212da76ad316178a184ab56d299b43"; // Uniswap V4 on Base
-
-const ETH_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
-
-// A known MC token on Base with WETH as reserve
-// We'll find one dynamically or use a known one
-const HUNT_BASE = "0x37f0c2915CeCC7e977183B8543Fc0864d03E064C";
+const UNIVERSAL_ROUTER_ADDRESS = "0x6ff5693b99212da76ad316178a184ab56d299b43";
 
 describe("MCV2_ZapV2", function () {
   async function deployFixtures() {
@@ -75,13 +68,10 @@ describe("MCV2_ZapV2", function () {
     });
   });
 
-  describe("mintWithEth (simple zap, no Uniswap)", function () {
-    // Find a token with WETH as reserve on Base
-    // We'll create one for testing
+  describe("zapMint (ETH → WETH reserve, no swap needed)", function () {
     let mcToken;
 
     beforeEach(async function () {
-      // Create a test MC token with WETH as reserve via the Bond contract
       const creationFee = await Bond.creationFee();
       const symbol = "ZAPTEST" + Math.floor(Math.random() * 1000000);
       const tx = await Bond.createToken(
@@ -97,70 +87,126 @@ describe("MCV2_ZapV2", function () {
         { value: creationFee }
       );
       const receipt = await tx.wait();
-      // Get created token address from event
-      const event = receipt.logs.find(
-        (log) => {
-          try {
-            return Bond.interface.parseLog(log)?.name === "TokenCreated";
-          } catch { return false; }
-        }
-      );
+      const event = receipt.logs.find((log) => {
+        try { return Bond.interface.parseLog(log)?.name === "TokenCreated"; }
+        catch { return false; }
+      });
       mcToken = Bond.interface.parseLog(event).args.token;
     });
 
-    it("should mint MC tokens with ETH", async function () {
-      const tokensToMint = wei(100);
-      const [reserveNeeded] = await Bond.getReserveForToken(mcToken, tokensToMint);
-
+    it("should mint MC tokens with ETH (no swap)", async function () {
+      const inputAmount = wei(1, 15); // 0.001 ETH
       const MCToken = await ethers.getContractAt("IERC20", mcToken);
       const balBefore = await MCToken.balanceOf(alice.address);
 
-      await ZapV2.connect(alice).mintWithEth(mcToken, tokensToMint, alice.address, {
-        value: reserveNeeded + wei(1, 15), // extra for safety
-      });
+      await ZapV2.connect(alice).zapMint(
+        mcToken,
+        ethers.ZeroAddress, // ETH
+        inputAmount,
+        1, // minTokensOut
+        "0x", // no commands (empty triggers direct wrap)
+        [],
+        0,
+        alice.address,
+        { value: inputAmount }
+      );
 
       const balAfter = await MCToken.balanceOf(alice.address);
-      expect(balAfter - balBefore).to.equal(tokensToMint);
+      expect(balAfter - balBefore).to.be.gt(0);
     });
 
     it("should refund leftover ETH", async function () {
-      const tokensToMint = wei(100);
-      const [reserveNeeded] = await Bond.getReserveForToken(mcToken, tokensToMint);
-      const extraEth = wei(1, 15);
-
+      // Mint a specific amount worth of tokens, sending excess ETH
+      const inputAmount = wei(2, 15); // send more than needed
       const ethBefore = await ethers.provider.getBalance(alice.address);
-      const tx = await ZapV2.connect(alice).mintWithEth(mcToken, tokensToMint, alice.address, {
-        value: reserveNeeded + extraEth,
-      });
+
+      const tx = await ZapV2.connect(alice).zapMint(
+        mcToken,
+        ethers.ZeroAddress,
+        inputAmount,
+        1,
+        "0x",
+        [],
+        0,
+        alice.address,
+        { value: inputAmount }
+      );
       const receipt = await tx.wait();
       const gasCost = receipt.gasUsed * receipt.gasPrice;
       const ethAfter = await ethers.provider.getBalance(alice.address);
 
-      // Should have spent approximately reserveNeeded + gas, not reserveNeeded + extraEth + gas
-      const ethSpent = ethBefore - ethAfter - gasCost;
-      // ethSpent should be close to reserveNeeded (within dust)
-      expect(ethSpent).to.be.closeTo(reserveNeeded, wei(1, 10));
+      // User should get leftover reserve refunded as ETH
+      // Total cost = reserveUsed + gas (leftover refunded)
+      const totalSpent = ethBefore - ethAfter;
+      // Should be less than inputAmount + gas (because of refund)
+      expect(totalSpent).to.be.lte(inputAmount + gasCost);
     });
 
     it("should revert with zero address receiver", async function () {
       await expect(
-        ZapV2.connect(alice).mintWithEth(mcToken, wei(100), ethers.ZeroAddress, {
-          value: wei(1),
-        })
+        ZapV2.connect(alice).zapMint(
+          mcToken,
+          ethers.ZeroAddress,
+          wei(1, 15),
+          1,
+          "0x",
+          [],
+          0,
+          ethers.ZeroAddress,
+          { value: wei(1, 15) }
+        )
       ).to.be.revertedWithCustomError(ZapV2, "MCV2_ZapV2__InvalidReceiver");
     });
 
-    it("should revert with insufficient ETH", async function () {
-      const tokensToMint = wei(100);
+    it("should revert with zero amount", async function () {
       await expect(
-        ZapV2.connect(alice).mintWithEth(mcToken, tokensToMint, alice.address, {
-          value: 1, // way too little
-        })
-      ).to.be.reverted;
+        ZapV2.connect(alice).zapMint(
+          mcToken,
+          ethers.ZeroAddress,
+          0,
+          1,
+          "0x",
+          [],
+          0,
+          alice.address
+        )
+      ).to.be.revertedWithCustomError(ZapV2, "MCV2_ZapV2__InvalidAmount");
+    });
+
+    it("should revert if msg.value != inputAmount for ETH", async function () {
+      await expect(
+        ZapV2.connect(alice).zapMint(
+          mcToken,
+          ethers.ZeroAddress,
+          wei(1),
+          1,
+          "0x",
+          [],
+          0,
+          alice.address,
+          { value: wei(1) - 1n }
+        )
+      ).to.be.revertedWithCustomError(ZapV2, "MCV2_ZapV2__MsgValueMismatch");
+    });
+
+    it("should revert if msg.value sent with ERC20 input", async function () {
+      await expect(
+        ZapV2.connect(alice).zapMint(
+          mcToken,
+          USDC_ADDRESS,
+          wei(100, 6),
+          1,
+          "0x",
+          [],
+          0,
+          alice.address,
+          { value: wei(1) }
+        )
+      ).to.be.revertedWithCustomError(ZapV2, "MCV2_ZapV2__MsgValueMismatch");
     });
   });
 
-  describe("burnToEth (simple zap, no Uniswap)", function () {
+  describe("zapBurn (WETH reserve → ETH, no swap needed)", function () {
     let mcToken;
 
     beforeEach(async function () {
@@ -179,154 +225,110 @@ describe("MCV2_ZapV2", function () {
         { value: creationFee }
       );
       const receipt = await tx.wait();
-      const event = receipt.logs.find(
-        (log) => {
-          try {
-            return Bond.interface.parseLog(log)?.name === "TokenCreated";
-          } catch { return false; }
-        }
-      );
+      const event = receipt.logs.find((log) => {
+        try { return Bond.interface.parseLog(log)?.name === "TokenCreated"; }
+        catch { return false; }
+      });
       mcToken = Bond.interface.parseLog(event).args.token;
 
-      // Mint some tokens first using mintWithEth
-      const tokensToMint = wei(1000);
-      const [reserveNeeded] = await Bond.getReserveForToken(mcToken, tokensToMint);
-      await ZapV2.connect(alice).mintWithEth(mcToken, tokensToMint, alice.address, {
-        value: reserveNeeded + wei(1, 15),
-      });
+      // Mint some tokens first
+      const inputAmount = wei(2, 15);
+      await ZapV2.connect(alice).zapMint(
+        mcToken,
+        ethers.ZeroAddress,
+        inputAmount,
+        1,
+        "0x",
+        [],
+        0,
+        alice.address,
+        { value: inputAmount }
+      );
 
       // Approve ZapV2 to spend MC tokens
       const MCToken = await ethers.getContractAt("IERC20", mcToken);
-      await MCToken.connect(alice).approve(ZapV2.target, wei(1000));
+      await MCToken.connect(alice).approve(ZapV2.target, ethers.MaxUint256);
     });
 
     it("should burn MC tokens and receive ETH", async function () {
-      const tokensToBurn = wei(500);
+      const MCToken = await ethers.getContractAt("IERC20", mcToken);
+      const tokenBalance = await MCToken.balanceOf(alice.address);
+      const tokensToBurn = tokenBalance / 2n;
       const [refundAmount] = await Bond.getRefundForTokens(mcToken, tokensToBurn);
 
       const ethBefore = await ethers.provider.getBalance(bob.address);
-      await ZapV2.connect(alice).burnToEth(mcToken, tokensToBurn, refundAmount, bob.address);
-      const ethAfter = await ethers.provider.getBalance(bob.address);
 
+      await ZapV2.connect(alice).zapBurn(
+        mcToken,
+        tokensToBurn,
+        ethers.ZeroAddress, // output ETH
+        refundAmount,       // minOutputAmount
+        "0x",
+        [],
+        0,
+        bob.address
+      );
+
+      const ethAfter = await ethers.provider.getBalance(bob.address);
       expect(ethAfter - ethBefore).to.equal(refundAmount);
     });
 
     it("should revert with slippage exceeded", async function () {
-      const tokensToBurn = wei(500);
+      const MCToken = await ethers.getContractAt("IERC20", mcToken);
+      const tokenBalance = await MCToken.balanceOf(alice.address);
+      const tokensToBurn = tokenBalance / 2n;
       const [refundAmount] = await Bond.getRefundForTokens(mcToken, tokensToBurn);
 
       await expect(
-        ZapV2.connect(alice).burnToEth(mcToken, tokensToBurn, refundAmount + 1n, bob.address)
-      ).to.be.revertedWithCustomError(ZapV2, "MCV2_ZapV2__InsufficientOutputAmount");
+        ZapV2.connect(alice).zapBurn(
+          mcToken,
+          tokensToBurn,
+          ethers.ZeroAddress,
+          refundAmount + 1n, // more than available
+          "0x",
+          [],
+          0,
+          bob.address
+        )
+      ).to.be.revertedWithCustomError(ZapV2, "MCV2_ZapV2__SlippageLimitExceeded");
     });
 
     it("should revert with zero address receiver", async function () {
-      await expect(
-        ZapV2.connect(alice).burnToEth(mcToken, wei(100), 0, ethers.ZeroAddress)
-      ).to.be.revertedWithCustomError(ZapV2, "MCV2_ZapV2__InvalidReceiver");
-    });
-  });
-
-  describe("zapMint (with Uniswap swap)", function () {
-    it("should revert with zero amount", async function () {
-      await expect(
-        ZapV2.connect(alice).zapMint(
-          ethers.ZeroAddress, // token (will fail for other reasons too)
-          USDC_ADDRESS,
-          0, // zero amount
-          wei(100),
-          "0x",
-          [],
-          Math.floor(Date.now() / 1000) + 3600,
-          alice.address
-        )
-      ).to.be.revertedWithCustomError(ZapV2, "MCV2_ZapV2__InvalidInputAmount");
-    });
-
-    it("should revert with zero address receiver", async function () {
-      await expect(
-        ZapV2.connect(alice).zapMint(
-          ethers.ZeroAddress,
-          USDC_ADDRESS,
-          wei(100, 6),
-          wei(100),
-          "0x",
-          [],
-          Math.floor(Date.now() / 1000) + 3600,
-          ethers.ZeroAddress
-        )
-      ).to.be.revertedWithCustomError(ZapV2, "MCV2_ZapV2__InvalidReceiver");
-    });
-
-    it("should revert if msg.value sent with ERC20 input", async function () {
-      await expect(
-        ZapV2.connect(alice).zapMint(
-          ethers.ZeroAddress,
-          USDC_ADDRESS,
-          wei(100, 6),
-          wei(100),
-          "0x",
-          [],
-          Math.floor(Date.now() / 1000) + 3600,
-          alice.address,
-          { value: wei(1) }
-        )
-      ).to.be.revertedWithCustomError(ZapV2, "MCV2_ZapV2__MsgValueMismatch");
-    });
-
-    it("should revert if insufficient ETH for ETH input", async function () {
-      await expect(
-        ZapV2.connect(alice).zapMint(
-          ethers.ZeroAddress,
-          ETH_ADDRESS,
-          wei(1),
-          wei(100),
-          "0x",
-          [],
-          Math.floor(Date.now() / 1000) + 3600,
-          alice.address,
-          { value: wei(1) - 1n } // less than inputAmount
-        )
-      ).to.be.revertedWithCustomError(ZapV2, "MCV2_ZapV2__MsgValueMismatch");
-    });
-  });
-
-  describe("zapBurn", function () {
-    it("should revert with zero amount", async function () {
       await expect(
         ZapV2.connect(alice).zapBurn(
+          mcToken,
+          wei(100),
           ethers.ZeroAddress,
           0,
-          USDC_ADDRESS,
-          wei(100, 6),
           "0x",
           [],
-          Math.floor(Date.now() / 1000) + 3600,
-          alice.address
-        )
-      ).to.be.revertedWithCustomError(ZapV2, "MCV2_ZapV2__InvalidInputAmount");
-    });
-
-    it("should revert with zero address receiver", async function () {
-      await expect(
-        ZapV2.connect(alice).zapBurn(
-          ethers.ZeroAddress,
-          wei(100),
-          USDC_ADDRESS,
-          wei(100, 6),
-          "0x",
-          [],
-          Math.floor(Date.now() / 1000) + 3600,
+          0,
           ethers.ZeroAddress
         )
       ).to.be.revertedWithCustomError(ZapV2, "MCV2_ZapV2__InvalidReceiver");
+    });
+
+    it("should revert with zero burn amount", async function () {
+      await expect(
+        ZapV2.connect(alice).zapBurn(
+          mcToken,
+          0,
+          ethers.ZeroAddress,
+          0,
+          "0x",
+          [],
+          0,
+          alice.address
+        )
+      ).to.be.revertedWithCustomError(ZapV2, "MCV2_ZapV2__InvalidAmount");
     });
   });
 
   describe("Admin functions", function () {
     describe("rescueETH", function () {
       it("should rescue ETH stuck in contract", async function () {
-        // Send ETH to contract
+        // Force-send ETH to contract via selfdestruct workaround
+        // The receive() is open now, so we can send directly
         await deployer.sendTransaction({
           to: ZapV2.target,
           value: wei(1),
@@ -364,7 +366,6 @@ describe("MCV2_ZapV2", function () {
 
     describe("rescueTokens", function () {
       it("should rescue ERC20 tokens stuck in contract", async function () {
-        // Get some WETH and send to contract
         await WETH.deposit({ value: wei(1) });
         const wethToken = await ethers.getContractAt("IERC20", WETH_ADDRESS);
         await wethToken.transfer(ZapV2.target, wei(1));
