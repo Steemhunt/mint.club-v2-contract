@@ -336,6 +336,95 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
    </tbody>
 </table>
 
+### MCV2_ZapV2 (Uniswap Universal Router)
+
+<table>
+   <thead>
+      <tr>
+         <th>Chain</th>
+         <th>Contract Address</th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td><a href="https://etherscan.io">Ethereum</a></td>
+         <td>TBA</td>
+      </tr>
+      <tr>
+         <td><a href="https://optimistic.etherscan.io">Optimism</a></td>
+         <td>TBA</td>
+      </tr>
+      <tr>
+         <td><a href="https://arbiscan.io">Arbitrum One</a></td>
+         <td>TBA</td>
+      </tr>
+      <tr>
+         <td><a href="https://basescan.org">Base</a></td>
+         <td><a href="https://basescan.org/address/0x7d999874eAe10f170C4813270173363468A559cD#code">0x7d999874eAe10f170C4813270173363468A559cD</a></td>
+      </tr>
+      <tr>
+         <td><a href="https://bscscan.com">BNB Chain</a></td>
+         <td>TBA</td>
+      </tr>
+      <tr>
+         <td><a href="https://polygonscan.com">Polygon (PoS)</a></td>
+         <td>TBA</td>
+      </tr>
+      <tr>
+         <td><a href="https://snowtrace.io">Avalanche (C-Chain)</a></td>
+         <td>TBA</td>
+      </tr>
+      <tr>
+         <td><a href="https://blastexplorer.io">Blast</a></td>
+         <td>TBA</td>
+      </tr>
+      <tr>
+         <td><a href="https://explorer.zora.energy">Zora</a></td>
+         <td>TBA</td>
+      </tr>
+      <tr>
+         <td><a href="https://uniscan.xyz">Unichain</a></td>
+         <td>TBA</td>
+      </tr>
+      <tr>
+         <td>Degen Chain</td>
+         <td>N/A</td>
+      </tr>
+      <tr>
+         <td>Kaia</td>
+         <td>N/A</td>
+      </tr>
+      <tr>
+         <td>Cyber</td>
+         <td>N/A</td>
+      </tr>
+      <tr>
+         <td>APEChain</td>
+         <td>N/A</td>
+      </tr>
+      <tr>
+         <td>Shibarium</td>
+         <td>N/A</td>
+      </tr>
+      <tr>
+         <td>HashKey</td>
+         <td>N/A</td>
+      </tr>
+      <tr>
+         <td>Over</td>
+         <td>N/A</td>
+      </tr>
+      <tr>
+         <td><a href="https://sepolia.etherscan.io">Sepolia Testnet</a></td>
+         <td>TBA</td>
+      </tr>
+      <tr>
+         <td><a href="https://testnet.basescan.org">Base Sepolia Testnet</a></td>
+         <td>TBA</td>
+      </tr>
+   </tbody>
+</table>
+
 ### Bulk Sender
 
 <table>
