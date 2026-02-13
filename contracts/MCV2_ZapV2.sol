@@ -84,12 +84,24 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
         (,,,,reserveToken,) = BOND.tokenBond(token);
     }
 
-    /// @dev Check if an MC token is ERC-20 (vs ERC-1155). All MC ERC-20s have 18 decimals.
+    /// @dev Check if an MC token is ERC-20 (vs ERC-1155).
+    ///      MC ERC-20s return decimals() == 18, MC ERC-1155s return 0.
+    ///      Uses try/catch so tokens that don't implement decimals() are treated as ERC-1155.
     function _isMCTokenERC20(address token) private view returns (bool) {
-        return MCV2_ICommonToken(token).decimals() == 18;
+        try MCV2_ICommonToken(token).decimals() returns (uint8 d) {
+            return d == 18;
+        } catch {
+            return false;
+        }
     }
 
-    /// @dev Execute swap via UniversalRouter with balance-check slippage protection
+    /// @dev Execute swap via UniversalRouter with balance-check slippage protection.
+    ///
+    /// IMPORTANT for off-chain command construction:
+    /// - Swap recipient MUST be address(this) — output is measured by balance delta.
+    /// - Use payerIsUser=false — this contract transfers tokens to the router before execute().
+    /// - Use exact amountIn (not CONTRACT_BALANCE/MaxUint256) for reliable execution.
+    /// - Fee-on-transfer tokens are NOT supported and will cause amount mismatches.
     function _executeSwap(
         address inputToken,
         address outputToken,
@@ -402,5 +414,9 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
 
     function onERC1155Received(address, address, uint256, uint256, bytes memory) external pure returns (bytes4) {
         return this.onERC1155Received.selector;
+    }
+
+    function onERC1155BatchReceived(address, address, uint256[] memory, uint256[] memory, bytes memory) external pure returns (bytes4) {
+        return this.onERC1155BatchReceived.selector;
     }
 }
