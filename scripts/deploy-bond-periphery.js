@@ -57,5 +57,6 @@ npx hardhat compile && npx hardhat run --network shibarium scripts/deploy-bond-p
 npx hardhat compile && npx hardhat run --network hashkey scripts/deploy-bond-periphery.js
 npx hardhat compile && npx hardhat run --network unichain scripts/deploy-bond-periphery.js
 npx hardhat compile && npx hardhat run --network over scripts/deploy-bond-periphery.js
+npx hardhat compile && npx hardhat run --network robinhood scripts/deploy-bond-periphery.js
 
 */

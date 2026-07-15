@@ -30,6 +30,7 @@ exports.getCreationFee = function (network) {
     hashkey: 10n ** 18n, // 1 HSK (~$2)
     unichain: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     over: 50n * 10n ** 18n, // 50 OVER (~$1.4)
+    robinhood: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     // Testnets
     sepolia: 7n * 10n ** 14n, // 0.007 ETH - testnet
     baseSepolia: 0n, // 0 ETH - testnet
@@ -67,6 +68,7 @@ exports.getWETHAddress = function (network) {
     hashkey: "0xB210D2120d57b758EE163cFfb43e73728c471Cf1", // WHSK
     unichain: "0x4200000000000000000000000000000000000006", // WETH
     over: "0x59c914C8ac6F212bb655737CC80d9Abc79A1e273", // WOVER
+    robinhood: "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73", // WETH
     // Testnets
     sepolia: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14", // WETH
     baseSepolia: "0x4200000000000000000000000000000000000006", // WETH
@@ -104,6 +106,7 @@ exports.getBondAddress = function (network) {
     hashkey: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     unichain: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     over: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
+    robinhood: "0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa",
     sepolia: "0x8dce343A86Aa950d539eeE0e166AFfd0Ef515C0c",
     baseSepolia: "0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d",
     // skip other testnets
@@ -135,6 +138,7 @@ exports.getMaxSteps = function (network) {
     hashkey: 1000n, // 30M gas limit
     unichain: 1000n, // 30M gas limit
     over: 1000n, // 30M gas limit
+    robinhood: 1000n, // Arbitrum Nitro gas limit
     // Testnets
     sepolia: 1000n, // 30M gas limit
     baseSepolia: 1000n, // 30M gas limit

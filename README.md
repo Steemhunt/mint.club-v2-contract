@@ -233,6 +233,40 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
    <thead>
       <tr>
          <th>Contract /  Chain</th>
+         <th><a href="https://robinhoodchain.blockscout.com/">Robinhood Chain</a></th>
+      </tr>
+   </thead>
+   <tbody>
+      <tr>
+         <td>MCV2_Token</td>
+         <td>0xEb54dACB4C2ccb64F8074eceEa33b5eBb38E5387</td>
+      </tr>
+      <tr>
+         <td>MCV2_MultiToken</td>
+         <td>0xaF987E88bf30581F7074E628c894A3FCbf4EE12e</td>
+      </tr>
+      <tr>
+         <td>MCV2_Bond</td>
+         <td>0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa</td>
+      </tr>
+      <tr>
+         <td>MCV2_ZapV1</td>
+         <td>0xA3dCf3Ca587D9929d540868c924f208726DC9aB6</td>
+      </tr>
+      <tr>
+         <td>Locker</td>
+         <td>0x3bc6B601196752497a68B2625DB4f2205C3b150b</td>
+      </tr>
+      <tr>
+         <td>MerkleDistributor</td>
+         <td>0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</td>
+      </tr>
+   </tbody>
+</table>
+<table>
+   <thead>
+      <tr>
+         <th>Contract /  Chain</th>
          <th><a href="https://sepolia.etherscan.io">Sepolia Testnet</a></th>
       </tr>
    </thead>
@@ -415,6 +449,10 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
          <td><a href="https://scan.over.network/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4?tab=contract">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</a></td>
       </tr>
       <tr>
+         <td>Robinhood Chain</td>
+         <td><a href="https://robinhoodchain.blockscout.com/address/0x5DaE94e149CF2112Ec625D46670047814aA9aC2a?tab=contract">0x5DaE94e149CF2112Ec625D46670047814aA9aC2a</a></td>
+      </tr>
+      <tr>
          <td>Sepolia</td>
          <td><a href="https://sepolia.etherscan.io/address/0x7A6995CE649FA025a8792a375510d2B7C3c48581#code">0x7A6995CE649FA025a8792a375510d2B7C3c48581</a></td>
       </tr>
@@ -507,6 +545,10 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
          <td><a href="https://scan.over.network/address/0x621c335b4BD8f2165E120DC70d3AfcAfc6628681?tab=contract">0x621c335b4BD8f2165E120DC70d3AfcAfc6628681</a></td>
       </tr>
       <tr>
+         <td>Robinhood Chain</td>
+         <td><a href="https://robinhoodchain.blockscout.com/address/0xF44939c1613143ad587c79602182De7DcF593e33?tab=contract">0xF44939c1613143ad587c79602182De7DcF593e33</a></td>
+      </tr>
+      <tr>
          <td>Sepolia</td>
          <td><a href="https://sepolia.etherscan.io/address/0xd1cFAf476c8311792c329359B012bA515399f3a4#code">0xd1cFAf476c8311792c329359B012bA515399f3a4</a></td>
       </tr>
@@ -588,6 +630,10 @@ This provides reverse calculations for the `MCV2_Bond.mint()` function, similar 
       <tr>
          <td>Over</td>
          <td><a href="https://scan.over.network/address/0x06FD26c092Db44E5491abB7cDC580CE24D93030c#code">0x06FD26c092Db44E5491abB7cDC580CE24D93030c</a></td>
+      </tr>
+      <tr>
+         <td>Robinhood Chain</td>
+         <td><a href="https://robinhoodchain.blockscout.com/address/0xa4021a8907197Df92341F1218B32E26b250F6798?tab=contract">0xa4021a8907197Df92341F1218B32E26b250F6798</a></td>
       </tr>
       <tr>
          <td>Sepolia</td>
