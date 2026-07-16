@@ -53,15 +53,39 @@ module.exports = {
         },
       },
     ],
+    overrides: {
+      "contracts/MCV2_ZapV2.sol": {
+        version: "0.8.20",
+        settings: {
+          evmVersion: "paris",
+          optimizer: {
+            enabled: true,
+            runs: 50000,
+          },
+          viaIR: true,
+        },
+      },
+    },
   },
   mocha: {
     timeout: 12000 * 1000, // test timeout: 2 minutes
   },
   networks: {
     hardhat: {
+      blockGasLimit: 60_000_000, // forked mainnet tests need higher gas for multi-hop swaps
       forking: {
         url: process.env.RPC_BASE,
-        blockNumber: 27276515,
+        blockNumber: 42039200, // 2026-02-12 12:42 PM KST
+      },
+      chains: {
+        8453: {
+          hardforkHistory: {
+            london: 0,
+            merge: 0,
+            shanghai: 0,
+            cancun: 0,
+          },
+        },
       },
     },
     mainnet: {
