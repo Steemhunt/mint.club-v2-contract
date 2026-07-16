@@ -7,7 +7,18 @@ const { subtask } = require("hardhat/config");
 // Keep Etherscan V2 for existing networks and use Blockscout where required.
 subtask("verify:get-verification-subtasks").setAction(
   async (_, { network }, runSuper) => {
-    if (["robinhood", "zora"].includes(network.name)) {
+    if (
+      [
+        "cyber",
+        "degen",
+        "hashkey",
+        "over",
+        "puppynet",
+        "robinhood",
+        "shibarium",
+        "zora",
+      ].includes(network.name)
+    ) {
       return [{ label: "Blockscout", subtaskName: "verify:blockscout" }];
     }
 
@@ -234,11 +245,59 @@ module.exports = {
     enabled: false,
     customChains: [
       {
+        network: "cyber",
+        chainId: 7560,
+        urls: {
+          apiURL: "https://cyberscan.co/api",
+          browserURL: "https://cyberscan.co",
+        },
+      },
+      {
+        network: "degen",
+        chainId: 666666666,
+        urls: {
+          apiURL: "https://explorer.degen.tips/api",
+          browserURL: "https://explorer.degen.tips",
+        },
+      },
+      {
+        network: "hashkey",
+        chainId: 177,
+        urls: {
+          apiURL: "https://hsk.blockscout.com/api",
+          browserURL: "https://hsk.blockscout.com",
+        },
+      },
+      {
+        network: "over",
+        chainId: 54176,
+        urls: {
+          apiURL: "https://scan.over.network/api",
+          browserURL: "https://scan.over.network",
+        },
+      },
+      {
+        network: "puppynet",
+        chainId: 157,
+        urls: {
+          apiURL: "https://puppyscan.shib.io/api",
+          browserURL: "https://puppyscan.shib.io",
+        },
+      },
+      {
         network: "robinhood",
         chainId: 4663,
         urls: {
           apiURL: "https://robinhoodchain.blockscout.com/api",
           browserURL: "https://robinhoodchain.blockscout.com",
+        },
+      },
+      {
+        network: "shibarium",
+        chainId: 109,
+        urls: {
+          apiURL: "https://shibariumscan.io/api",
+          browserURL: "https://shibariumscan.io",
         },
       },
       {
@@ -265,28 +324,11 @@ module.exports = {
         },
       },
       {
-        network: "degen",
-        chainId: 666666666,
-        urls: {
-          apiURL: "https://explorer.degen.tips/api",
-          browserURL: "https://explorer.degen.tips",
-        },
-      },
-      {
         network: "klaytn",
         chainId: 8217,
         urls: {
           apiURL: "https://mainnet-api.kaiascan.io/hardhat-verify",
           browserURL: "https://kaiascan.io",
-        },
-      },
-      {
-        network: "cyber",
-        chainId: 7560,
-        urls: {
-          apiURL:
-            "https://api.socialscan.io/cyber/v1/explorer/command_api/contract",
-          browserURL: "https://cyberscan.co/",
         },
       },
       {
@@ -298,35 +340,11 @@ module.exports = {
         },
       },
       {
-        network: "shibarium",
-        chainId: 109,
-        urls: {
-          apiURL: "https://www.shibariumscan.io/api",
-          browserURL: "https://www.shibariumscan.io/",
-        },
-      },
-      {
-        network: "hashkey",
-        chainId: 177,
-        urls: {
-          apiURL: "https://explorer.hsk.xyz/api",
-          browserURL: "https://explorer.hsk.xyz",
-        },
-      },
-      {
         network: "unichain",
         chainId: 130,
         urls: {
           apiURL: "https://api.uniscan.xyz/api",
           browserURL: "https://uniscan.xyz",
-        },
-      },
-      {
-        network: "over",
-        chainId: 54176,
-        urls: {
-          apiURL: "https://scan.over.network",
-          browserURL: "https://scan.over.network",
         },
       },
       {
@@ -368,14 +386,6 @@ module.exports = {
         urls: {
           apiURL: "https://dolphin.view.over.network/TODO:", // TODO: API verification?
           browserURL: "https://dolphin.view.over.network/",
-        },
-      },
-      {
-        network: "puppynet",
-        chainId: 157,
-        urls: {
-          apiURL: "https://puppyscan.shib.io/TODO:", // TODO: API verification?
-          browserURL: "https://puppyscan.shib.io/",
         },
       },
     ],
