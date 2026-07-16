@@ -22,6 +22,8 @@ const WHALE = "0xCB3f3e0E992435390e686D7b638FCb8baBa6c5c7";
 
 // UniversalRouter command constants
 const V3_SWAP_EXACT_IN = 0x00;
+const V3_SWAP_EXACT_OUT = 0x01;
+const SWEEP = 0x04;
 
 /**
  * Encode a V3 swap path: token0 + fee + token1 + fee + token2 ...
@@ -59,6 +61,42 @@ function buildV3SwapCommands(amountIn, amountOutMin, path, recipient) {
   const commands = new Uint8Array([V3_SWAP_EXACT_IN]);
 
   return { commands, inputs: [swapInput] };
+}
+
+/**
+ * Build UniversalRouter commands + inputs for a V3 exact-output swap.
+ * The path must be encoded in reverse order: output token → input token.
+ * Unused prefunded input is swept back to ZapV2 for refunding.
+ */
+function buildV3ExactOutCommands(
+  amountOut,
+  amountInMax,
+  path,
+  inputToken,
+  recipient
+) {
+  const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+  const swapInput = abiCoder.encode(
+    ["address", "uint256", "uint256", "bytes", "bool"],
+    [recipient, amountOut, amountInMax, path, false]
+  );
+  const sweepInput = abiCoder.encode(
+    ["address", "address", "uint256"],
+    [inputToken, recipient, 0]
+  );
+
+  return {
+    commands: new Uint8Array([V3_SWAP_EXACT_OUT, SWEEP]),
+    inputs: [swapInput, sweepInput],
+  };
+}
+
+function findEvent(receipt, contract, name) {
+  const log = receipt.logs.find((item) => {
+    try { return contract.interface.parseLog(item)?.name === name; }
+    catch { return false; }
+  });
+  return contract.interface.parseLog(log).args;
 }
 
 describe("MCV2_ZapV2", function () {
@@ -207,6 +245,52 @@ describe("MCV2_ZapV2", function () {
       expect(totalSpent).to.be.lte(inputAmount + gasCost);
     });
 
+    it("should mint an exact MC amount and refund unused ETH", async function () {
+      const MCToken = await ethers.getContractAt("IERC20", mcToken);
+      const tokensOut = wei(1000);
+      const [reserveRequired] = await Bond.getReserveForToken(mcToken, tokensOut);
+      const maxInputAmount = reserveRequired + wei(1, 15);
+      const balanceBefore = await MCToken.balanceOf(bob.address);
+
+      const tx = await ZapV2.connect(alice).zapMintExactOut(
+        mcToken,
+        ethers.ZeroAddress,
+        tokensOut,
+        maxInputAmount,
+        "0x",
+        [],
+        0,
+        bob.address,
+        { value: maxInputAmount }
+      );
+      const event = findEvent(await tx.wait(), ZapV2, "ZapMint");
+
+      expect((await MCToken.balanceOf(bob.address)) - balanceBefore).to.equal(tokensOut);
+      expect(event.inputAmount).to.equal(reserveRequired);
+      expect(event.tokensReceived).to.equal(tokensOut);
+      expect(await ethers.provider.getBalance(ZapV2.target)).to.equal(0);
+      expect(await WETH.balanceOf(ZapV2.target)).to.equal(0);
+    });
+
+    it("should enforce max input for an exact MC amount", async function () {
+      const tokensOut = wei(1000);
+      const [reserveRequired] = await Bond.getReserveForToken(mcToken, tokensOut);
+
+      await expect(
+        ZapV2.connect(alice).zapMintExactOut(
+          mcToken,
+          ethers.ZeroAddress,
+          tokensOut,
+          reserveRequired - 1n,
+          "0x",
+          [],
+          0,
+          alice.address,
+          { value: reserveRequired - 1n }
+        )
+      ).to.be.revertedWithCustomError(ZapV2, "MCV2_ZapV2__SlippageLimitExceeded");
+    });
+
     it("should revert with zero address receiver", async function () {
       await expect(
         ZapV2.connect(alice).zapMint(
@@ -336,6 +420,60 @@ describe("MCV2_ZapV2", function () {
       expect(ethAfter - ethBefore).to.equal(refundAmount);
     });
 
+    it("should burn the minimum MC amount for an exact ETH output", async function () {
+      const MCToken = await ethers.getContractAt("IERC20", mcToken);
+      const outputAmount = wei(5, 14);
+      const tokensToBurn = await ZapV2.estimateZapBurnExactOut(
+        mcToken,
+        outputAmount
+      );
+      const tokenBalanceBefore = await MCToken.balanceOf(alice.address);
+      const ethBalanceBefore = await ethers.provider.getBalance(bob.address);
+
+      const tx = await ZapV2.connect(alice).zapBurnExactOut(
+        mcToken,
+        tokensToBurn,
+        ethers.ZeroAddress,
+        outputAmount,
+        outputAmount,
+        "0x",
+        [],
+        0,
+        bob.address
+      );
+      const event = findEvent(await tx.wait(), ZapV2, "ZapBurn");
+
+      expect(tokenBalanceBefore - (await MCToken.balanceOf(alice.address))).to.equal(
+        tokensToBurn
+      );
+      expect((await ethers.provider.getBalance(bob.address)) - ethBalanceBefore).to.equal(
+        outputAmount
+      );
+      expect(event.outputAmount).to.equal(outputAmount);
+    });
+
+    it("should enforce max burn for an exact ETH output", async function () {
+      const outputAmount = wei(5, 14);
+      const tokensToBurn = await ZapV2.estimateZapBurnExactOut(
+        mcToken,
+        outputAmount
+      );
+
+      await expect(
+        ZapV2.connect(alice).zapBurnExactOut(
+          mcToken,
+          tokensToBurn - 1n,
+          ethers.ZeroAddress,
+          outputAmount,
+          outputAmount,
+          "0x",
+          [],
+          0,
+          bob.address
+        )
+      ).to.be.revertedWithCustomError(ZapV2, "MCV2_ZapV2__SlippageLimitExceeded");
+    });
+
     it("should revert with slippage exceeded", async function () {
       const MCToken = await ethers.getContractAt("IERC20", mcToken);
       const tokenBalance = await MCToken.balanceOf(alice.address);
@@ -384,6 +522,100 @@ describe("MCV2_ZapV2", function () {
           alice.address
         )
       ).to.be.revertedWithCustomError(ZapV2, "MCV2_ZapV2__InvalidAmount");
+    });
+  });
+
+  describe("curve calculations on the forked Bond", function () {
+    let mcToken;
+
+    beforeEach(async function () {
+      const creationFee = await Bond.creationFee();
+      const symbol = "ZAPCURVE" + Math.floor(Math.random() * 1000000);
+      const tx = await Bond.createToken(
+        { name: "Zap Curve Test", symbol },
+        {
+          mintRoyalty: 100,
+          burnRoyalty: 150,
+          reserveToken: WETH_ADDRESS,
+          maxSupply: wei(4000),
+          stepRanges: [wei(1000), wei(2000), wei(4000)],
+          stepPrices: [wei(1, 15), wei(2, 15), wei(4, 15)],
+        },
+        { value: creationFee }
+      );
+      const event = (await tx.wait()).logs.find((log) => {
+        try { return Bond.interface.parseLog(log)?.name === "TokenCreated"; }
+        catch { return false; }
+      });
+      mcToken = Bond.interface.parseLog(event).args.token;
+    });
+
+    it("should keep exact-input minting maximal across curve steps", async function () {
+      const MCToken = await ethers.getContractAt("IERC20", mcToken);
+      const inputAmount = wei(3);
+      const [estimatedTokens, estimatedReserve] = await ZapV2.estimateZapMint(
+        mcToken,
+        inputAmount
+      );
+      const [nextReserve] = await Bond.getReserveForToken(
+        mcToken,
+        estimatedTokens + 1n
+      );
+
+      const tx = await ZapV2.connect(alice).zapMint(
+        mcToken,
+        ethers.ZeroAddress,
+        inputAmount,
+        1,
+        "0x",
+        [],
+        0,
+        alice.address,
+        { value: inputAmount }
+      );
+      const event = findEvent(await tx.wait(), ZapV2, "ZapMint");
+
+      expect(await MCToken.balanceOf(alice.address)).to.equal(estimatedTokens);
+      expect(event.reserveUsed).to.equal(estimatedReserve);
+      expect(estimatedReserve).to.be.lte(inputAmount);
+      expect(nextReserve).to.be.gt(inputAmount);
+    });
+
+    it("should find the minimum burn across curve steps and royalty rounding", async function () {
+      const MCToken = await ethers.getContractAt("IERC20", mcToken);
+      const tokensOut = wei(3000);
+      const [reserveRequired] = await Bond.getReserveForToken(mcToken, tokensOut);
+
+      await ZapV2.connect(alice).zapMintExactOut(
+        mcToken,
+        ethers.ZeroAddress,
+        tokensOut,
+        reserveRequired,
+        "0x",
+        [],
+        0,
+        alice.address,
+        { value: reserveRequired }
+      );
+      await MCToken.connect(alice).approve(ZapV2.target, tokensOut);
+
+      const reserveTargets = [1n, wei(5, 17), wei(25, 17), wei(6)];
+      for (const reserveTarget of reserveTargets) {
+        const tokensToBurn = await ZapV2.estimateZapBurnExactOut(
+          mcToken,
+          reserveTarget
+        );
+        const [refund] = await Bond.getRefundForTokens(mcToken, tokensToBurn);
+
+        expect(refund).to.be.gte(reserveTarget);
+        if (tokensToBurn > 1n) {
+          const [previousRefund] = await Bond.getRefundForTokens(
+            mcToken,
+            tokensToBurn - 1n
+          );
+          expect(previousRefund).to.be.lt(reserveTarget);
+        }
+      }
     });
   });
 
@@ -488,6 +720,56 @@ describe("MCV2_ZapV2", function () {
       console.log(`    MT received: ${ethers.formatEther(tokensReceived)}`);
       expect(tokensReceived).to.be.gt(0);
     });
+
+    it("should buy an exact SIGNET amount with USDC and refund unused input", async function () {
+      const tokensOut = wei(10000);
+      const maxInputAmount = wei(5000, 6);
+      const [reserveRequired] = await Bond.getReserveForToken(
+        SIGNET_ADDRESS,
+        tokensOut
+      );
+
+      await USDC.connect(whale).approve(ZapV2.target, maxInputAmount);
+
+      // V3 exact-output paths are encoded in reverse: HUNT → WETH → USDC
+      const path = encodeV3Path(
+        [HUNT_ADDRESS, WETH_ADDRESS, USDC_ADDRESS],
+        [3000, 500]
+      );
+      const zapV2Address = await ZapV2.getAddress();
+      const { commands, inputs } = buildV3ExactOutCommands(
+        reserveRequired,
+        maxInputAmount,
+        path,
+        USDC_ADDRESS,
+        zapV2Address
+      );
+
+      const usdcBefore = await USDC.balanceOf(whale.address);
+      const signetBefore = await SIGNET.balanceOf(whale.address);
+      const tx = await ZapV2.connect(whale).zapMintExactOut(
+        SIGNET_ADDRESS,
+        USDC_ADDRESS,
+        tokensOut,
+        maxInputAmount,
+        commands,
+        inputs,
+        Math.floor(Date.now() / 1000) + 3600,
+        whale.address
+      );
+      const event = findEvent(await tx.wait(), ZapV2, "ZapMint");
+      const inputUsed = usdcBefore - (await USDC.balanceOf(whale.address));
+
+      expect((await SIGNET.balanceOf(whale.address)) - signetBefore).to.equal(
+        tokensOut
+      );
+      expect(inputUsed).to.be.gt(0);
+      expect(inputUsed).to.be.lt(maxInputAmount);
+      expect(event.inputAmount).to.equal(inputUsed);
+      expect(event.reserveUsed).to.equal(reserveRequired);
+      expect(await USDC.balanceOf(ZapV2.target)).to.equal(0);
+      expect(await HUNT.balanceOf(ZapV2.target)).to.equal(0);
+    });
   });
 
   describe("zapBurn with UniswapV3 swap (forked mainnet)", function () {
@@ -542,6 +824,63 @@ describe("MCV2_ZapV2", function () {
 
       console.log(`    cbBTC received: ${ethers.formatUnits(cbBTCReceived, 8)}`);
       expect(cbBTCReceived).to.be.gt(0);
+    });
+
+    it("should sell MT for an exact cbBTC amount and refund unused reserve", async function () {
+      const maxTokensIn = wei(5000);
+      const outputAmount = 10000n; // 0.0001 cbBTC
+      const [maxReserveAmount] = await Bond.getRefundForTokens(
+        MT_ADDRESS,
+        maxTokensIn
+      );
+      const estimatedTokens = await ZapV2.estimateZapBurnExactOut(
+        MT_ADDRESS,
+        maxReserveAmount
+      );
+
+      await MT.connect(whale).approve(ZapV2.target, maxTokensIn);
+
+      // V3 exact-output paths are encoded in reverse: cbBTC → WETH → HUNT
+      const path = encodeV3Path(
+        [CBBTC_ADDRESS, WETH_ADDRESS, HUNT_ADDRESS],
+        [500, 3000]
+      );
+      const zapV2Address = await ZapV2.getAddress();
+      const { commands, inputs } = buildV3ExactOutCommands(
+        outputAmount,
+        maxReserveAmount,
+        path,
+        HUNT_ADDRESS,
+        zapV2Address
+      );
+
+      const mtBefore = await MT.balanceOf(whale.address);
+      const huntBefore = await HUNT.balanceOf(whale.address);
+      const cbBTCBefore = await cbBTC.balanceOf(whale.address);
+      const tx = await ZapV2.connect(whale).zapBurnExactOut(
+        MT_ADDRESS,
+        maxTokensIn,
+        CBBTC_ADDRESS,
+        outputAmount,
+        maxReserveAmount,
+        commands,
+        inputs,
+        Math.floor(Date.now() / 1000) + 3600,
+        whale.address
+      );
+      const event = findEvent(await tx.wait(), ZapV2, "ZapBurn");
+
+      expect((await cbBTC.balanceOf(whale.address)) - cbBTCBefore).to.equal(
+        outputAmount
+      );
+      expect(mtBefore - (await MT.balanceOf(whale.address))).to.equal(
+        estimatedTokens
+      );
+      expect((await HUNT.balanceOf(whale.address)) - huntBefore).to.be.gt(0);
+      expect(event.tokensBurned).to.equal(estimatedTokens);
+      expect(event.outputAmount).to.equal(outputAmount);
+      expect(await HUNT.balanceOf(ZapV2.target)).to.equal(0);
+      expect(await cbBTC.balanceOf(ZapV2.target)).to.equal(0);
     });
   });
 
