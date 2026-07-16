@@ -4,10 +4,10 @@ require("solidity-coverage");
 require("hardhat-interface-generator");
 const { subtask } = require("hardhat/config");
 
-// Keep Etherscan V2 for existing networks and use Blockscout only on Robinhood.
+// Keep Etherscan V2 for existing networks and use Blockscout where required.
 subtask("verify:get-verification-subtasks").setAction(
   async (_, { network }, runSuper) => {
-    if (network.name === "robinhood") {
+    if (["robinhood", "zora"].includes(network.name)) {
       return [{ label: "Blockscout", subtaskName: "verify:blockscout" }];
     }
 
@@ -230,7 +230,7 @@ module.exports = {
     enabled: false,
   },
   blockscout: {
-    // Selected explicitly for Robinhood by the verification task override above.
+    // Selected explicitly by the verification task override above.
     enabled: false,
     customChains: [
       {
@@ -239,6 +239,14 @@ module.exports = {
         urls: {
           apiURL: "https://robinhoodchain.blockscout.com/api",
           browserURL: "https://robinhoodchain.blockscout.com",
+        },
+      },
+      {
+        network: "zora",
+        chainId: 7777777,
+        urls: {
+          apiURL: "https://explorer.zora.energy/api",
+          browserURL: "https://explorer.zora.energy",
         },
       },
     ],
@@ -262,14 +270,6 @@ module.exports = {
         urls: {
           apiURL: "https://explorer.degen.tips/api",
           browserURL: "https://explorer.degen.tips",
-        },
-      },
-      {
-        network: "zora",
-        chainId: 7777777,
-        urls: {
-          apiURL: "https://explorer.zora.energy/api",
-          browserURL: "https://explorer.zora.energy",
         },
       },
       {
