@@ -2,6 +2,18 @@ require("dotenv").config();
 require("@nomicfoundation/hardhat-toolbox");
 require("solidity-coverage");
 require("hardhat-interface-generator");
+const { subtask } = require("hardhat/config");
+
+// Keep Etherscan V2 for existing networks and use Blockscout only on Robinhood.
+subtask("verify:get-verification-subtasks").setAction(
+  async (_, { network }, runSuper) => {
+    if (network.name === "robinhood") {
+      return [{ label: "Blockscout", subtaskName: "verify:blockscout" }];
+    }
+
+    return runSuper();
+  }
+);
 
 module.exports = {
   solidity: {
@@ -149,6 +161,11 @@ module.exports = {
       chainId: 54176,
       accounts: [process.env.MAINNET_PRIVATE_KEY],
     },
+    robinhood: {
+      url: "https://rpc.mainnet.chain.robinhood.com",
+      chainId: 4663,
+      accounts: [process.env.MAINNET_PRIVATE_KEY],
+    },
     // Testnets
     sepolia: {
       url: process.env.RPC_SEPOLIA,
@@ -199,6 +216,20 @@ module.exports = {
   },
   sourcify: {
     enabled: false,
+  },
+  blockscout: {
+    // Selected explicitly for Robinhood by the verification task override above.
+    enabled: false,
+    customChains: [
+      {
+        network: "robinhood",
+        chainId: 4663,
+        urls: {
+          apiURL: "https://robinhoodchain.blockscout.com/api",
+          browserURL: "https://robinhoodchain.blockscout.com",
+        },
+      },
+    ],
   },
   etherscan: {
     // network list: npx hardhat verify --list-networks
