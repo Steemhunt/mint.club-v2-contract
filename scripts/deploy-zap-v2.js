@@ -42,7 +42,7 @@ main()
     process.exit(1);
   });
 
-/* Deploy script — only chains where BOTH Mint Club V2 AND Uniswap V4 UniversalRouter are deployed
+/* Deploy script — only chains where BOTH Mint Club V2 AND Uniswap UniversalRouter are deployed
 
 npx hardhat compile && npx hardhat run --network mainnet scripts/deploy-zap-v2.js
 npx hardhat compile && npx hardhat run --network base scripts/deploy-zap-v2.js
@@ -54,6 +54,7 @@ npx hardhat compile && npx hardhat run --network blast scripts/deploy-zap-v2.js
 npx hardhat compile && npx hardhat run --network zora scripts/deploy-zap-v2.js
 npx hardhat compile && npx hardhat run --network avalanche scripts/deploy-zap-v2.js
 npx hardhat compile && npx hardhat run --network unichain scripts/deploy-zap-v2.js
+npx hardhat compile && npx hardhat run --network robinhood scripts/deploy-zap-v2.js
 
 # Testnets
 npx hardhat compile && npx hardhat run --network sepolia scripts/deploy-zap-v2.js

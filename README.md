@@ -372,6 +372,8 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
 
 ### MCV2_ZapV2 (Uniswap Universal Router)
 
+Supports exact-input and exact-output minting and burning, with optional swaps between any Universal Router-supported token and the bond reserve token.
+
 <table>
    <thead>
       <tr>
@@ -418,6 +420,10 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
       </tr>
       <tr>
          <td><a href="https://uniscan.xyz">Unichain</a></td>
+         <td>TBA</td>
+      </tr>
+      <tr>
+         <td><a href="https://robinhoodchain.blockscout.com">Robinhood Chain</a></td>
          <td>TBA</td>
       </tr>
       <tr>

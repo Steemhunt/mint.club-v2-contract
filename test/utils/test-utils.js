@@ -157,8 +157,8 @@ exports.getMaxSteps = function (network) {
 };
 
 exports.getUniversalRouterAddress = function (network) {
-  // Uniswap V4 Universal Router addresses
-  // REF: https://docs.uniswap.org/contracts/v4/deployments
+  // Uniswap Universal Router addresses
+  // REF: https://developers.uniswap.org/docs/protocols/v3/deployments
   const UNIVERSAL_ROUTER_ADDRESS = {
     mainnet: "0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af",
     optimisticEthereum: "0x851116D9223fabED8E56C0E6b8Ad0c31d98B3507",
@@ -170,13 +170,16 @@ exports.getUniversalRouterAddress = function (network) {
     zora: "0x3315ef7cA28dB74aBADC6c44570efDF06b04B020",
     avalanche: "0x94b75331AE8d42C1b61065089B7d48FE14aA73b7",
     unichain: "0xEf740bf23aCaE26f6492B10de645D6B98dC8Eaf3",
+    robinhood: "0x8876789976dEcBfCbBbe364623C63652db8C0904",
     // Testnets
     sepolia: "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b",
     baseSepolia: "0x492E6456D9528771018DeB9E87ef7750EF184104",
   };
 
   if (!UNIVERSAL_ROUTER_ADDRESS[network]) {
-    throw new Error(`UNIVERSAL_ROUTER_ADDRESS is not defined for ${network}. ZapV2 only supports chains where Uniswap V4 UniversalRouter is deployed.`);
+    throw new Error(
+      `UNIVERSAL_ROUTER_ADDRESS is not defined for ${network}. ZapV2 only supports chains where Uniswap UniversalRouter is deployed.`
+    );
   }
 
   return UNIVERSAL_ROUTER_ADDRESS[network];
