@@ -728,7 +728,7 @@ describe("MCV2_ZapV2", function () {
   });
 
   describe("ERC1155 MC tokens on the forked Bond", function () {
-    it("should reject direct transfers and accept the ERC1155 burn flow", async function () {
+    it("should reject direct transfers and support exact-output and exact-input ERC1155 burns", async function () {
       const creationFee = await Bond.creationFee();
       const symbol = `ZAP1155-${ZapV2.target.slice(2)}`;
       const tx = await Bond.createMultiToken(
@@ -818,6 +818,40 @@ describe("MCV2_ZapV2", function () {
       expect((await WETH.balanceOf(bob.address)) - wethBefore).to.equal(
         outputAmount
       );
+
+      const exactInputAmount = 5n;
+      const [expectedRefund] = await Bond.getRefundForTokens(
+        multiTokenAddress,
+        exactInputAmount
+      );
+      const tokenBalanceBefore = await MultiToken.balanceOf(alice.address, 0);
+      const wethBeforeExactInput = await WETH.balanceOf(bob.address);
+      const exactInputTx = await ZapV2.connect(alice).zapBurn(
+        multiTokenAddress,
+        exactInputAmount,
+        WETH_ADDRESS,
+        expectedRefund,
+        "0x",
+        [],
+        0,
+        bob.address
+      );
+      const exactInputEvent = findEvent(
+        await exactInputTx.wait(),
+        ZapV2,
+        "ZapBurn"
+      );
+
+      expect(
+        tokenBalanceBefore - (await MultiToken.balanceOf(alice.address, 0))
+      ).to.equal(exactInputAmount);
+      expect(
+        (await WETH.balanceOf(bob.address)) - wethBeforeExactInput
+      ).to.equal(expectedRefund);
+      expect(exactInputEvent.tokensBurned).to.equal(exactInputAmount);
+      expect(exactInputEvent.outputAmount).to.equal(expectedRefund);
+      expect(exactInputEvent.reserveReceived).to.equal(expectedRefund);
+      expect(await MultiToken.balanceOf(ZapV2.target, 0)).to.equal(0);
       expect(await WETH.balanceOf(ZapV2.target)).to.equal(0);
     });
   });
