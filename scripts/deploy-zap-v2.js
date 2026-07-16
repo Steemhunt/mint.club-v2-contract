@@ -53,7 +53,6 @@ npx hardhat compile && npx hardhat run --network optimisticEthereum scripts/depl
 npx hardhat compile && npx hardhat run --network arbitrumOne scripts/deploy-zap-v2.js
 npx hardhat compile && npx hardhat run --network polygon scripts/deploy-zap-v2.js
 npx hardhat compile && npx hardhat run --network bsc scripts/deploy-zap-v2.js
-npx hardhat compile && npx hardhat run --network blast scripts/deploy-zap-v2.js
 npx hardhat compile && npx hardhat run --network zora scripts/deploy-zap-v2.js
 npx hardhat compile && npx hardhat run --network avalanche scripts/deploy-zap-v2.js
 npx hardhat compile && npx hardhat run --network unichain scripts/deploy-zap-v2.js

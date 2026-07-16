@@ -166,7 +166,6 @@ exports.getUniversalRouterAddress = function (network) {
     arbitrumOne: "0xA51afAFe0263b40EdaEf0Df8781eA9aa03E381a3",
     polygon: "0x1095692A6237d83C6a72F3F5eFEdb9A670C49223",
     bsc: "0x1906c1d672b88cD1B9aC7593301cA990F94Eae07",
-    blast: "0xeAbBcB3E8E415306207ef514f660A3F820025BE3",
     zora: "0x3315ef7cA28dB74aBADC6c44570efDF06b04B020",
     avalanche: "0x94b75331AE8d42C1b61065089B7d48FE14aA73b7",
     unichain: "0xEf740bf23aCaE26f6492B10de645D6B98dC8Eaf3",

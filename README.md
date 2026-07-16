@@ -411,10 +411,6 @@ Supports exact-input and exact-output minting and burning, with optional swaps b
          <td>TBA</td>
       </tr>
       <tr>
-         <td><a href="https://blastexplorer.io">Blast</a></td>
-         <td>TBA</td>
-      </tr>
-      <tr>
          <td><a href="https://explorer.zora.energy">Zora</a></td>
          <td>TBA</td>
       </tr>
