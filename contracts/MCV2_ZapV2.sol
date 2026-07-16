@@ -35,6 +35,7 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
     error MCV2_ZapV2__MsgValueMismatch();
     error MCV2_ZapV2__NothingToRescue();
     error MCV2_ZapV2__ExactOutputMismatch();
+    error MCV2_ZapV2__InvalidERC1155Transfer();
 
     // Immutables — stored in bytecode, zero SLOAD cost
     MCV2_Bond public immutable BOND;
@@ -714,11 +715,24 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
 
     // ─── ERC1155 Receiver ────────────────────────────────────────────
 
-    function onERC1155Received(address, address, uint256, uint256, bytes memory) external pure returns (bytes4) {
+    function onERC1155Received(
+        address operator,
+        address,
+        uint256,
+        uint256,
+        bytes memory
+    ) external view returns (bytes4) {
+        if (operator != address(this)) revert MCV2_ZapV2__InvalidERC1155Transfer();
         return this.onERC1155Received.selector;
     }
 
-    function onERC1155BatchReceived(address, address, uint256[] memory, uint256[] memory, bytes memory) external pure returns (bytes4) {
-        return this.onERC1155BatchReceived.selector;
+    function onERC1155BatchReceived(
+        address,
+        address,
+        uint256[] memory,
+        uint256[] memory,
+        bytes memory
+    ) external pure returns (bytes4) {
+        revert MCV2_ZapV2__InvalidERC1155Transfer();
     }
 }

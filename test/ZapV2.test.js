@@ -728,7 +728,7 @@ describe("MCV2_ZapV2", function () {
   });
 
   describe("ERC1155 MC tokens on the forked Bond", function () {
-    it("should mint and burn an exact amount through the ERC1155 path", async function () {
+    it("should reject direct transfers and accept the ERC1155 burn flow", async function () {
       const creationFee = await Bond.creationFee();
       const symbol = `ZAP1155-${ZapV2.target.slice(2)}`;
       const tx = await Bond.createMultiToken(
@@ -774,6 +774,19 @@ describe("MCV2_ZapV2", function () {
         { value: reserveRequired }
       );
       expect(await MultiToken.balanceOf(alice.address, 0)).to.equal(tokensOut);
+
+      await expect(
+        MultiToken.connect(alice).safeTransferFrom(
+          alice.address,
+          ZapV2.target,
+          0n,
+          1n,
+          "0x"
+        )
+      ).to.be.revertedWithCustomError(
+        ZapV2,
+        "MCV2_ZapV2__InvalidERC1155Transfer"
+      );
 
       const [outputAmount] = await Bond.getRefundForTokens(
         multiTokenAddress,
@@ -1185,15 +1198,30 @@ describe("MCV2_ZapV2", function () {
   });
 
   describe("ERC1155 receiver", function () {
-    it("should return correct selector for onERC1155Received", async function () {
+    it("should accept single transfers initiated by ZapV2", async function () {
       const selector = await ZapV2.onERC1155Received(
-        ethers.ZeroAddress,
+        ZapV2.target,
         ethers.ZeroAddress,
         0,
         0,
         "0x"
       );
       expect(selector).to.equal("0xf23a6e61");
+    });
+
+    it("should reject batch transfers", async function () {
+      await expect(
+        ZapV2.onERC1155BatchReceived(
+          ZapV2.target,
+          ethers.ZeroAddress,
+          [0n],
+          [1n],
+          "0x"
+        )
+      ).to.be.revertedWithCustomError(
+        ZapV2,
+        "MCV2_ZapV2__InvalidERC1155Transfer"
+      );
     });
   });
 });
