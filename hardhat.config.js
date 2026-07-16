@@ -39,7 +39,6 @@ module.exports = {
             enabled: true,
             runs: 50000,
           },
-          viaIR: true,
         },
       },
       {
@@ -54,6 +53,19 @@ module.exports = {
         },
       },
     ],
+    overrides: {
+      "contracts/MCV2_ZapV2.sol": {
+        version: "0.8.20",
+        settings: {
+          evmVersion: "paris",
+          optimizer: {
+            enabled: true,
+            runs: 50000,
+          },
+          viaIR: true,
+        },
+      },
+    },
   },
   mocha: {
     timeout: 12000 * 1000, // test timeout: 2 minutes

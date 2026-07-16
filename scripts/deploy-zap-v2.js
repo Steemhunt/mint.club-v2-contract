@@ -1,7 +1,10 @@
 require("dotenv").config();
 const hre = require("hardhat");
-const { getWETHAddress, getBondAddress } = require("../test/utils/test-utils");
-const { getUniversalRouterAddress } = require("../test/utils/test-utils");
+const {
+  getWETHAddress,
+  getBondAddress,
+  getUniversalRouterAddress,
+} = require("../test/utils/test-utils");
 
 async function main() {
   const network = hre.network.name;

@@ -115,15 +115,7 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
     ) private returns (uint256 outputAmount) {
         if (commands.length == 0) revert MCV2_ZapV2__InvalidSwapPath();
 
-        bool isEthOutput = (outputToken == address(0));
-
-        // Measure balance before — single SLOAD/BALANCE
-        uint256 balanceBefore;
-        unchecked {
-            balanceBefore = isEthOutput
-                ? address(this).balance
-                : IERC20(outputToken).balanceOf(address(this));
-        }
+        uint256 balanceBefore = _balanceOf(outputToken);
 
         if (inputToken == address(0)) {
             // ETH input — forward value to router
@@ -137,12 +129,7 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
             UNIVERSAL_ROUTER.execute(commands, inputs, deadline);
         }
 
-        // Measure balance after
-        unchecked {
-            outputAmount = isEthOutput
-                ? address(this).balance - balanceBefore
-                : IERC20(outputToken).balanceOf(address(this)) - balanceBefore;
-        }
+        outputAmount = _balanceOf(outputToken) - balanceBefore;
 
         if (outputAmount < minOutputAmount) revert MCV2_ZapV2__SlippageLimitExceeded();
     }
@@ -212,9 +199,10 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
         (actualReserveNeeded, ) = BOND.getReserveForToken(token, maxTokens);
         if (actualReserveNeeded <= reserveAmount) return (maxTokens, actualReserveNeeded);
 
-        unchecked { --maxTokens; }
+        --maxTokens;
         if (maxTokens == 0) return (0, 0);
         (actualReserveNeeded, ) = BOND.getReserveForToken(token, maxTokens);
+        if (actualReserveNeeded > reserveAmount) return (0, 0);
     }
 
     /// @dev Calculate tokens purchasable with reserve by walking the curve once.
@@ -446,6 +434,7 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
      * @notice Mint an exact amount of MC tokens using at most maxInputAmount.
      * @dev For routed swaps, commands must send the exact reserve output to this contract and
      *      sweep unused input back to this contract for refunding.
+     *      Native-input routes must unwrap unused WETH and return native ETH to this contract.
      */
     function zapMintExactOut(
         address token,
@@ -471,6 +460,7 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
         if (reserveToken == address(0)) revert MCV2_ZapV2__InvalidToken();
 
         (reserveUsed, ) = BOND.getReserveForToken(token, tokensOut);
+        uint256 reserveBalanceBefore = IERC20(reserveToken).balanceOf(address(this));
 
         if (inputToken == address(0)) {
             uint256 ethBalanceBefore = address(this).balance - msg.value;
@@ -508,6 +498,9 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
         IERC20(reserveToken).forceApprove(address(BOND), reserveUsed);
         reserveUsed = BOND.mint(token, tokensOut, reserveUsed, receiver);
         IERC20(reserveToken).forceApprove(address(BOND), 0);
+
+        _refundBalance(reserveToken, reserveBalanceBefore, msg.sender);
+        if (inputToken == reserveToken) inputUsed = reserveUsed;
 
         emit ZapMint(token, inputToken, receiver, inputUsed, tokensOut, reserveUsed);
     }
@@ -668,7 +661,7 @@ contract MCV2_ZapV2 is Ownable, ReentrancyGuard {
 
     // ─── View Functions ──────────────────────────────────────────────
 
-    /// @dev Estimate output for zapMint (off-chain helper, assumes 1:1 swap for estimation)
+    /// @dev Estimate zapMint output from an amount denominated in the bond reserve token.
     function estimateZapMint(address token, uint256 inputAmount)
         external view returns (uint256 estimatedTokensOut, uint256 estimatedReserveNeeded)
     {

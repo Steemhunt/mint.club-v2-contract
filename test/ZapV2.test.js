@@ -24,6 +24,8 @@ const WHALE = "0xCB3f3e0E992435390e686D7b638FCb8baBa6c5c7";
 const V3_SWAP_EXACT_IN = 0x00;
 const V3_SWAP_EXACT_OUT = 0x01;
 const SWEEP = 0x04;
+const WRAP_ETH = 0x0b;
+const UNWRAP_WETH = 0x0c;
 
 /**
  * Encode a V3 swap path: token0 + fee + token1 + fee + token2 ...
@@ -88,6 +90,36 @@ function buildV3ExactOutCommands(
   return {
     commands: new Uint8Array([V3_SWAP_EXACT_OUT, SWEEP]),
     inputs: [swapInput, sweepInput],
+  };
+}
+
+/**
+ * Build UniversalRouter commands for a native ETH exact-output swap.
+ * Unused WETH is unwrapped and returned to ZapV2 as native ETH.
+ */
+function buildV3ExactOutWithEthCommands(
+  amountOut,
+  amountInMax,
+  path,
+  recipient
+) {
+  const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+  const wrapInput = abiCoder.encode(
+    ["address", "uint256"],
+    [UNIVERSAL_ROUTER_ADDRESS, amountInMax]
+  );
+  const swapInput = abiCoder.encode(
+    ["address", "uint256", "uint256", "bytes", "bool"],
+    [recipient, amountOut, amountInMax, path, false]
+  );
+  const unwrapInput = abiCoder.encode(
+    ["address", "uint256"],
+    [recipient, 0]
+  );
+
+  return {
+    commands: new Uint8Array([WRAP_ETH, V3_SWAP_EXACT_OUT, UNWRAP_WETH]),
+    inputs: [wrapInput, swapInput, unwrapInput],
   };
 }
 
@@ -272,6 +304,34 @@ describe("MCV2_ZapV2", function () {
       expect(await WETH.balanceOf(ZapV2.target)).to.equal(0);
     });
 
+    it("should mint an exact MC amount with the reserve token directly", async function () {
+      const MCToken = await ethers.getContractAt("IERC20", mcToken);
+      const tokensOut = wei(1000);
+      const [reserveRequired] = await Bond.getReserveForToken(mcToken, tokensOut);
+      const maxInputAmount = reserveRequired + wei(1, 15);
+
+      await WETH.connect(alice).deposit({ value: maxInputAmount });
+      await WETH.connect(alice).approve(ZapV2.target, maxInputAmount);
+      const wethBefore = await WETH.balanceOf(alice.address);
+
+      await ZapV2.connect(alice).zapMintExactOut(
+        mcToken,
+        WETH_ADDRESS,
+        tokensOut,
+        maxInputAmount,
+        "0x",
+        [],
+        0,
+        alice.address
+      );
+
+      expect(wethBefore - (await WETH.balanceOf(alice.address))).to.equal(
+        reserveRequired
+      );
+      expect(await MCToken.balanceOf(alice.address)).to.equal(tokensOut);
+      expect(await WETH.balanceOf(ZapV2.target)).to.equal(0);
+    });
+
     it("should enforce max input for an exact MC amount", async function () {
       const tokensOut = wei(1000);
       const [reserveRequired] = await Bond.getReserveForToken(mcToken, tokensOut);
@@ -420,6 +480,28 @@ describe("MCV2_ZapV2", function () {
       expect(ethAfter - ethBefore).to.equal(refundAmount);
     });
 
+    it("should burn MC tokens and receive the reserve token directly", async function () {
+      const MCToken = await ethers.getContractAt("IERC20", mcToken);
+      const tokensToBurn = (await MCToken.balanceOf(alice.address)) / 4n;
+      const [refundAmount] = await Bond.getRefundForTokens(mcToken, tokensToBurn);
+      const wethBefore = await WETH.balanceOf(bob.address);
+
+      await ZapV2.connect(alice).zapBurn(
+        mcToken,
+        tokensToBurn,
+        WETH_ADDRESS,
+        refundAmount,
+        "0x",
+        [],
+        0,
+        bob.address
+      );
+
+      expect((await WETH.balanceOf(bob.address)) - wethBefore).to.equal(
+        refundAmount
+      );
+    });
+
     it("should burn the minimum MC amount for an exact ETH output", async function () {
       const MCToken = await ethers.getContractAt("IERC20", mcToken);
       const outputAmount = wei(5, 14);
@@ -450,6 +532,32 @@ describe("MCV2_ZapV2", function () {
         outputAmount
       );
       expect(event.outputAmount).to.equal(outputAmount);
+    });
+
+    it("should burn the minimum MC amount for an exact reserve output", async function () {
+      const outputAmount = wei(5, 14);
+      const tokensToBurn = await ZapV2.estimateZapBurnExactOut(
+        mcToken,
+        outputAmount
+      );
+      const wethBefore = await WETH.balanceOf(bob.address);
+
+      await ZapV2.connect(alice).zapBurnExactOut(
+        mcToken,
+        tokensToBurn,
+        WETH_ADDRESS,
+        outputAmount,
+        outputAmount,
+        "0x",
+        [],
+        0,
+        bob.address
+      );
+
+      expect((await WETH.balanceOf(bob.address)) - wethBefore).to.equal(
+        outputAmount
+      );
+      expect(await WETH.balanceOf(ZapV2.target)).to.equal(0);
     });
 
     it("should enforce max burn for an exact ETH output", async function () {
@@ -619,6 +727,88 @@ describe("MCV2_ZapV2", function () {
     });
   });
 
+  describe("ERC1155 MC tokens on the forked Bond", function () {
+    it("should mint and burn an exact amount through the ERC1155 path", async function () {
+      const creationFee = await Bond.creationFee();
+      const symbol = `ZAP1155-${ZapV2.target.slice(2)}`;
+      const tx = await Bond.createMultiToken(
+        {
+          name: "Zap Multi Token",
+          symbol,
+          uri: "https://example.com/{id}.json",
+        },
+        {
+          mintRoyalty: 100n,
+          burnRoyalty: 150n,
+          reserveToken: WETH_ADDRESS,
+          maxSupply: 100n,
+          stepRanges: [20n, 50n, 100n],
+          stepPrices: [wei(1, 15), wei(2, 15), wei(4, 15)],
+        },
+        { value: creationFee }
+      );
+      const event = (await tx.wait()).logs.find((log) => {
+        try { return Bond.interface.parseLog(log)?.name === "MultiTokenCreated"; }
+        catch { return false; }
+      });
+      const multiTokenAddress = Bond.interface.parseLog(event).args.token;
+      const MultiToken = await ethers.getContractAt(
+        "MCV2_MultiToken",
+        multiTokenAddress
+      );
+
+      const tokensOut = 40n;
+      const [reserveRequired] = await Bond.getReserveForToken(
+        multiTokenAddress,
+        tokensOut
+      );
+      await ZapV2.connect(alice).zapMintExactOut(
+        multiTokenAddress,
+        ethers.ZeroAddress,
+        tokensOut,
+        reserveRequired,
+        "0x",
+        [],
+        0,
+        alice.address,
+        { value: reserveRequired }
+      );
+      expect(await MultiToken.balanceOf(alice.address, 0)).to.equal(tokensOut);
+
+      const [outputAmount] = await Bond.getRefundForTokens(
+        multiTokenAddress,
+        7n
+      );
+      const tokensToBurn = await ZapV2.estimateZapBurnExactOut(
+        multiTokenAddress,
+        outputAmount
+      );
+      await MultiToken.connect(alice).setApprovalForAll(ZapV2.target, true);
+      const wethBefore = await WETH.balanceOf(bob.address);
+
+      await ZapV2.connect(alice).zapBurnExactOut(
+        multiTokenAddress,
+        tokensToBurn,
+        WETH_ADDRESS,
+        outputAmount,
+        outputAmount,
+        "0x",
+        [],
+        0,
+        bob.address
+      );
+
+      expect(tokensToBurn).to.equal(7n);
+      expect(await MultiToken.balanceOf(alice.address, 0)).to.equal(
+        tokensOut - tokensToBurn
+      );
+      expect((await WETH.balanceOf(bob.address)) - wethBefore).to.equal(
+        outputAmount
+      );
+      expect(await WETH.balanceOf(ZapV2.target)).to.equal(0);
+    });
+  });
+
   describe("zapMint with UniswapV3 swap (forked mainnet)", function () {
     let whale;
 
@@ -768,6 +958,51 @@ describe("MCV2_ZapV2", function () {
       expect(event.inputAmount).to.equal(inputUsed);
       expect(event.reserveUsed).to.equal(reserveRequired);
       expect(await USDC.balanceOf(ZapV2.target)).to.equal(0);
+      expect(await HUNT.balanceOf(ZapV2.target)).to.equal(0);
+    });
+
+    it("should buy an exact SIGNET amount with ETH and refund unused input", async function () {
+      const tokensOut = wei(1000);
+      const maxInputAmount = wei(1);
+      const [reserveRequired] = await Bond.getReserveForToken(
+        SIGNET_ADDRESS,
+        tokensOut
+      );
+
+      // V3 exact-output paths are encoded in reverse: HUNT → WETH.
+      const path = encodeV3Path(
+        [HUNT_ADDRESS, WETH_ADDRESS],
+        [3000]
+      );
+      const { commands, inputs } = buildV3ExactOutWithEthCommands(
+        reserveRequired,
+        maxInputAmount,
+        path,
+        ZapV2.target
+      );
+
+      const signetBefore = await SIGNET.balanceOf(alice.address);
+      const tx = await ZapV2.connect(alice).zapMintExactOut(
+        SIGNET_ADDRESS,
+        ethers.ZeroAddress,
+        tokensOut,
+        maxInputAmount,
+        commands,
+        inputs,
+        Math.floor(Date.now() / 1000) + 3600,
+        alice.address,
+        { value: maxInputAmount }
+      );
+      const event = findEvent(await tx.wait(), ZapV2, "ZapMint");
+
+      expect((await SIGNET.balanceOf(alice.address)) - signetBefore).to.equal(
+        tokensOut
+      );
+      expect(event.inputAmount).to.be.gt(0);
+      expect(event.inputAmount).to.be.lt(maxInputAmount);
+      expect(event.reserveUsed).to.equal(reserveRequired);
+      expect(await ethers.provider.getBalance(ZapV2.target)).to.equal(0);
+      expect(await WETH.balanceOf(ZapV2.target)).to.equal(0);
       expect(await HUNT.balanceOf(ZapV2.target)).to.equal(0);
     });
   });

@@ -396,7 +396,7 @@ Supports exact-input and exact-output minting and burning, with optional swaps b
       </tr>
       <tr>
          <td><a href="https://basescan.org">Base</a></td>
-         <td><a href="https://basescan.org/address/0x7d999874eAe10f170C4813270173363468A559cD#code">0x7d999874eAe10f170C4813270173363468A559cD</a></td>
+         <td>TBA</td>
       </tr>
       <tr>
          <td><a href="https://bscscan.com">BNB Chain</a></td>
@@ -464,6 +464,8 @@ Supports exact-input and exact-output minting and burning, with optional swaps b
       </tr>
    </tbody>
 </table>
+
+The previous Base deployment at [`0x7d999874eAe10f170C4813270173363468A559cD`](https://basescan.org/address/0x7d999874eAe10f170C4813270173363468A559cD#code) supports exact-input flows only and predates the exact-output functions documented above.
 
 ### Bulk Sender
 
