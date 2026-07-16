@@ -384,79 +384,83 @@ Supports exact-input and exact-output minting and burning, with optional swaps b
    <tbody>
       <tr>
          <td><a href="https://etherscan.io">Ethereum</a></td>
-         <td>TBA</td>
+         <td><a href="https://etherscan.io/address/0xf7e2cDe9E603F15118E6E389cF14f11f19C1afbc#code">0xf7e2cDe9E603F15118E6E389cF14f11f19C1afbc</a></td>
       </tr>
       <tr>
          <td><a href="https://optimistic.etherscan.io">Optimism</a></td>
-         <td>TBA</td>
+         <td><a href="https://optimistic.etherscan.io/address/0x7B09b728ee8c6a714dC3F10367b5DF9b217FE633#code">0x7B09b728ee8c6a714dC3F10367b5DF9b217FE633</a></td>
       </tr>
       <tr>
          <td><a href="https://arbiscan.io">Arbitrum One</a></td>
-         <td>TBA</td>
+         <td><a href="https://arbiscan.io/address/0x3a8a4BFCC487d0FE9D342B6180bf0323989f251B#code">0x3a8a4BFCC487d0FE9D342B6180bf0323989f251B</a></td>
       </tr>
       <tr>
          <td><a href="https://basescan.org">Base</a></td>
-         <td>TBA</td>
+         <td><a href="https://basescan.org/address/0x96282046C0e19F727a92728198c0Dc4E260Ebe0b#code">0x96282046C0e19F727a92728198c0Dc4E260Ebe0b</a></td>
       </tr>
       <tr>
          <td><a href="https://bscscan.com">BNB Chain</a></td>
-         <td>TBA</td>
+         <td><a href="https://bscscan.com/address/0x68f54a53d3E69e2191bCF586fB507c81E5353413#code">0x68f54a53d3E69e2191bCF586fB507c81E5353413</a></td>
       </tr>
       <tr>
          <td><a href="https://polygonscan.com">Polygon (PoS)</a></td>
-         <td>TBA</td>
+         <td><a href="https://polygonscan.com/address/0x664f626516c82772F0F492Ff64f6FA826C86F5e1#code">0x664f626516c82772F0F492Ff64f6FA826C86F5e1</a></td>
       </tr>
       <tr>
          <td><a href="https://snowtrace.io">Avalanche (C-Chain)</a></td>
-         <td>TBA</td>
+         <td><a href="https://snowtrace.io/address/0xD0586d5F4ae18650340fFc6f3b1307AB2Ca334f4#code">0xD0586d5F4ae18650340fFc6f3b1307AB2Ca334f4</a></td>
+      </tr>
+      <tr>
+         <td>Blast</td>
+         <td>Unsupported</td>
       </tr>
       <tr>
          <td><a href="https://explorer.zora.energy">Zora</a></td>
-         <td>TBA</td>
+         <td><a href="https://explorer.zora.energy/address/0x5b64cECC5cF3E4B1A668Abd895D16BdDC0c77a17?tab=contract">0x5b64cECC5cF3E4B1A668Abd895D16BdDC0c77a17</a></td>
       </tr>
       <tr>
          <td><a href="https://uniscan.xyz">Unichain</a></td>
-         <td>TBA</td>
+         <td><a href="https://uniscan.xyz/address/0x06FD26c092Db44E5491abB7cDC580CE24D93030c#code">0x06FD26c092Db44E5491abB7cDC580CE24D93030c</a></td>
       </tr>
       <tr>
          <td><a href="https://robinhoodchain.blockscout.com">Robinhood Chain</a></td>
-         <td>TBA</td>
+         <td><a href="https://robinhoodchain.blockscout.com/address/0x621c335b4BD8f2165E120DC70d3AfcAfc6628681?tab=contract">0x621c335b4BD8f2165E120DC70d3AfcAfc6628681</a></td>
       </tr>
       <tr>
          <td>Degen Chain</td>
-         <td>N/A</td>
+         <td>Unsupported</td>
       </tr>
       <tr>
          <td>Kaia</td>
-         <td>N/A</td>
+         <td>Unsupported</td>
       </tr>
       <tr>
          <td>Cyber</td>
-         <td>N/A</td>
+         <td>Unsupported</td>
       </tr>
       <tr>
          <td>APEChain</td>
-         <td>N/A</td>
+         <td>Unsupported</td>
       </tr>
       <tr>
          <td>Shibarium</td>
-         <td>N/A</td>
+         <td>Unsupported</td>
       </tr>
       <tr>
          <td>HashKey</td>
-         <td>N/A</td>
+         <td>Unsupported</td>
       </tr>
       <tr>
          <td>Over</td>
-         <td>N/A</td>
+         <td>Unsupported</td>
       </tr>
       <tr>
          <td><a href="https://sepolia.etherscan.io">Sepolia Testnet</a></td>
-         <td>TBA</td>
+         <td><a href="https://sepolia.etherscan.io/address/0x69c94AF858FeCA41f97ff7888e3B5104b95D66D9#code">0x69c94AF858FeCA41f97ff7888e3B5104b95D66D9</a></td>
       </tr>
       <tr>
-         <td><a href="https://testnet.basescan.org">Base Sepolia Testnet</a></td>
-         <td>TBA</td>
+         <td><a href="https://sepolia.basescan.org">Base Sepolia Testnet</a></td>
+         <td><a href="https://sepolia.basescan.org/address/0x60432191893c4F742205a2C834817a1891feC435#code">0x60432191893c4F742205a2C834817a1891feC435</a></td>
       </tr>
    </tbody>
 </table>
