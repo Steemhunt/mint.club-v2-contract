@@ -43,334 +43,229 @@ Mint Club aims to provide no-code, yet flexible, token creation tools for web3 c
 
 ## Contract addresses 📜
 
-<table>
-   <thead>
-      <tr>
-         <th>Contract /  Chain</th>
-         <th><a href="https://etherscan.io">Ethereum</a></th>
-         <th><a href="https://optimistic.etherscan.io">Optimism</a></th>
-         <th><a href="https://arbiscan.io">Arbitrum One</a></th>
-         <th><a href="https://basescan.org">Base</a></th>
-         <th><a href="https://bscscan.com">BNB Chain</a></th>
-         <th><a href="https://polygonscan.com">Polygon (PoS)</a></th>
-      </tr>
-   </thead>
-   <tbody>
-      <tr>
-         <td>MCV2_Token</td>
-         <td colspan="6">0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df</td>
-      </tr>
-      <tr>
-         <td>MCV2_MultiToken</td>
-         <td colspan="6">0x6c61918eECcC306D35247338FDcf025af0f6120A</td>
-      </tr>
-      <tr>
-         <td>MCV2_Bond</td>
-         <td colspan="6">0xc5a076cad94176c2996B32d8466Be1cE757FAa27</td>
-      </tr>
-      <tr>
-         <td>MCV2_ZapV1</td>
-         <td colspan="6">0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa</td>
-      </tr>
-      <tr>
-         <td>Locker</td>
-         <td colspan="6">0xA3dCf3Ca587D9929d540868c924f208726DC9aB6</td>
-      </tr>
-      <tr>
-         <td>MerkleDistributor</td>
-         <td colspan="6">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</td>
-      </tr>
-      <tr>
-         <td>MCV1_Wrapper</td>
-         <td colspan="6">0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724 (BNB Chain only)</td>
-      </tr>
-   </tbody>
-</table>
-<table>
-   <thead>
-      <tr>
-         <th>Contract /  Chain</th>
-         <th><a href="https://blastexplorer.io/">Blast</a></th>
-      </tr>
-   </thead>
-   <tbody>
-      <tr>
-         <td>MCV2_Token</td>
-         <td>0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</td>
-      </tr>
-      <tr>
-         <td>MCV2_MultiToken</td>
-         <td>0x5DaE94e149CF2112Ec625D46670047814aA9aC2a</td>
-      </tr>
-      <tr>
-         <td>MCV2_Bond</td>
-         <td>0x621c335b4BD8f2165E120DC70d3AfcAfc6628681</td>
-      </tr>
-      <tr>
-         <td>MCV2_ZapV1</td>
-         <td>0x06FD26c092Db44E5491abB7cDC580CE24D93030c</td>
-      </tr>
-      <tr>
-         <td>Locker</td>
-         <td>0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1</td>
-      </tr>
-      <tr>
-         <td>MerkleDistributor</td>
-         <td>0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724</td>
-      </tr>
-   </tbody>
-</table>
-<table>
-   <thead>
-      <tr>
-         <th>Contract /  Chain</th>
-         <th><a href="https://snowtrace.io">Avalanche (C (C-Chain)-Chain)</a></th>
-      </tr>
-   </thead>
-   <tbody>
-      <tr>
-         <td>MCV2_Token</td>
-         <td>0x5DaE94e149CF2112Ec625D46670047814aA9aC2a</td>
-      </tr>
-      <tr>
-         <td>MCV2_MultiToken</td>
-         <td>0x621c335b4BD8f2165E120DC70d3AfcAfc6628681</td>
-      </tr>
-      <tr>
-         <td>MCV2_Bond</td>
-         <td>0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1</td>
-      </tr>
-      <tr>
-         <td>MCV2_ZapV1</td>
-         <td>0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724</td>
-      </tr>
-      <tr>
-         <td>Locker</td>
-         <td>0x5b64cECC5cF3E4B1A668Abd895D16BdDC0c77a17</td>
-      </tr>
-      <tr>
-         <td>MerkleDistributor</td>
-         <td>0x841A2bD2fc97DCB865b4Ddb352540148Bad2dB09</td>
-      </tr>
-   </tbody>
-</table>
-<table>
-   <thead>
-      <tr>
-         <th>Contract /  Chain</th>
-         <th><a href="https://explorer.degen.tips">Degen Chain</a></th>
-      </tr>
-   </thead>
-   <tbody>
-      <tr>
-         <td>MCV2_Token</td>
-         <td>0xaF987E88bf30581F7074E628c894A3FCbf4EE12e</td>
-      </tr>
-      <tr>
-         <td>MCV2_MultiToken</td>
-         <td>0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa</td>
-      </tr>
-      <tr>
-         <td>MCV2_Bond</td>
-         <td>0x3bc6B601196752497a68B2625DB4f2205C3b150b</td>
-      </tr>
-      <tr>
-         <td>MCV2_ZapV1</td>
-         <td>0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</td>
-      </tr>
-      <tr>
-         <td>Locker</td>
-         <td>0xF44939c1613143ad587c79602182De7DcF593e33</td>
-      </tr>
-      <tr>
-         <td>MerkleDistributor</td>
-         <td>0x5DaE94e149CF2112Ec625D46670047814aA9aC2a</td>
-      </tr>
-   </tbody>
-</table>
-<table>
-   <thead>
-      <tr>
-         <th>Contract /  Chain</th>
-         <th><a href="https://explorer.zora.energy/">Zora</a></th>
-         <th><a href="https://kaiascan.io/">Kaia</a></th>
-         <th><a href="https://cyberscan.co/">Cyber</a></th>
-         <th><a href="https://apescan.io/">APEChain</a></th>
-         <th><a href="https://shibariumscan.io/">Shibarium</a></th>
-         <th><a href="https://explorer.hsk.xyz/">HashKey</a></th>
-         <th><a href="https://uniscan.xyz/">Unichain</a></th>
-         <th><a href="https://scan.over.network/">Over</a></th>
-      </tr>
-   </thead>
-   <tbody>
-      <tr>
-         <td>MCV2_Token</td>
-         <td colspan="8">0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df</td>
-      </tr>
-      <tr>
-         <td>MCV2_MultiToken</td>
-         <td colspan="8">0x6c61918eECcC306D35247338FDcf025af0f6120A</td>
-      </tr>
-      <tr>
-         <td>MCV2_Bond</td>
-         <td colspan="8">0xc5a076cad94176c2996B32d8466Be1cE757FAa27</td>
-      </tr>
-      <tr>
-         <td>MCV2_ZapV1</td>
-         <td colspan="8">0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa</td>
-      </tr>
-      <tr>
-         <td>Locker</td>
-         <td colspan="8">0xA3dCf3Ca587D9929d540868c924f208726DC9aB6</td>
-      </tr>
-      <tr>
-         <td>MerkleDistributor</td>
-         <td colspan="8">0x3bc6B601196752497a68B2625DB4f2205C3b150b</td>
-      </tr>
-   </tbody>
-</table>
-<table>
-   <thead>
-      <tr>
-         <th>Contract /  Chain</th>
-         <th><a href="https://robinhoodchain.blockscout.com/">Robinhood Chain</a></th>
-      </tr>
-   </thead>
-   <tbody>
-      <tr>
-         <td>MCV2_Token</td>
-         <td>0xEb54dACB4C2ccb64F8074eceEa33b5eBb38E5387</td>
-      </tr>
-      <tr>
-         <td>MCV2_MultiToken</td>
-         <td>0xaF987E88bf30581F7074E628c894A3FCbf4EE12e</td>
-      </tr>
-      <tr>
-         <td>MCV2_Bond</td>
-         <td>0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa</td>
-      </tr>
-      <tr>
-         <td>MCV2_ZapV1</td>
-         <td>0xA3dCf3Ca587D9929d540868c924f208726DC9aB6</td>
-      </tr>
-      <tr>
-         <td>Locker</td>
-         <td>0x3bc6B601196752497a68B2625DB4f2205C3b150b</td>
-      </tr>
-      <tr>
-         <td>MerkleDistributor</td>
-         <td>0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</td>
-      </tr>
-   </tbody>
-</table>
-<table>
-   <thead>
-      <tr>
-         <th>Contract /  Chain</th>
-         <th><a href="https://sepolia.etherscan.io">Sepolia Testnet</a></th>
-      </tr>
-   </thead>
-   <tbody>
-      <tr>
-         <td>MCV2_Token</td>
-         <td>0x749bA94344521727f55a3007c777FbeB5F52C2Eb</td>
-      </tr>
-      <tr>
-         <td>MCV2_MultiToken</td>
-         <td>0x3cABE5125C5D8922c5f38c5b779F6E96F563cdc0</td>
-      </tr>
-      <tr>
-         <td>MCV2_Bond</td>
-         <td>0x8dce343A86Aa950d539eeE0e166AFfd0Ef515C0c</td>
-      </tr>
-      <tr>
-         <td>MCV2_ZapV1</td>
-         <td>0x1Bf3183acc57571BecAea0E238d6C3A4d00633da</td>
-      </tr>
-      <tr>
-         <td>Locker</td>
-         <td>0x7c204B1B03A88D24088941068f6DFC809f2fd022</td>
-      </tr>
-      <tr>
-         <td>MerkleDistributor</td>
-         <td>0x0CD940395566d509168977Cf10E5296302efA57A</td>
-      </tr>
-   </tbody>
-</table>
-<table>
-   <thead>
-      <tr>
-         <th>Contract /  Chain</th>
-         <th><a href="https://testnet.basescan.org">Base Sepolia Testnet</a></th>
-         <th><a href="https://testnet.blastscan.io">Blast Sepolia Testnet</a></th>
-         <th><a href="https://testnet.cyberscan.co">Cyber Testnet</a></th>
-         <th><a href="https://dolphin.view.over.network">Over Testnet</a></th>
-         <th><a href="https://puppyscan.shib.io">Shibarium Testnet (Puppynet)</a></th>
-      </tr>
-   </thead>
-   <tbody>
-      <tr>
-         <td>MCV2_Token</td>
-         <td colspan="5">0x37F540de37afE8bDf6C722d87CB019F30e5E406a</td>
-      </tr>
-      <tr>
-         <td>MCV2_MultiToken</td>
-         <td colspan="5">0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881</td>
-      </tr>
-      <tr>
-         <td>MCV2_Bond / MCV2_BlastBond</td>
-         <td colspan="5">0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d</td>
-      </tr>
-      <tr>
-         <td>MCV2_ZapV1</td>
-         <td colspan="5">0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad</td>
-      </tr>
-      <tr>
-         <td>Locker</td>
-         <td colspan="5">0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB</td>
-      </tr>
-      <tr>
-         <td>MerkleDistributor</td>
-         <td colspan="5">0xCbb23973235feA43E62C41a0c67717a92a2467f2</td>
-      </tr>
-   </tbody>
-</table>
-<table>
-   <thead>
-      <tr>
-         <th>Contract /  Chain</th>
-         <th><a href="https://testnet.snowtrace.io">Avalanche Fu (C-Chain)ji Testnet</a></th>
-      </tr>
-   </thead>
-   <tbody>
-      <tr>
-         <td>MCV2_Token</td>
-         <td>0xAD5a113ee65F30269f7558f96483126B1FB60c4E</td>
-      </tr>
-      <tr>
-         <td>MCV2_MultiToken</td>
-         <td>0xB43826E079dFB2e2b48a0a473Efc7F1fe6391763</td>
-      </tr>
-      <tr>
-         <td>MCV2_Bond</td>
-         <td>0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89</td>
-      </tr>
-      <tr>
-         <td>MCV2_ZapV1</td>
-         <td>0x60432191893c4F742205a2C834817a1891feC435</td>
-      </tr>
-      <tr>
-         <td>Locker</td>
-         <td>0x789771E410527691729e54A84103594ee6Be6C3C</td>
-      </tr>
-      <tr>
-         <td>MerkleDistributor</td>
-         <td>0x6d1f4ecd17ddA7fb39C56Da566b66d63f06671d9</td>
-      </tr>
-   </tbody>
-</table>
+Deployments are grouped by contract. Expand a contract to view its chain addresses.
 
-### MCV2_ZapV2 (Uniswap Universal Router)
+### Core protocol
+
+<details>
+<summary><strong><code>MCV2_Token</code></strong></summary>
+
+| Chain | Address |
+| --- | --- |
+| Ethereum | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://etherscan.io/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df#code) |
+| Optimism | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://optimistic.etherscan.io/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df#code) |
+| Arbitrum One | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://arbiscan.io/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df#code) |
+| Base | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://basescan.org/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df#code) |
+| BNB Chain | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://bscscan.com/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df#code) |
+| Polygon (PoS) | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://polygonscan.com/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df#code) |
+| Blast | [`0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4`](https://blastexplorer.io/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4#code) |
+| Avalanche (C-Chain) | [`0x5DaE94e149CF2112Ec625D46670047814aA9aC2a`](https://snowtrace.io/address/0x5DaE94e149CF2112Ec625D46670047814aA9aC2a#code) |
+| Degen Chain | [`0xaF987E88bf30581F7074E628c894A3FCbf4EE12e`](https://explorer.degen.tips/address/0xaF987E88bf30581F7074E628c894A3FCbf4EE12e?tab=contract) |
+| Zora | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://explorer.zora.energy/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df?tab=contract) |
+| Kaia | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://kaiascan.io/account/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df?tabId=contract) |
+| Cyber | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://cyberscan.co/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df#contract) |
+| APEChain | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://apescan.io/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df?tab=contract#code) |
+| Shibarium | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://www.shibariumscan.io/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df?tab=contract) |
+| HashKey | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://explorer.hsk.xyz/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df?tab=contract) |
+| Unichain | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://uniscan.xyz/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df#code) |
+| Over | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://scan.over.network/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df?tab=contract) |
+| Robinhood Chain | [`0xEb54dACB4C2ccb64F8074eceEa33b5eBb38E5387`](https://robinhoodchain.blockscout.com/address/0xEb54dACB4C2ccb64F8074eceEa33b5eBb38E5387?tab=contract) |
+| Sepolia | [`0x749bA94344521727f55a3007c777FbeB5F52C2Eb`](https://sepolia.etherscan.io/address/0x749bA94344521727f55a3007c777FbeB5F52C2Eb#code) |
+| Base Sepolia | [`0x37F540de37afE8bDf6C722d87CB019F30e5E406a`](https://sepolia.basescan.org/address/0x37F540de37afE8bDf6C722d87CB019F30e5E406a#code) |
+| Blast Sepolia | [`0x37F540de37afE8bDf6C722d87CB019F30e5E406a`](https://testnet.blastscan.io/address/0x37F540de37afE8bDf6C722d87CB019F30e5E406a#code) |
+| Cyber Testnet | [`0x37F540de37afE8bDf6C722d87CB019F30e5E406a`](https://testnet.cyberscan.co/address/0x37F540de37afE8bDf6C722d87CB019F30e5E406a#contract) |
+| Over Testnet | [`0x37F540de37afE8bDf6C722d87CB019F30e5E406a`](https://dolphin.view.over.network/address/0x37F540de37afE8bDf6C722d87CB019F30e5E406a?tab=contract) |
+| Shibarium Puppynet | [`0x37F540de37afE8bDf6C722d87CB019F30e5E406a`](https://puppyscan.shib.io/address/0x37F540de37afE8bDf6C722d87CB019F30e5E406a?tab=contract) |
+| Avalanche Fuji | [`0xAD5a113ee65F30269f7558f96483126B1FB60c4E`](https://testnet.snowtrace.io/address/0xAD5a113ee65F30269f7558f96483126B1FB60c4E#code) |
+
+</details>
+
+<details>
+<summary><strong><code>MCV2_MultiToken</code></strong></summary>
+
+| Chain | Address |
+| --- | --- |
+| Ethereum | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://etherscan.io/address/0x6c61918eECcC306D35247338FDcf025af0f6120A#code) |
+| Optimism | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://optimistic.etherscan.io/address/0x6c61918eECcC306D35247338FDcf025af0f6120A#code) |
+| Arbitrum One | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://arbiscan.io/address/0x6c61918eECcC306D35247338FDcf025af0f6120A#code) |
+| Base | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://basescan.org/address/0x6c61918eECcC306D35247338FDcf025af0f6120A#code) |
+| BNB Chain | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://bscscan.com/address/0x6c61918eECcC306D35247338FDcf025af0f6120A#code) |
+| Polygon (PoS) | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://polygonscan.com/address/0x6c61918eECcC306D35247338FDcf025af0f6120A#code) |
+| Blast | [`0x5DaE94e149CF2112Ec625D46670047814aA9aC2a`](https://blastexplorer.io/address/0x5DaE94e149CF2112Ec625D46670047814aA9aC2a#code) |
+| Avalanche (C-Chain) | [`0x621c335b4BD8f2165E120DC70d3AfcAfc6628681`](https://snowtrace.io/address/0x621c335b4BD8f2165E120DC70d3AfcAfc6628681#code) |
+| Degen Chain | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://explorer.degen.tips/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa?tab=contract) |
+| Zora | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://explorer.zora.energy/address/0x6c61918eECcC306D35247338FDcf025af0f6120A?tab=contract) |
+| Kaia | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://kaiascan.io/account/0x6c61918eECcC306D35247338FDcf025af0f6120A?tabId=contract) |
+| Cyber | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://cyberscan.co/address/0x6c61918eECcC306D35247338FDcf025af0f6120A#contract) |
+| APEChain | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://apescan.io/address/0x6c61918eECcC306D35247338FDcf025af0f6120A?tab=contract#code) |
+| Shibarium | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://www.shibariumscan.io/address/0x6c61918eECcC306D35247338FDcf025af0f6120A?tab=contract) |
+| HashKey | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://explorer.hsk.xyz/address/0x6c61918eECcC306D35247338FDcf025af0f6120A?tab=contract) |
+| Unichain | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://uniscan.xyz/address/0x6c61918eECcC306D35247338FDcf025af0f6120A#code) |
+| Over | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://scan.over.network/address/0x6c61918eECcC306D35247338FDcf025af0f6120A?tab=contract) |
+| Robinhood Chain | [`0xaF987E88bf30581F7074E628c894A3FCbf4EE12e`](https://robinhoodchain.blockscout.com/address/0xaF987E88bf30581F7074E628c894A3FCbf4EE12e?tab=contract) |
+| Sepolia | [`0x3cABE5125C5D8922c5f38c5b779F6E96F563cdc0`](https://sepolia.etherscan.io/address/0x3cABE5125C5D8922c5f38c5b779F6E96F563cdc0#code) |
+| Base Sepolia | [`0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881`](https://sepolia.basescan.org/address/0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881#code) |
+| Blast Sepolia | [`0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881`](https://testnet.blastscan.io/address/0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881#code) |
+| Cyber Testnet | [`0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881`](https://testnet.cyberscan.co/address/0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881#contract) |
+| Over Testnet | [`0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881`](https://dolphin.view.over.network/address/0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881?tab=contract) |
+| Shibarium Puppynet | [`0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881`](https://puppyscan.shib.io/address/0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881?tab=contract) |
+| Avalanche Fuji | [`0xB43826E079dFB2e2b48a0a473Efc7F1fe6391763`](https://testnet.snowtrace.io/address/0xB43826E079dFB2e2b48a0a473Efc7F1fe6391763#code) |
+
+</details>
+
+<details>
+<summary><strong><code>MCV2_Bond</code></strong></summary>
+
+| Chain | Address |
+| --- | --- |
+| Ethereum | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://etherscan.io/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27#code) |
+| Optimism | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://optimistic.etherscan.io/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27#code) |
+| Arbitrum One | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://arbiscan.io/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27#code) |
+| Base | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://basescan.org/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27#code) |
+| BNB Chain | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://bscscan.com/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27#code) |
+| Polygon (PoS) | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://polygonscan.com/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27#code) |
+| Avalanche (C-Chain) | [`0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1`](https://snowtrace.io/address/0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1#code) |
+| Degen Chain | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://explorer.degen.tips/address/0x3bc6B601196752497a68B2625DB4f2205C3b150b?tab=contract) |
+| Zora | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://explorer.zora.energy/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27?tab=contract) |
+| Kaia | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://kaiascan.io/account/0xc5a076cad94176c2996B32d8466Be1cE757FAa27?tabId=contract) |
+| Cyber | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://cyberscan.co/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27#contract) |
+| APEChain | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://apescan.io/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27?tab=contract#code) |
+| Shibarium | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://www.shibariumscan.io/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27?tab=contract) |
+| HashKey | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://explorer.hsk.xyz/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27?tab=contract) |
+| Unichain | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://uniscan.xyz/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27#code) |
+| Over | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://scan.over.network/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27?tab=contract) |
+| Robinhood Chain | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://robinhoodchain.blockscout.com/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa?tab=contract) |
+| Sepolia | [`0x8dce343A86Aa950d539eeE0e166AFfd0Ef515C0c`](https://sepolia.etherscan.io/address/0x8dce343A86Aa950d539eeE0e166AFfd0Ef515C0c#code) |
+| Base Sepolia | [`0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d`](https://sepolia.basescan.org/address/0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d#code) |
+| Cyber Testnet | [`0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d`](https://testnet.cyberscan.co/address/0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d#contract) |
+| Over Testnet | [`0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d`](https://dolphin.view.over.network/address/0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d?tab=contract) |
+| Shibarium Puppynet | [`0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d`](https://puppyscan.shib.io/address/0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d?tab=contract) |
+| Avalanche Fuji | [`0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89`](https://testnet.snowtrace.io/address/0x20fBC8a650d75e4C2Dab8b7e85C27135f0D64e89#code) |
+
+</details>
+
+<details>
+<summary><strong><code>MCV2_BlastBond</code></strong></summary>
+
+| Chain | Address |
+| --- | --- |
+| Blast | [`0x621c335b4BD8f2165E120DC70d3AfcAfc6628681`](https://blastexplorer.io/address/0x621c335b4BD8f2165E120DC70d3AfcAfc6628681#code) |
+| Blast Sepolia | [`0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d`](https://testnet.blastscan.io/address/0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d#code) |
+
+</details>
+
+<details>
+<summary><strong><code>MCV2_ZapV1</code></strong></summary>
+
+| Chain | Address |
+| --- | --- |
+| Ethereum | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://etherscan.io/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa#code) |
+| Optimism | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://optimistic.etherscan.io/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa#code) |
+| Arbitrum One | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://arbiscan.io/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa#code) |
+| Base | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://basescan.org/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa#code) |
+| BNB Chain | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://bscscan.com/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa#code) |
+| Polygon (PoS) | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://polygonscan.com/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa#code) |
+| Blast | [`0x06FD26c092Db44E5491abB7cDC580CE24D93030c`](https://blastexplorer.io/address/0x06FD26c092Db44E5491abB7cDC580CE24D93030c#code) |
+| Avalanche (C-Chain) | [`0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724`](https://snowtrace.io/address/0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724#code) |
+| Degen Chain | [`0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4`](https://explorer.degen.tips/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4?tab=contract) |
+| Zora | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://explorer.zora.energy/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa?tab=contract) |
+| Kaia | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://kaiascan.io/account/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa?tabId=contract) |
+| Cyber | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://cyberscan.co/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa#contract) |
+| APEChain | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://apescan.io/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa?tab=contract#code) |
+| Shibarium | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://www.shibariumscan.io/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa?tab=contract) |
+| HashKey | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://explorer.hsk.xyz/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa?tab=contract) |
+| Unichain | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://uniscan.xyz/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa#code) |
+| Over | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://scan.over.network/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa?tab=contract) |
+| Robinhood Chain | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://robinhoodchain.blockscout.com/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6?tab=contract) |
+| Sepolia | [`0x1Bf3183acc57571BecAea0E238d6C3A4d00633da`](https://sepolia.etherscan.io/address/0x1Bf3183acc57571BecAea0E238d6C3A4d00633da#code) |
+| Base Sepolia | [`0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad`](https://sepolia.basescan.org/address/0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad#code) |
+| Blast Sepolia | [`0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad`](https://testnet.blastscan.io/address/0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad#code) |
+| Cyber Testnet | [`0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad`](https://testnet.cyberscan.co/address/0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad#contract) |
+| Over Testnet | [`0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad`](https://dolphin.view.over.network/address/0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad?tab=contract) |
+| Shibarium Puppynet | [`0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad`](https://puppyscan.shib.io/address/0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad?tab=contract) |
+| Avalanche Fuji | [`0x60432191893c4F742205a2C834817a1891feC435`](https://testnet.snowtrace.io/address/0x60432191893c4F742205a2C834817a1891feC435#code) |
+
+</details>
+
+<details>
+<summary><strong><code>Locker</code></strong></summary>
+
+| Chain | Address |
+| --- | --- |
+| Ethereum | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://etherscan.io/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6#code) |
+| Optimism | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://optimistic.etherscan.io/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6#code) |
+| Arbitrum One | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://arbiscan.io/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6#code) |
+| Base | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://basescan.org/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6#code) |
+| BNB Chain | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://bscscan.com/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6#code) |
+| Polygon (PoS) | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://polygonscan.com/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6#code) |
+| Blast | [`0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1`](https://blastexplorer.io/address/0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1#code) |
+| Avalanche (C-Chain) | [`0x5b64cECC5cF3E4B1A668Abd895D16BdDC0c77a17`](https://snowtrace.io/address/0x5b64cECC5cF3E4B1A668Abd895D16BdDC0c77a17#code) |
+| Degen Chain | [`0xF44939c1613143ad587c79602182De7DcF593e33`](https://explorer.degen.tips/address/0xF44939c1613143ad587c79602182De7DcF593e33?tab=contract) |
+| Zora | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://explorer.zora.energy/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6?tab=contract) |
+| Kaia | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://kaiascan.io/account/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6?tabId=contract) |
+| Cyber | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://cyberscan.co/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6#contract) |
+| APEChain | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://apescan.io/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6?tab=contract#code) |
+| Shibarium | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://www.shibariumscan.io/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6?tab=contract) |
+| HashKey | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://explorer.hsk.xyz/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6?tab=contract) |
+| Unichain | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://uniscan.xyz/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6#code) |
+| Over | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://scan.over.network/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6?tab=contract) |
+| Robinhood Chain | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://robinhoodchain.blockscout.com/address/0x3bc6B601196752497a68B2625DB4f2205C3b150b?tab=contract) |
+| Sepolia | [`0x7c204B1B03A88D24088941068f6DFC809f2fd022`](https://sepolia.etherscan.io/address/0x7c204B1B03A88D24088941068f6DFC809f2fd022#code) |
+| Base Sepolia | [`0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB`](https://sepolia.basescan.org/address/0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB#code) |
+| Blast Sepolia | [`0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB`](https://testnet.blastscan.io/address/0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB#code) |
+| Cyber Testnet | [`0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB`](https://testnet.cyberscan.co/address/0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB#contract) |
+| Over Testnet | [`0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB`](https://dolphin.view.over.network/address/0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB?tab=contract) |
+| Shibarium Puppynet | [`0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB`](https://puppyscan.shib.io/address/0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB?tab=contract) |
+| Avalanche Fuji | [`0x789771E410527691729e54A84103594ee6Be6C3C`](https://testnet.snowtrace.io/address/0x789771E410527691729e54A84103594ee6Be6C3C#code) |
+
+</details>
+
+<details>
+<summary><strong><code>MerkleDistributor</code></strong></summary>
+
+| Chain | Address |
+| --- | --- |
+| Ethereum | [`0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4`](https://etherscan.io/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4#code) |
+| Optimism | [`0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4`](https://optimistic.etherscan.io/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4#code) |
+| Arbitrum One | [`0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4`](https://arbiscan.io/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4#code) |
+| Base | [`0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4`](https://basescan.org/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4#code) |
+| BNB Chain | [`0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4`](https://bscscan.com/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4#code) |
+| Polygon (PoS) | [`0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4`](https://polygonscan.com/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4#code) |
+| Blast | [`0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724`](https://blastexplorer.io/address/0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724#code) |
+| Avalanche (C-Chain) | [`0x841A2bD2fc97DCB865b4Ddb352540148Bad2dB09`](https://snowtrace.io/address/0x841A2bD2fc97DCB865b4Ddb352540148Bad2dB09#code) |
+| Degen Chain | [`0x5DaE94e149CF2112Ec625D46670047814aA9aC2a`](https://explorer.degen.tips/address/0x5DaE94e149CF2112Ec625D46670047814aA9aC2a?tab=contract) |
+| Zora | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://explorer.zora.energy/address/0x3bc6B601196752497a68B2625DB4f2205C3b150b?tab=contract) |
+| Kaia | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://kaiascan.io/account/0x3bc6B601196752497a68B2625DB4f2205C3b150b?tabId=contract) |
+| Cyber | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://cyberscan.co/address/0x3bc6B601196752497a68B2625DB4f2205C3b150b#contract) |
+| APEChain | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://apescan.io/address/0x3bc6B601196752497a68B2625DB4f2205C3b150b?tab=contract#code) |
+| Shibarium | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://www.shibariumscan.io/address/0x3bc6B601196752497a68B2625DB4f2205C3b150b?tab=contract) |
+| HashKey | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://explorer.hsk.xyz/address/0x3bc6B601196752497a68B2625DB4f2205C3b150b?tab=contract) |
+| Unichain | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://uniscan.xyz/address/0x3bc6B601196752497a68B2625DB4f2205C3b150b#code) |
+| Over | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://scan.over.network/address/0x3bc6B601196752497a68B2625DB4f2205C3b150b?tab=contract) |
+| Robinhood Chain | [`0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4`](https://robinhoodchain.blockscout.com/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4?tab=contract) |
+| Sepolia | [`0x0CD940395566d509168977Cf10E5296302efA57A`](https://sepolia.etherscan.io/address/0x0CD940395566d509168977Cf10E5296302efA57A#code) |
+| Base Sepolia | [`0xCbb23973235feA43E62C41a0c67717a92a2467f2`](https://sepolia.basescan.org/address/0xCbb23973235feA43E62C41a0c67717a92a2467f2#code) |
+| Blast Sepolia | [`0xCbb23973235feA43E62C41a0c67717a92a2467f2`](https://testnet.blastscan.io/address/0xCbb23973235feA43E62C41a0c67717a92a2467f2#code) |
+| Cyber Testnet | [`0xCbb23973235feA43E62C41a0c67717a92a2467f2`](https://testnet.cyberscan.co/address/0xCbb23973235feA43E62C41a0c67717a92a2467f2#contract) |
+| Over Testnet | [`0xCbb23973235feA43E62C41a0c67717a92a2467f2`](https://dolphin.view.over.network/address/0xCbb23973235feA43E62C41a0c67717a92a2467f2?tab=contract) |
+| Shibarium Puppynet | [`0xCbb23973235feA43E62C41a0c67717a92a2467f2`](https://puppyscan.shib.io/address/0xCbb23973235feA43E62C41a0c67717a92a2467f2?tab=contract) |
+| Avalanche Fuji | [`0x6d1f4ecd17ddA7fb39C56Da566b66d63f06671d9`](https://testnet.snowtrace.io/address/0x6d1f4ecd17ddA7fb39C56Da566b66d63f06671d9#code) |
+
+</details>
+
+<details>
+<summary><strong><code>MCV1_Wrapper</code></strong></summary>
+
+| Chain | Address |
+| --- | --- |
+| BNB Chain | [`0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724`](https://bscscan.com/address/0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724#code) |
+
+</details>
+
+### Additional contracts
+
+<details>
+<summary><strong>MCV2_ZapV2 (Uniswap Universal Router)</strong></summary>
 
 Supports exact-input and exact-output minting and burning, with optional swaps between any Universal Router-supported token and the bond reserve token.
 
@@ -467,7 +362,10 @@ Supports exact-input and exact-output minting and burning, with optional swaps b
 
 The previous Base deployment at [`0x7d999874eAe10f170C4813270173363468A559cD`](https://basescan.org/address/0x7d999874eAe10f170C4813270173363468A559cD#code) supports exact-input flows only and predates the exact-output functions documented above.
 
-### Bulk Sender
+</details>
+
+<details>
+<summary><strong>Bulk Sender</strong></summary>
 
 <table>
    <thead>
@@ -556,7 +454,10 @@ The previous Base deployment at [`0x7d999874eAe10f170C4813270173363468A559cD`](h
    </tbody>
 </table>
 
-### Stake (V1.2)
+</details>
+
+<details>
+<summary><strong>Stake (V1.2)</strong></summary>
 
 <table>
    <thead>
@@ -572,11 +473,7 @@ The previous Base deployment at [`0x7d999874eAe10f170C4813270173363468A559cD`](h
       </tr>
       <tr>
          <td>Base</td>
-         <td>
-            <a href="https://basescan.org/address/0x364e0f814a2c5524d26e82937815c574f8bB86C1#code">0x364e0f814a2c5524d26e82937815c574f8bB86C1 (V1.0)</a>
-            <a href="https://basescan.org/address/0x3460E2fD6cBC9aFB49BF970659AfDE2909cf3399#code">0x3460E2fD6cBC9aFB49BF970659AfDE2909cf3399 (V1.1)</a>
-            <a href="https://basescan.org/address/0x9Ab05EcA10d087f23a1B22A44A714cdbBA76E802#code">0x9Ab05EcA10d087f23a1B22A44A714cdbBA76E802 (V1.2)</a>
-         </td>
+         <td><a href="https://basescan.org/address/0x9Ab05EcA10d087f23a1B22A44A714cdbBA76E802#code">0x9Ab05EcA10d087f23a1B22A44A714cdbBA76E802</a></td>
       </tr>
       <tr>
          <td>Optimism</td>
@@ -588,10 +485,7 @@ The previous Base deployment at [`0x7d999874eAe10f170C4813270173363468A559cD`](h
       </tr>
       <tr>
          <td>Polygon (PoS)</td>
-         <td>
-            <a href="https://polygonscan.com/address/0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65#code">0xF187645D1C5AE70C3ddCDeE6D746E5A7619a2A65 (V1.1)</a>
-            <a href="https://polygonscan.com/address/0x95BDA90196c4e737933360F4639c46Ace657AAb7#code">0x95BDA90196c4e737933360F4639c46Ace657AAb7 (V1.2)</a>
-         </td>
+         <td><a href="https://polygonscan.com/address/0x95BDA90196c4e737933360F4639c46Ace657AAb7#code">0x95BDA90196c4e737933360F4639c46Ace657AAb7</a></td>
       </tr>
       <tr>
          <td>BNB Chain</td>
@@ -652,7 +546,10 @@ The previous Base deployment at [`0x7d999874eAe10f170C4813270173363468A559cD`](h
    </tbody>
 </table>
 
-### MCV2_BondPeriphery
+</details>
+
+<details>
+<summary><strong>MCV2_BondPeriphery</strong></summary>
 
 This provides reverse calculations for the `MCV2_Bond.mint()` function, similar to the `exactInput` function on Uniswap. It also exposes the interface for the 0x Settler.
 
@@ -743,9 +640,14 @@ This provides reverse calculations for the `MCV2_Bond.mint()` function, similar 
    </tbody>
 </table>
 
-### BuyBackBurner (Base)
+</details>
+
+<details>
+<summary><strong>BuyBackBurner (Base)</strong></summary>
 
 [0xcEF6a6AB0f74c9cE97f7D1EB9bD99EA49E71Ec1d](https://basescan.org/address/0xcEF6a6AB0f74c9cE97f7D1EB9bD99EA49E71Ec1d)
+
+</details>
 
 ## Design Choices 📐
 
