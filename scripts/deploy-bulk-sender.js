@@ -53,7 +53,6 @@ npx hardhat compile && npx hardhat run --network mainnet scripts/deploy-bulk-sen
 
 npx hardhat compile && npx hardhat run --network avalanche scripts/deploy-bulk-sender.js
 npx hardhat compile && npx hardhat run --network blast scripts/deploy-bulk-sender.js
-npx hardhat compile && npx hardhat run --network degen scripts/deploy-bulk-sender.js
 npx hardhat compile && npx hardhat run --network zora scripts/deploy-bulk-sender.js
 npx hardhat compile && npx hardhat run --network klaytn scripts/deploy-bulk-sender.js
 npx hardhat compile && npx hardhat run --network cyber scripts/deploy-bulk-sender.js

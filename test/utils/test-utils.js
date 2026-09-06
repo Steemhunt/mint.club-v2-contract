@@ -21,7 +21,6 @@ exports.getCreationFee = function (network) {
     bsc: 5n * 10n ** 15n, // 0.005 BNB (~$2)
     avalanche: 5n * 10n ** 16n, // 0.05 AVAX (~$2)
     blast: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
-    degen: 50n * 10n ** 18n, // 50 DEGEN (~$2)
     zora: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     klaytn: 8n * 10n ** 18n, // 8 KLAY (~$2)
     cyber: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
@@ -59,7 +58,6 @@ exports.getWETHAddress = function (network) {
     bsc: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB
     avalanche: "0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7", // WAVAX
     blast: "0x4300000000000000000000000000000000000004", // WETH
-    degen: "0xEb54dACB4C2ccb64F8074eceEa33b5eBb38E5387", // WDEGEN - deployed ourselves
     zora: "0x4200000000000000000000000000000000000006", // WETH
     klaytn: "0x19Aac5f612f524B754CA7e7c41cbFa2E981A4432", // WKLAY - (ref: https://hrl.sh/g6ccv7)
     cyber: "0x4200000000000000000000000000000000000006", // WETH
@@ -97,7 +95,6 @@ exports.getBondAddress = function (network) {
     polygon: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     blast: "0x621c335b4BD8f2165E120DC70d3AfcAfc6628681",
     avalanche: "0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1",
-    degen: "0x3bc6B601196752497a68B2625DB4f2205C3b150b",
     zora: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     klaytn: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     cyber: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
@@ -129,7 +126,6 @@ exports.getMaxSteps = function (network) {
     bsc: 1000n, // 30M gas limit
     avalanche: 1000n, // 15M gas limit
     blast: 1000n, // 30M gas limit
-    degen: 1000n, // 30M gas limit
     zora: 1000n, // 30M gas limit
     klaytn: 1000n, // 100M execution cost (ref: https://hrl.sh/eylozo)
     cyber: 1000n, // 30M gas limit

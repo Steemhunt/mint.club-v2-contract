@@ -53,7 +53,6 @@ npx hardhat compile && npx hardhat run --network mainnet scripts/deploy-stake.js
 
 npx hardhat compile && npx hardhat run --network avalanche scripts/deploy-stake.js
 npx hardhat compile && npx hardhat run --network blast scripts/deploy-stake.js
-npx hardhat compile && npx hardhat run --network degen scripts/deploy-stake.js
 npx hardhat compile && npx hardhat run --network zora scripts/deploy-stake.js
 npx hardhat compile && npx hardhat run --network klaytn scripts/deploy-stake.js
 npx hardhat compile && npx hardhat run --network cyber scripts/deploy-stake.js

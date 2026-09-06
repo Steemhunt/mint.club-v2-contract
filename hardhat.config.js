@@ -10,7 +10,6 @@ subtask("verify:get-verification-subtasks").setAction(
     if (
       [
         "cyber",
-        "degen",
         "hashkey",
         "over",
         "puppynet",
@@ -54,14 +53,6 @@ module.exports = {
       },
       {
         version: "0.4.18", // For WETH mock contract
-      },
-      {
-        version: "0.5.17", // For WDEGEN mock contract
-        evmVersion: "istanbul",
-        optimizer: {
-          enabled: true,
-          runs: 50000,
-        },
       },
     ],
     overrides: {
@@ -137,11 +128,6 @@ module.exports = {
     blast: {
       url: process.env.RPC_BLAST,
       chainId: 81457,
-      accounts: [process.env.MAINNET_PRIVATE_KEY],
-    },
-    degen: {
-      url: "https://rpc.degen.tips",
-      chainId: 666666666,
       accounts: [process.env.MAINNET_PRIVATE_KEY],
     },
     zora: {
@@ -250,14 +236,6 @@ module.exports = {
         urls: {
           apiURL: "https://cyberscan.co/api",
           browserURL: "https://cyberscan.co",
-        },
-      },
-      {
-        network: "degen",
-        chainId: 666666666,
-        urls: {
-          apiURL: "https://explorer.degen.tips/api",
-          browserURL: "https://explorer.degen.tips",
         },
       },
       {

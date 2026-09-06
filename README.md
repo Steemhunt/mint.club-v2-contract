@@ -60,7 +60,6 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Polygon (PoS) | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://polygonscan.com/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df#code) |
 | Blast | [`0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4`](https://blastexplorer.io/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4#code) |
 | Avalanche (C-Chain) | [`0x5DaE94e149CF2112Ec625D46670047814aA9aC2a`](https://snowtrace.io/address/0x5DaE94e149CF2112Ec625D46670047814aA9aC2a#code) |
-| Degen Chain | [`0xaF987E88bf30581F7074E628c894A3FCbf4EE12e`](https://explorer.degen.tips/address/0xaF987E88bf30581F7074E628c894A3FCbf4EE12e?tab=contract) |
 | Zora | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://explorer.zora.energy/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df?tab=contract) |
 | Kaia | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://kaiascan.io/account/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df?tabId=contract) |
 | Cyber | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://cyberscan.co/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df#contract) |
@@ -93,7 +92,6 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Polygon (PoS) | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://polygonscan.com/address/0x6c61918eECcC306D35247338FDcf025af0f6120A#code) |
 | Blast | [`0x5DaE94e149CF2112Ec625D46670047814aA9aC2a`](https://blastexplorer.io/address/0x5DaE94e149CF2112Ec625D46670047814aA9aC2a#code) |
 | Avalanche (C-Chain) | [`0x621c335b4BD8f2165E120DC70d3AfcAfc6628681`](https://snowtrace.io/address/0x621c335b4BD8f2165E120DC70d3AfcAfc6628681#code) |
-| Degen Chain | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://explorer.degen.tips/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa?tab=contract) |
 | Zora | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://explorer.zora.energy/address/0x6c61918eECcC306D35247338FDcf025af0f6120A?tab=contract) |
 | Kaia | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://kaiascan.io/account/0x6c61918eECcC306D35247338FDcf025af0f6120A?tabId=contract) |
 | Cyber | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://cyberscan.co/address/0x6c61918eECcC306D35247338FDcf025af0f6120A#contract) |
@@ -125,7 +123,6 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | BNB Chain | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://bscscan.com/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27#code) |
 | Polygon (PoS) | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://polygonscan.com/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27#code) |
 | Avalanche (C-Chain) | [`0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1`](https://snowtrace.io/address/0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1#code) |
-| Degen Chain | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://explorer.degen.tips/address/0x3bc6B601196752497a68B2625DB4f2205C3b150b?tab=contract) |
 | Zora | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://explorer.zora.energy/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27?tab=contract) |
 | Kaia | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://kaiascan.io/account/0xc5a076cad94176c2996B32d8466Be1cE757FAa27?tabId=contract) |
 | Cyber | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://cyberscan.co/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27#contract) |
@@ -167,7 +164,6 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Polygon (PoS) | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://polygonscan.com/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa#code) |
 | Blast | [`0x06FD26c092Db44E5491abB7cDC580CE24D93030c`](https://blastexplorer.io/address/0x06FD26c092Db44E5491abB7cDC580CE24D93030c#code) |
 | Avalanche (C-Chain) | [`0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724`](https://snowtrace.io/address/0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724#code) |
-| Degen Chain | [`0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4`](https://explorer.degen.tips/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4?tab=contract) |
 | Zora | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://explorer.zora.energy/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa?tab=contract) |
 | Kaia | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://kaiascan.io/account/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa?tabId=contract) |
 | Cyber | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://cyberscan.co/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa#contract) |
@@ -200,7 +196,6 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Polygon (PoS) | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://polygonscan.com/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6#code) |
 | Blast | [`0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1`](https://blastexplorer.io/address/0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1#code) |
 | Avalanche (C-Chain) | [`0x5b64cECC5cF3E4B1A668Abd895D16BdDC0c77a17`](https://snowtrace.io/address/0x5b64cECC5cF3E4B1A668Abd895D16BdDC0c77a17#code) |
-| Degen Chain | [`0xF44939c1613143ad587c79602182De7DcF593e33`](https://explorer.degen.tips/address/0xF44939c1613143ad587c79602182De7DcF593e33?tab=contract) |
 | Zora | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://explorer.zora.energy/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6?tab=contract) |
 | Kaia | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://kaiascan.io/account/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6?tabId=contract) |
 | Cyber | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://cyberscan.co/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6#contract) |
@@ -233,7 +228,6 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Polygon (PoS) | [`0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4`](https://polygonscan.com/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4#code) |
 | Blast | [`0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724`](https://blastexplorer.io/address/0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724#code) |
 | Avalanche (C-Chain) | [`0x841A2bD2fc97DCB865b4Ddb352540148Bad2dB09`](https://snowtrace.io/address/0x841A2bD2fc97DCB865b4Ddb352540148Bad2dB09#code) |
-| Degen Chain | [`0x5DaE94e149CF2112Ec625D46670047814aA9aC2a`](https://explorer.degen.tips/address/0x5DaE94e149CF2112Ec625D46670047814aA9aC2a?tab=contract) |
 | Zora | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://explorer.zora.energy/address/0x3bc6B601196752497a68B2625DB4f2205C3b150b?tab=contract) |
 | Kaia | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://kaiascan.io/account/0x3bc6B601196752497a68B2625DB4f2205C3b150b?tabId=contract) |
 | Cyber | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://cyberscan.co/address/0x3bc6B601196752497a68B2625DB4f2205C3b150b#contract) |
@@ -322,10 +316,6 @@ Supports exact-input and exact-output minting and burning, with optional swaps b
          <td><a href="https://robinhoodchain.blockscout.com/address/0x621c335b4BD8f2165E120DC70d3AfcAfc6628681?tab=contract">0x621c335b4BD8f2165E120DC70d3AfcAfc6628681</a></td>
       </tr>
       <tr>
-         <td>Degen Chain</td>
-         <td>Unsupported</td>
-      </tr>
-      <tr>
          <td>Kaia</td>
          <td>Unsupported</td>
       </tr>
@@ -406,10 +396,6 @@ The previous Base deployment at [`0x7d999874eAe10f170C4813270173363468A559cD`](h
       <tr>
          <td>Blast</td>
          <td><a href="https://blastexplorer.io/address/0x9a176d09b3824cf50417e348696cBbBc43d7818d#code">0x9a176d09b3824cf50417e348696cBbBc43d7818d</a></td>
-      </tr>
-      <tr>
-         <td>Degen</td>
-         <td><a href="https://explorer.degen.tips/address/0x7B09b728ee8c6a714dC3F10367b5DF9b217FE633?tab=contract">0x7B09b728ee8c6a714dC3F10367b5DF9b217FE633</a></td>
       </tr>
       <tr>
          <td>Zora</td>
@@ -500,10 +486,6 @@ The previous Base deployment at [`0x7d999874eAe10f170C4813270173363468A559cD`](h
          <td><a href="https://blastexplorer.io/address/0x68f54a53d3E69e2191bCF586fB507c81E5353413#code">0x68f54a53d3E69e2191bCF586fB507c81E5353413</a></td>
       </tr>
       <tr>
-         <td>Degen</td>
-         <td><a href="https://explorer.degen.tips/address/0x5FBdC7941a735685eB08c51776bA77098ebe1eb7?tab=contract">0x5FBdC7941a735685eB08c51776bA77098ebe1eb7</a></td>
-      </tr>
-      <tr>
          <td>Zora</td>
          <td><a href="https://explorer.zora.energy/address/0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1?tab=contract">0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1</a></td>
       </tr>
@@ -592,10 +574,6 @@ This provides reverse calculations for the `MCV2_Bond.mint()` function, similar 
       <tr>
          <td>Blast</td>
          <td><a href="https://blastexplorer.io/address/0x5dff49313d616c30599F6007b04BAB71619C5687#code">0x5dff49313d616c30599F6007b04BAB71619C5687</a></td>
-      </tr>
-      <tr>
-         <td>Degen</td>
-         <td><a href="https://explorer.degen.tips/address/0x3a8a4BFCC487d0FE9D342B6180bf0323989f251B#code">0x3a8a4BFCC487d0FE9D342B6180bf0323989f251B</a></td>
       </tr>
       <tr>
          <td>Zora</td>
@@ -708,8 +686,6 @@ File                      |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered
   IMintClubBond.sol       |      100 |      100 |      100 |      100 |                |
   IWETH.sol               |      100 |      100 |      100 |      100 |                |
   MCV2_ICommonToken.sol   |      100 |      100 |      100 |      100 |                |
- contracts/lib/           |        0 |        0 |        0 |        0 |                |
-  WDEGEN.sol              |        0 |        0 |        0 |        0 |... 74,75,77,79 |
 --------------------------|----------|----------|----------|----------|----------------|
 All files                 |    94.26 |    77.29 |    86.44 |    93.47 |                |
 --------------------------|----------|----------|----------|----------|----------------|
