@@ -128,6 +128,7 @@ contract MCV1_Wrapper {
                 stop = tokensLength;
             }
 
+            if (start >= stop) return new BondInfo[](0);
             uint256 arrayLength = stop - start;
             info = new BondInfo[](arrayLength);
 

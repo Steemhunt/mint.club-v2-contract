@@ -618,6 +618,7 @@ contract MCV2_Bond is MCV2_Royalty {
                 stop = tokensLength;
             }
 
+            if (start >= stop) return new BondInfo[](0);
             uint256 arrayLength = stop - start;
             info = new BondInfo[](arrayLength);
 

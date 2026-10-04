@@ -1495,6 +1495,11 @@ describe("Bond", function () {
     });
   }); // Edge cases: Tax Token
 
+  it("should return an empty token list when the bond has no tokens", async function () {
+    expect(await Bond.getList(0, 1)).to.deep.equal([]);
+    expect(await Bond.getList(1, 2)).to.deep.equal([]);
+  });
+
   describe("Utility functions", function () {
     beforeEach(async function () {
       this.BaseToken2 = await ethers.deployContract("TestToken", [
@@ -1537,6 +1542,20 @@ describe("Bond", function () {
         100
       );
       expect(addresses).to.deep.equal([this.token0]);
+    });
+
+    it("should return an empty token list at or beyond the token count", async function () {
+      expect(await Bond.getList(3, 4)).to.deep.equal([]);
+      expect(await Bond.getList(4, 5)).to.deep.equal([]);
+    });
+
+    it("should retain pagination validation before clipping to the token count", async function () {
+      for (const [start, stop] of [[1, 1], [2, 1], [0, 1001]]) {
+        await expect(Bond.getList(start, stop)).to.be.revertedWithCustomError(
+          Bond,
+          "MCV2_BOND__InvalidPaginationParameters"
+        );
+      }
     });
 
     it("should return [1, 2] for ReserveToken = BaseToken2", async function () {
