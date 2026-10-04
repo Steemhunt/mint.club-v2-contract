@@ -6,11 +6,14 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IMCV2_Bond} from "./interfaces/IMCV2_Bond.sol";
 import {MCV2_ICommonToken} from "./interfaces/MCV2_ICommonToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title Mint Club V2 Bond Periphery
  */
 contract MCV2_BondPeriphery {
+    using SafeERC20 for IERC20;
+
     error MCV2_BondPeriphery__InvalidParams(string name);
     error MCV2_BondPeriphery__ExceedMaxSupply();
     error MCV2_BondPeriphery__InvalidCurrentSupply();
@@ -28,6 +31,11 @@ contract MCV2_BondPeriphery {
         return 2;
     }
 
+    function _isBurnSwap(address sellToken, address buyToken) private view returns (bool) {
+        (, , , , address reserveToken, ) = BOND.tokenBond(sellToken);
+        return reserveToken != address(0) && reserveToken == buyToken;
+    }
+
     /**
      * @dev Estimate swap results between Mint Club tokens and their reserve tokens.
      * @param sellToken The address of the token to sell.
@@ -41,14 +49,7 @@ contract MCV2_BondPeriphery {
         address buyToken
     ) external view returns (uint256 buyAmount) {
         // Check if sellToken is a Mint Club token and buyToken is the reserve token
-        if (BOND.exists(sellToken)) {
-            (, , , , address reserveToken, ) = BOND.tokenBond(sellToken);
-
-            // Verify that buyToken matches the reserve token
-            if (buyToken != reserveToken) {
-                revert MCV2_BondPeriphery__NoLiquidityAvailable();
-            }
-
+        if (_isBurnSwap(sellToken, buyToken)) {
             // Estimate burning: get refund amount for selling (burning) the Mint Club token
             (uint256 refundAmount, ) = BOND.getRefundForTokens(
                 sellToken,
@@ -97,23 +98,16 @@ contract MCV2_BondPeriphery {
         address receiver
     ) external returns (uint256 buyAmount) {
         // Check if sellToken is a Mint Club token and buyToken is the reserve token
-        if (BOND.exists(sellToken)) {
-            (, , , , address reserveToken, ) = BOND.tokenBond(sellToken);
-
-            // Verify that buyToken matches the reserve token
-            if (buyToken != reserveToken) {
-                revert MCV2_BondPeriphery__NoLiquidityAvailable();
-            }
-
+        if (_isBurnSwap(sellToken, buyToken)) {
             // Transfer the Mint Club token from sender to this contract
-            IERC20(sellToken).transferFrom(
+            IERC20(sellToken).safeTransferFrom(
                 msg.sender,
                 address(this),
                 sellAmount
             );
 
             // Approve the Bond contract to burn the tokens
-            IERC20(sellToken).approve(address(BOND), sellAmount);
+            IERC20(sellToken).forceApprove(address(BOND), sellAmount);
 
             // Burn the Mint Club token to get reserve tokens
             buyAmount = BOND.burn(
@@ -165,17 +159,12 @@ contract MCV2_BondPeriphery {
             revert MCV2_BondPeriphery__SlippageLimitExceeded();
 
         IERC20 reserveToken = IERC20(reserveAddress);
-        reserveToken.transferFrom(msg.sender, address(this), reserveAmount);
-        reserveToken.approve(address(BOND), reserveAmount);
+        uint256 reserveBalanceBefore = reserveToken.balanceOf(address(this));
+        reserveToken.safeTransferFrom(msg.sender, address(this), reserveAmount);
+        reserveToken.forceApprove(address(BOND), reserveAmount);
 
         // Try minting with ceiling division result first
         try BOND.mint(token, tokensToMint, reserveAmount, receiver) {
-            // Success - send any leftover reserve tokens to receiver
-            uint256 reserveBalance = reserveToken.balanceOf(address(this));
-            if (reserveBalance > 0) {
-                reserveToken.transfer(receiver, reserveBalance);
-            }
-            return tokensToMint;
         } catch {
             // If minting fails, try reducing by 1 token
             tokensToMint -= 1;
@@ -185,13 +174,12 @@ contract MCV2_BondPeriphery {
 
             // Try minting with reduced amount
             BOND.mint(token, tokensToMint, reserveAmount, receiver);
-            uint256 reserveBalance = reserveToken.balanceOf(address(this));
-            if (reserveBalance > 0) {
-                reserveToken.transfer(receiver, reserveBalance);
-            }
-
-            return tokensToMint;
         }
+
+        reserveToken.forceApprove(address(BOND), 0);
+        uint256 reserveBalance = reserveToken.balanceOf(address(this)) - reserveBalanceBefore;
+        if (reserveBalance > 0) reserveToken.safeTransfer(receiver, reserveBalance);
+        return tokensToMint;
     }
 
     /**
