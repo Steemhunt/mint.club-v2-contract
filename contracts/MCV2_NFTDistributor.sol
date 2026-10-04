@@ -30,7 +30,7 @@ contract MCV2_NFTDistributor {
         if (bp.stepPrices[0] != 0)
             revert MCV2_NFTDistributor__InvalidParams("MUST_HAVE_FREE_MINTING");
 
-        uint8 recipientsCount = uint8(recipients.length);
+        uint256 recipientsCount = recipients.length;
         uint256 totalAmount;
         for (uint256 i = 0; i < recipientsCount; i++) {
             totalAmount += amounts[i];

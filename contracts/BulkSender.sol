@@ -2,6 +2,7 @@
 pragma solidity =0.8.20;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -11,6 +12,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
  * @notice With 30M block gas limit, the max number of recipient count was 4200 for ERC1155 / 5500 for ERC20 / 3700 for Native
  */
 contract BulkSender is Ownable {
+    using SafeERC20 for IERC20;
+
     error BulkSender__InvalidParams(string param);
     error BulkSender__InsufficientTokenBalance();
     error BulkSender__InsufficientTokenAllowance();
@@ -122,7 +125,7 @@ contract BulkSender is Ownable {
             address msgSender = _msgSender(); // cache
 
             for (uint256 i = 0; i < recipientsCount; ++i) {
-                IERC20(token).transferFrom(
+                IERC20(token).safeTransferFrom(
                     msgSender,
                     recipients[i],
                     amounts[i]

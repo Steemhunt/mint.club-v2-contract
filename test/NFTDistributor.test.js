@@ -74,6 +74,31 @@ describe("NFTDistributor", function () {
     BABY_TOKEN.bondParams.reserveToken = BaseToken.target; // set BaseToken address
   });
 
+  for (const recipientsCount of [255, 256, 257]) {
+    it(`should distribute to ${recipientsCount} recipients and charge all recipient fees`, async function () {
+      const recipients = Array(recipientsCount).fill(alice.address);
+      const amounts = Array(recipientsCount).fill(1n);
+      const bondParams = {
+        ...BABY_TOKEN.bondParams,
+        maxSupply: BigInt(recipientsCount),
+        stepRanges: [BigInt(recipientsCount)],
+        stepPrices: [0n],
+      };
+      const totalFee = CREATION_FEE + FEE_PER_RECIPIENT * BigInt(recipientsCount);
+
+      await expect(
+        NFTDistributor.createAndDistribute(BABY_TOKEN.tokenParams, bondParams, recipients, amounts, {
+          value: totalFee,
+        })
+      ).to.changeEtherBalance(PROTOCOL_BENEFICIARY, totalFee);
+
+      const token = await ethers.getContractAt("MCV2_MultiToken", await Bond.tokens(0));
+      expect(await token.balanceOf(alice.address, 0)).to.equal(BigInt(recipientsCount));
+      expect(await token.balanceOf(NFTDistributor.target, 0)).to.equal(0n);
+      expect((await Bond.tokenBond(token.target)).creator).to.equal(creator.address);
+    });
+  }
+
   describe("Create and send", function () {
     beforeEach(async function () {
       await NFTDistributor.createAndDistribute(

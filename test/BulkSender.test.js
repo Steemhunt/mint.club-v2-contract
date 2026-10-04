@@ -108,6 +108,36 @@ describe("BulkSender", function () {
       );
     });
 
+    it("should support ERC20 transfers without a return value", async function () {
+      const token = await ethers.deployContract("BulkTransferMock", [true, NULL_ADDRESS]);
+      await token.approve(BulkSender.target, 30n);
+
+      await BulkSender.sendERC20(token.target, [alice.address, bob.address], [10n, 20n], {
+        value: FEE_PER_RECIPIENT * 2n,
+      });
+
+      expect(await token.balanceOf(alice.address)).to.equal(10n);
+      expect(await token.balanceOf(bob.address)).to.equal(20n);
+      expect(await token.balanceOf(owner.address)).to.equal(970n);
+    });
+
+    it("should roll back every transfer and fee when an ERC20 returns false", async function () {
+      const token = await ethers.deployContract("BulkTransferMock", [false, bob.address]);
+      await token.approve(BulkSender.target, 30n);
+      const beneficiaryBalance = await ethers.provider.getBalance(PROTOCOL_BENEFICIARY);
+
+      await expect(
+        BulkSender.sendERC20(token.target, [alice.address, bob.address], [10n, 20n], {
+          value: FEE_PER_RECIPIENT * 2n,
+        })
+      ).to.be.revertedWithCustomError(BulkSender, "SafeERC20FailedOperation").withArgs(token.target);
+
+      expect(await token.balanceOf(alice.address)).to.equal(0n);
+      expect(await token.balanceOf(owner.address)).to.equal(1000n);
+      expect(await token.allowance(owner.address, BulkSender.target)).to.equal(30n);
+      expect(await ethers.provider.getBalance(PROTOCOL_BENEFICIARY)).to.equal(beneficiaryBalance);
+    });
+
     it("should revert if the sender does not have enough token balance", async function () {
       await Token.transfer(alice.address, ORIGINAL_BALANCE);
       await expect(
