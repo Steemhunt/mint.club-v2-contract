@@ -75,6 +75,7 @@ contract MCV2_BuyBackBurner {
         );
         if (huntRequired == 0) revert MCV2_BuyBackBurner__ZeroAmount();
 
+        uint256 huntBalanceBefore = HUNT.balanceOf(address(this));
         HUNT.transferFrom(msg.sender, address(this), huntRequired);
 
         // Mint MT and send it to the dead address straight away
@@ -82,7 +83,7 @@ contract MCV2_BuyBackBurner {
             BOND.mint(address(MT), mtAmount, huntRequired, DEAD_ADDRESS)
         );
 
-        if (huntSpent != huntRequired || HUNT.balanceOf(address(this)) != 0) {
+        if (huntSpent != huntRequired || HUNT.balanceOf(address(this)) != huntBalanceBefore) {
             revert MCV2_BuyBackBurner__InvalidSwap();
         }
 
@@ -129,6 +130,7 @@ contract MCV2_BuyBackBurner {
         if (stopBefore >= history.length) {
             stopBefore = history.length;
         }
+        if (start >= stopBefore) return new History[](0);
 
         unchecked {
             uint256 arrayLength = stopBefore - start;

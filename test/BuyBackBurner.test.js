@@ -123,6 +123,21 @@ describe("MCV2_BuyBackBurner", function () {
     });
 
     describe("Edge cases", function () {
+      it("should preserve unsolicited HUNT donations without blocking repeated buybacks", async function () {
+        await HuntToken.connect(burningAccount).transfer(BuyBackBurner.target, 1n);
+
+        for (let i = 0; i < 2; i++) {
+          const [huntRequired] = await Bond.getReserveForToken(MT, this.mtAmount);
+          await expect(
+            BuyBackBurner.connect(burningAccount).buyBackBurn(this.mtAmount, this.fromChainId)
+          ).to.changeTokenBalance(HuntToken, burningAccount, -huntRequired);
+          expect(await HuntToken.balanceOf(BuyBackBurner.target)).to.equal(1n);
+        }
+
+        expect(await MtToken.balanceOf(DEAD_ADDRESS)).to.equal(this.initialMtOnDeadAddress + this.mtAmount * 2n);
+        expect(await BuyBackBurner.getHistoryCount()).to.equal(2n);
+      });
+
       it("should revert if mt amount is 0", async function () {
         await expect(
           BuyBackBurner.connect(burningAccount).buyBackBurn(0, this.fromChainId)
@@ -229,6 +244,11 @@ describe("MCV2_BuyBackBurner", function () {
     it("should handle out of bounds indices gracefully", async function () {
       const historySlice = await BuyBackBurner.getHistory(0, 999);
       expect(historySlice.length).to.equal(3); // Should return all entries
+    });
+
+    it("should return an empty history page at or beyond the history count", async function () {
+      expect(await BuyBackBurner.getHistory(3, 4)).to.deep.equal([]);
+      expect(await BuyBackBurner.getHistory(4, 5)).to.deep.equal([]);
     });
 
     it("should revert with InvalidRange for invalid range", async function () {
