@@ -24,7 +24,7 @@ interface IERC20Rebasing {
 interface IBlast {
   // Note: the full interface for IBlast can be found below
   function configureClaimableGas() external;
-  function readClaimableYield(address contractAddress) external view returns (uint256);
+  function readGasParams(address contractAddress) external view returns (uint256 etherSeconds, uint256 etherBalance, uint256 lastUpdated, uint8 gasMode);
   function claimAllGas(address contractAddress, address recipient) external returns (uint256);
 }
 
@@ -58,7 +58,9 @@ contract MCV2_BlastBond is MCV2_Bond {
   }
 
   function getClaimableGas() external view returns (uint256) {
-    return BLAST.readClaimableYield(address(this));
+    // Accrued gas fees before Blast's time-dependent claim-rate adjustment.
+    (, uint256 etherBalance, , ) = BLAST.readGasParams(address(this));
+    return etherBalance;
   }
 
   function claimGas(address recipient) external onlyOwner returns (uint256) {

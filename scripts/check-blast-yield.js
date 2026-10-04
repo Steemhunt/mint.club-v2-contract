@@ -6,17 +6,20 @@ async function main() {
     "0x621c335b4BD8f2165E120DC70d3AfcAfc6628681"
   );
 
-  const claimableGas = await blastBond.getClaimableGas();
-  console.log(`Claimable Gas: ${ethers.formatEther(claimableGas)} ETH`);
+  // Query Blast directly so existing Bond deployments with the old getter report gas correctly.
+  const Blast = await ethers.getContractAt("IBlast", await blastBond.BLAST());
+  const [, accruedGas] = await Blast.readGasParams(blastBond.target);
+  console.log(`Accrued gas before claim-rate adjustment: ${ethers.formatEther(accruedGas)} ETH`);
 
   const ERC20 = await ethers.getContractFactory("MCV2_Token");
   const WETH = ERC20.attach(await blastBond.WETH());
   const USDB = ERC20.attach(await blastBond.USDB());
   const wethYield = await blastBond.getClaimableYield(WETH.target);
   const usdbYield = await blastBond.getClaimableYield(USDB.target);
+  const usdbDecimals = await USDB.decimals();
 
   console.log(`WETH yield: ${ethers.formatEther(wethYield)} ETH`);
-  console.log(`USDB yield: ${ethers.formatUnits(usdbYield, 6)} USDB`);
+  console.log(`USDB yield: ${ethers.formatUnits(usdbYield, usdbDecimals)} USDB`);
 
   const PROTOCOL_BENEFICIARY = await blastBond.protocolBeneficiary();
   console.log(
@@ -31,7 +34,7 @@ async function main() {
   console.log(
     ` - USDB Balance before: ${ethers.formatUnits(
       await USDB.balanceOf(PROTOCOL_BENEFICIARY),
-      6
+      usdbDecimals
     )} USDB`
   );
 
@@ -49,7 +52,7 @@ async function main() {
   console.log(
     ` - USDB Balance after: ${ethers.formatUnits(
       await USDB.balanceOf(PROTOCOL_BENEFICIARY),
-      6
+      usdbDecimals
     )} USDB`
   );
 }
