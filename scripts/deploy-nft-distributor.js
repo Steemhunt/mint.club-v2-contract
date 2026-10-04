@@ -1,18 +1,20 @@
 require("dotenv").config();
 const hre = require("hardhat");
+const { getBondAddress } = require("../test/utils/test-utils");
 
 async function main() {
+  const bulkSenderAddresses = {
+    base: "0x95BDA90196c4e737933360F4639c46Ace657AAb7",
+    sepolia: "0x7A6995CE649FA025a8792a375510d2B7C3c48581",
+    baseSepolia: "0xeDeB9196B6648F5a4701067E851F3fEBcF62F549",
+  };
+  const BULK_SENDER = bulkSenderAddresses[hre.network.name];
+  if (!BULK_SENDER) {
+    throw new Error(`NFT distributor deployment is not configured for ${hre.network.name}`);
+  }
+  const BOND = getBondAddress(hre.network.name);
   const accounts = await hre.ethers.getSigners();
   const deployer = accounts[0].address;
-
-  // const BOND = "0xc5a076cad94176c2996B32d8466Be1cE757FAa27"; // Base: MCV2_Bond
-  // const BULK_SENDER = "0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1"; // Base: BulkSender
-
-  // const BOND = "0x8dce343A86Aa950d539eeE0e166AFfd0Ef515C0c"; // Sepolia: MCV2_Bond
-  // const BULK_SENDER = "0x480c09C58D658a14F6CCF62C5C0fA4e3186f2C70"; // Sepolia: BulkSender
-
-  const BOND = "0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d"; // BaseSepolia: MCV2_Bond
-  const BULK_SENDER = "0xeDeB9196B6648F5a4701067E851F3fEBcF62F549"; // BaseSepolia: BulkSender
 
   console.log(`Deploy from account: ${deployer}`);
   console.log(`BOND: ${BOND} | BULK_SENDER: ${BULK_SENDER}`);
