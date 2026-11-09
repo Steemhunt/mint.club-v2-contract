@@ -298,6 +298,10 @@ Supports exact-input and exact-output minting and burning, with optional swaps b
          <td><a href="https://robinhoodchain.blockscout.com/address/0x621c335b4BD8f2165E120DC70d3AfcAfc6628681?tab=contract">0x621c335b4BD8f2165E120DC70d3AfcAfc6628681</a></td>
       </tr>
       <tr>
+         <td><a href="https://elysium.kinetiq.xyz">Elysium</a></td>
+         <td><a href="https://elysium.kinetiq.xyz/address/0xa4021a8907197Df92341F1218B32E26b250F6798?tab=contract">0xa4021a8907197Df92341F1218B32E26b250F6798</a></td>
+      </tr>
+      <tr>
          <td>Kaia</td>
          <td>Unsupported</td>
       </tr>
