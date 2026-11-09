@@ -163,6 +163,7 @@ exports.getUniversalRouterAddress = function (network) {
     avalanche: "0x94b75331AE8d42C1b61065089B7d48FE14aA73b7",
     unichain: "0xEf740bf23aCaE26f6492B10de645D6B98dC8Eaf3",
     robinhood: "0x8876789976dEcBfCbBbe364623C63652db8C0904",
+    elysium: "0x1B341FDD55d56F8E08409A2C25DDFad93Eb03C1a", // Universal Router 2.2.0 - (ref: https://developers.uniswap.org/docs/protocols/v4/deployments)
     // Testnets
     sepolia: "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b",
     baseSepolia: "0x492E6456D9528771018DeB9E87ef7750EF184104",

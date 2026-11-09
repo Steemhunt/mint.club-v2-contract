@@ -57,6 +57,7 @@ npx hardhat compile && npx hardhat run --network zora scripts/deploy-zap-v2.js
 npx hardhat compile && npx hardhat run --network avalanche scripts/deploy-zap-v2.js
 npx hardhat compile && npx hardhat run --network unichain scripts/deploy-zap-v2.js
 npx hardhat compile && npx hardhat run --network robinhood scripts/deploy-zap-v2.js
+npx hardhat compile && npx hardhat run --network elysium scripts/deploy-zap-v2.js
 
 # Testnets
 npx hardhat compile && npx hardhat run --network sepolia scripts/deploy-zap-v2.js
