@@ -61,5 +61,6 @@ npx hardhat compile && npx hardhat run --network hashkey scripts/deploy-stake.js
 npx hardhat compile && npx hardhat run --network unichain scripts/deploy-stake.js
 npx hardhat compile && npx hardhat run --network over scripts/deploy-stake.js
 npx hardhat compile && npx hardhat run --network robinhood scripts/deploy-stake.js
+npx hardhat compile && npx hardhat run --network elysium scripts/deploy-stake.js
 
 */
