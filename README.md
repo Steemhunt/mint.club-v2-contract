@@ -68,6 +68,7 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Unichain | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://uniscan.xyz/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df#code) |
 | Over | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://scan.over.network/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df?tab=contract) |
 | Robinhood Chain | [`0xEb54dACB4C2ccb64F8074eceEa33b5eBb38E5387`](https://robinhoodchain.blockscout.com/address/0xEb54dACB4C2ccb64F8074eceEa33b5eBb38E5387?tab=contract) |
+| Elysium | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://elysium.kinetiq.xyz/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df?tab=contract) |
 | Sepolia | [`0x749bA94344521727f55a3007c777FbeB5F52C2Eb`](https://sepolia.etherscan.io/address/0x749bA94344521727f55a3007c777FbeB5F52C2Eb#code) |
 | Base Sepolia | [`0x37F540de37afE8bDf6C722d87CB019F30e5E406a`](https://sepolia.basescan.org/address/0x37F540de37afE8bDf6C722d87CB019F30e5E406a#code) |
 | Cyber Testnet | [`0x37F540de37afE8bDf6C722d87CB019F30e5E406a`](https://testnet.cyberscan.co/address/0x37F540de37afE8bDf6C722d87CB019F30e5E406a#contract) |
@@ -98,6 +99,7 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Unichain | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://uniscan.xyz/address/0x6c61918eECcC306D35247338FDcf025af0f6120A#code) |
 | Over | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://scan.over.network/address/0x6c61918eECcC306D35247338FDcf025af0f6120A?tab=contract) |
 | Robinhood Chain | [`0xaF987E88bf30581F7074E628c894A3FCbf4EE12e`](https://robinhoodchain.blockscout.com/address/0xaF987E88bf30581F7074E628c894A3FCbf4EE12e?tab=contract) |
+| Elysium | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://elysium.kinetiq.xyz/address/0x6c61918eECcC306D35247338FDcf025af0f6120A?tab=contract) |
 | Sepolia | [`0x3cABE5125C5D8922c5f38c5b779F6E96F563cdc0`](https://sepolia.etherscan.io/address/0x3cABE5125C5D8922c5f38c5b779F6E96F563cdc0#code) |
 | Base Sepolia | [`0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881`](https://sepolia.basescan.org/address/0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881#code) |
 | Cyber Testnet | [`0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881`](https://testnet.cyberscan.co/address/0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881#contract) |
@@ -128,6 +130,7 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Unichain | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://uniscan.xyz/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27#code) |
 | Over | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://scan.over.network/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27?tab=contract) |
 | Robinhood Chain | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://robinhoodchain.blockscout.com/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa?tab=contract) |
+| Elysium | [`0xc5a076cad94176c2996B32d8466Be1cE757FAa27`](https://elysium.kinetiq.xyz/address/0xc5a076cad94176c2996B32d8466Be1cE757FAa27?tab=contract) |
 | Sepolia | [`0x8dce343A86Aa950d539eeE0e166AFfd0Ef515C0c`](https://sepolia.etherscan.io/address/0x8dce343A86Aa950d539eeE0e166AFfd0Ef515C0c#code) |
 | Base Sepolia | [`0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d`](https://sepolia.basescan.org/address/0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d#code) |
 | Cyber Testnet | [`0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d`](https://testnet.cyberscan.co/address/0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d#contract) |
@@ -158,6 +161,7 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Unichain | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://uniscan.xyz/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa#code) |
 | Over | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://scan.over.network/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa?tab=contract) |
 | Robinhood Chain | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://robinhoodchain.blockscout.com/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6?tab=contract) |
+| Elysium | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://elysium.kinetiq.xyz/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa?tab=contract) |
 | Sepolia | [`0x1Bf3183acc57571BecAea0E238d6C3A4d00633da`](https://sepolia.etherscan.io/address/0x1Bf3183acc57571BecAea0E238d6C3A4d00633da#code) |
 | Base Sepolia | [`0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad`](https://sepolia.basescan.org/address/0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad#code) |
 | Cyber Testnet | [`0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad`](https://testnet.cyberscan.co/address/0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad#contract) |
@@ -188,6 +192,7 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Unichain | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://uniscan.xyz/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6#code) |
 | Over | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://scan.over.network/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6?tab=contract) |
 | Robinhood Chain | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://robinhoodchain.blockscout.com/address/0x3bc6B601196752497a68B2625DB4f2205C3b150b?tab=contract) |
+| Elysium | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://elysium.kinetiq.xyz/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6?tab=contract) |
 | Sepolia | [`0x7c204B1B03A88D24088941068f6DFC809f2fd022`](https://sepolia.etherscan.io/address/0x7c204B1B03A88D24088941068f6DFC809f2fd022#code) |
 | Base Sepolia | [`0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB`](https://sepolia.basescan.org/address/0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB#code) |
 | Cyber Testnet | [`0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB`](https://testnet.cyberscan.co/address/0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB#contract) |
@@ -218,6 +223,7 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Unichain | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://uniscan.xyz/address/0x3bc6B601196752497a68B2625DB4f2205C3b150b#code) |
 | Over | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://scan.over.network/address/0x3bc6B601196752497a68B2625DB4f2205C3b150b?tab=contract) |
 | Robinhood Chain | [`0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4`](https://robinhoodchain.blockscout.com/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4?tab=contract) |
+| Elysium | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://elysium.kinetiq.xyz/address/0x3bc6B601196752497a68B2625DB4f2205C3b150b?tab=contract) |
 | Sepolia | [`0x0CD940395566d509168977Cf10E5296302efA57A`](https://sepolia.etherscan.io/address/0x0CD940395566d509168977Cf10E5296302efA57A#code) |
 | Base Sepolia | [`0xCbb23973235feA43E62C41a0c67717a92a2467f2`](https://sepolia.basescan.org/address/0xCbb23973235feA43E62C41a0c67717a92a2467f2#code) |
 | Cyber Testnet | [`0xCbb23973235feA43E62C41a0c67717a92a2467f2`](https://testnet.cyberscan.co/address/0xCbb23973235feA43E62C41a0c67717a92a2467f2#contract) |
@@ -406,6 +412,10 @@ The previous Base deployment at [`0x7d999874eAe10f170C4813270173363468A559cD`](h
          <td><a href="https://robinhoodchain.blockscout.com/address/0x5DaE94e149CF2112Ec625D46670047814aA9aC2a?tab=contract">0x5DaE94e149CF2112Ec625D46670047814aA9aC2a</a></td>
       </tr>
       <tr>
+         <td>Elysium</td>
+         <td><a href="https://elysium.kinetiq.xyz/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4?tab=contract">0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4</a></td>
+      </tr>
+      <tr>
          <td>Sepolia</td>
          <td><a href="https://sepolia.etherscan.io/address/0x7A6995CE649FA025a8792a375510d2B7C3c48581#code">0x7A6995CE649FA025a8792a375510d2B7C3c48581</a></td>
       </tr>
@@ -490,6 +500,10 @@ The previous Base deployment at [`0x7d999874eAe10f170C4813270173363468A559cD`](h
          <td><a href="https://robinhoodchain.blockscout.com/address/0xF44939c1613143ad587c79602182De7DcF593e33?tab=contract">0xF44939c1613143ad587c79602182De7DcF593e33</a></td>
       </tr>
       <tr>
+         <td>Elysium</td>
+         <td><a href="https://elysium.kinetiq.xyz/address/0xF44939c1613143ad587c79602182De7DcF593e33?tab=contract">0xF44939c1613143ad587c79602182De7DcF593e33</a></td>
+      </tr>
+      <tr>
          <td>Sepolia</td>
          <td><a href="https://sepolia.etherscan.io/address/0xd1cFAf476c8311792c329359B012bA515399f3a4#code">0xd1cFAf476c8311792c329359B012bA515399f3a4</a></td>
       </tr>
@@ -570,6 +584,10 @@ This provides reverse calculations for the `MCV2_Bond.mint()` function, similar 
       <tr>
          <td>Robinhood Chain</td>
          <td><a href="https://robinhoodchain.blockscout.com/address/0xa4021a8907197Df92341F1218B32E26b250F6798?tab=contract">0xa4021a8907197Df92341F1218B32E26b250F6798</a></td>
+      </tr>
+      <tr>
+         <td>Elysium</td>
+         <td><a href="https://elysium.kinetiq.xyz/address/0x5DaE94e149CF2112Ec625D46670047814aA9aC2a?tab=contract">0x5DaE94e149CF2112Ec625D46670047814aA9aC2a</a></td>
       </tr>
       <tr>
          <td>Sepolia</td>

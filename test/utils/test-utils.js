@@ -101,6 +101,7 @@ exports.getBondAddress = function (network) {
     unichain: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     over: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     robinhood: "0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa",
+    elysium: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     sepolia: "0x8dce343A86Aa950d539eeE0e166AFfd0Ef515C0c",
     baseSepolia: "0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d",
     // skip other testnets
