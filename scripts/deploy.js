@@ -30,7 +30,7 @@ async function main() {
   console.log(
     `Deploy from account: ${deployer} - Balance: ${
       Number(await hre.ethers.provider.getBalance(deployer)) / 1e18
-    } ${hre.network.name === "elysium" ? "HYPE" : "ETH"}`
+    } ETH`
   );
 
   const tokenImplementation = await hre.ethers.deployContract("MCV2_Token");
@@ -121,7 +121,6 @@ npx hardhat compile && npx hardhat run --network puppynet scripts/deploy.js
 npx hardhat compile && npx hardhat run --network optimisticEthereum scripts/deploy.js
 npx hardhat compile && npx hardhat run --network arbitrumOne scripts/deploy.js
 npx hardhat compile && npx hardhat run --network base scripts/deploy.js
-npx hardhat compile && npx hardhat run --network elysium scripts/deploy.js
 npx hardhat compile && npx hardhat run --network polygon scripts/deploy.js
 npx hardhat compile && npx hardhat run --network bsc scripts/deploy.js
 npx hardhat compile && npx hardhat run --network mainnet scripts/deploy.js
@@ -136,5 +135,6 @@ npx hardhat compile && npx hardhat run --network hashkey scripts/deploy.js
 npx hardhat compile && npx hardhat run --network unichain scripts/deploy.js
 npx hardhat compile && npx hardhat run --network over scripts/deploy.js
 npx hardhat compile && npx hardhat run --network robinhood scripts/deploy.js
+npx hardhat compile && npx hardhat run --network elysium scripts/deploy.js
 
 */
