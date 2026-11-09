@@ -29,7 +29,7 @@ exports.getCreationFee = function (network) {
     unichain: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     over: 50n * 10n ** 18n, // 50 OVER (~$1.4)
     robinhood: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
-    elysium: 3n * 10n ** 16n, // 0.03 HYPE (~$2)
+    elysium: 10n ** 16n, // 0.01 HYPE (~$0.7)
     // Testnets
     sepolia: 7n * 10n ** 14n, // 0.007 ETH - testnet
     baseSepolia: 0n, // 0 ETH - testnet
