@@ -10,6 +10,7 @@ subtask("verify:get-verification-subtasks").setAction(
     if (
       [
         "cyber",
+        "elysium",
         "hashkey",
         "over",
         "puppynet",
@@ -231,6 +232,14 @@ module.exports = {
         urls: {
           apiURL: "https://cyberscan.co/api",
           browserURL: "https://cyberscan.co",
+        },
+      },
+      {
+        network: "elysium",
+        chainId: 99901,
+        urls: {
+          apiURL: "https://elysium.kinetiq.xyz/api/verify",
+          browserURL: "https://elysium.kinetiq.xyz",
         },
       },
       {
