@@ -4,7 +4,11 @@
   "description": "Mint Club V2",
   "main": "index.js",
   "scripts": {
-    "test": "npx hardhat test"
+    "test": "npx hardhat test",
+    "elysium:local": "hardhat test --config hardhat.elysium.config.js --network hardhat test/ElysiumReadiness.test.js",
+    "elysium:plan": "node scripts/elysium-plan.cjs",
+    "elysium:rpc": "node scripts/elysium-readiness.cjs",
+    "elysium:rpc:test": "node --test scripts/elysium-readiness.test.cjs"
   },
   "repository": {
     "type": "git",

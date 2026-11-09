@@ -58,7 +58,6 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Base | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://basescan.org/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df#code) |
 | BNB Chain | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://bscscan.com/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df#code) |
 | Polygon (PoS) | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://polygonscan.com/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df#code) |
-| Blast | [`0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4`](https://blastexplorer.io/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4#code) |
 | Avalanche (C-Chain) | [`0x5DaE94e149CF2112Ec625D46670047814aA9aC2a`](https://snowtrace.io/address/0x5DaE94e149CF2112Ec625D46670047814aA9aC2a#code) |
 | Zora | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://explorer.zora.energy/address/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df?tab=contract) |
 | Kaia | [`0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df`](https://kaiascan.io/account/0xAa70bC79fD1cB4a6FBA717018351F0C3c64B79Df?tabId=contract) |
@@ -71,7 +70,6 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Robinhood Chain | [`0xEb54dACB4C2ccb64F8074eceEa33b5eBb38E5387`](https://robinhoodchain.blockscout.com/address/0xEb54dACB4C2ccb64F8074eceEa33b5eBb38E5387?tab=contract) |
 | Sepolia | [`0x749bA94344521727f55a3007c777FbeB5F52C2Eb`](https://sepolia.etherscan.io/address/0x749bA94344521727f55a3007c777FbeB5F52C2Eb#code) |
 | Base Sepolia | [`0x37F540de37afE8bDf6C722d87CB019F30e5E406a`](https://sepolia.basescan.org/address/0x37F540de37afE8bDf6C722d87CB019F30e5E406a#code) |
-| Blast Sepolia | [`0x37F540de37afE8bDf6C722d87CB019F30e5E406a`](https://testnet.blastscan.io/address/0x37F540de37afE8bDf6C722d87CB019F30e5E406a#code) |
 | Cyber Testnet | [`0x37F540de37afE8bDf6C722d87CB019F30e5E406a`](https://testnet.cyberscan.co/address/0x37F540de37afE8bDf6C722d87CB019F30e5E406a#contract) |
 | Over Testnet | [`0x37F540de37afE8bDf6C722d87CB019F30e5E406a`](https://dolphin.view.over.network/address/0x37F540de37afE8bDf6C722d87CB019F30e5E406a?tab=contract) |
 | Shibarium Puppynet | [`0x37F540de37afE8bDf6C722d87CB019F30e5E406a`](https://puppyscan.shib.io/address/0x37F540de37afE8bDf6C722d87CB019F30e5E406a?tab=contract) |
@@ -90,7 +88,6 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Base | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://basescan.org/address/0x6c61918eECcC306D35247338FDcf025af0f6120A#code) |
 | BNB Chain | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://bscscan.com/address/0x6c61918eECcC306D35247338FDcf025af0f6120A#code) |
 | Polygon (PoS) | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://polygonscan.com/address/0x6c61918eECcC306D35247338FDcf025af0f6120A#code) |
-| Blast | [`0x5DaE94e149CF2112Ec625D46670047814aA9aC2a`](https://blastexplorer.io/address/0x5DaE94e149CF2112Ec625D46670047814aA9aC2a#code) |
 | Avalanche (C-Chain) | [`0x621c335b4BD8f2165E120DC70d3AfcAfc6628681`](https://snowtrace.io/address/0x621c335b4BD8f2165E120DC70d3AfcAfc6628681#code) |
 | Zora | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://explorer.zora.energy/address/0x6c61918eECcC306D35247338FDcf025af0f6120A?tab=contract) |
 | Kaia | [`0x6c61918eECcC306D35247338FDcf025af0f6120A`](https://kaiascan.io/account/0x6c61918eECcC306D35247338FDcf025af0f6120A?tabId=contract) |
@@ -103,7 +100,6 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Robinhood Chain | [`0xaF987E88bf30581F7074E628c894A3FCbf4EE12e`](https://robinhoodchain.blockscout.com/address/0xaF987E88bf30581F7074E628c894A3FCbf4EE12e?tab=contract) |
 | Sepolia | [`0x3cABE5125C5D8922c5f38c5b779F6E96F563cdc0`](https://sepolia.etherscan.io/address/0x3cABE5125C5D8922c5f38c5b779F6E96F563cdc0#code) |
 | Base Sepolia | [`0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881`](https://sepolia.basescan.org/address/0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881#code) |
-| Blast Sepolia | [`0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881`](https://testnet.blastscan.io/address/0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881#code) |
 | Cyber Testnet | [`0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881`](https://testnet.cyberscan.co/address/0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881#contract) |
 | Over Testnet | [`0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881`](https://dolphin.view.over.network/address/0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881?tab=contract) |
 | Shibarium Puppynet | [`0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881`](https://puppyscan.shib.io/address/0x4bF67e5C9baD43DD89dbe8fCAD3c213C868fe881?tab=contract) |
@@ -142,16 +138,6 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 </details>
 
 <details>
-<summary><strong><code>MCV2_BlastBond</code></strong></summary>
-
-| Chain | Address |
-| --- | --- |
-| Blast | [`0x621c335b4BD8f2165E120DC70d3AfcAfc6628681`](https://blastexplorer.io/address/0x621c335b4BD8f2165E120DC70d3AfcAfc6628681#code) |
-| Blast Sepolia | [`0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d`](https://testnet.blastscan.io/address/0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d#code) |
-
-</details>
-
-<details>
 <summary><strong><code>MCV2_ZapV1</code></strong></summary>
 
 | Chain | Address |
@@ -162,7 +148,6 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Base | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://basescan.org/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa#code) |
 | BNB Chain | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://bscscan.com/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa#code) |
 | Polygon (PoS) | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://polygonscan.com/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa#code) |
-| Blast | [`0x06FD26c092Db44E5491abB7cDC580CE24D93030c`](https://blastexplorer.io/address/0x06FD26c092Db44E5491abB7cDC580CE24D93030c#code) |
 | Avalanche (C-Chain) | [`0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724`](https://snowtrace.io/address/0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724#code) |
 | Zora | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://explorer.zora.energy/address/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa?tab=contract) |
 | Kaia | [`0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa`](https://kaiascan.io/account/0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa?tabId=contract) |
@@ -175,7 +160,6 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Robinhood Chain | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://robinhoodchain.blockscout.com/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6?tab=contract) |
 | Sepolia | [`0x1Bf3183acc57571BecAea0E238d6C3A4d00633da`](https://sepolia.etherscan.io/address/0x1Bf3183acc57571BecAea0E238d6C3A4d00633da#code) |
 | Base Sepolia | [`0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad`](https://sepolia.basescan.org/address/0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad#code) |
-| Blast Sepolia | [`0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad`](https://testnet.blastscan.io/address/0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad#code) |
 | Cyber Testnet | [`0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad`](https://testnet.cyberscan.co/address/0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad#contract) |
 | Over Testnet | [`0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad`](https://dolphin.view.over.network/address/0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad?tab=contract) |
 | Shibarium Puppynet | [`0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad`](https://puppyscan.shib.io/address/0x40c7DC399e01029a51cAb316f8Bca7D20DE31bad?tab=contract) |
@@ -194,7 +178,6 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Base | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://basescan.org/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6#code) |
 | BNB Chain | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://bscscan.com/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6#code) |
 | Polygon (PoS) | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://polygonscan.com/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6#code) |
-| Blast | [`0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1`](https://blastexplorer.io/address/0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1#code) |
 | Avalanche (C-Chain) | [`0x5b64cECC5cF3E4B1A668Abd895D16BdDC0c77a17`](https://snowtrace.io/address/0x5b64cECC5cF3E4B1A668Abd895D16BdDC0c77a17#code) |
 | Zora | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://explorer.zora.energy/address/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6?tab=contract) |
 | Kaia | [`0xA3dCf3Ca587D9929d540868c924f208726DC9aB6`](https://kaiascan.io/account/0xA3dCf3Ca587D9929d540868c924f208726DC9aB6?tabId=contract) |
@@ -207,7 +190,6 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Robinhood Chain | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://robinhoodchain.blockscout.com/address/0x3bc6B601196752497a68B2625DB4f2205C3b150b?tab=contract) |
 | Sepolia | [`0x7c204B1B03A88D24088941068f6DFC809f2fd022`](https://sepolia.etherscan.io/address/0x7c204B1B03A88D24088941068f6DFC809f2fd022#code) |
 | Base Sepolia | [`0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB`](https://sepolia.basescan.org/address/0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB#code) |
-| Blast Sepolia | [`0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB`](https://testnet.blastscan.io/address/0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB#code) |
 | Cyber Testnet | [`0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB`](https://testnet.cyberscan.co/address/0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB#contract) |
 | Over Testnet | [`0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB`](https://dolphin.view.over.network/address/0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB?tab=contract) |
 | Shibarium Puppynet | [`0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB`](https://puppyscan.shib.io/address/0x2c6B3fe4D6de27363cFEC95f703889EaF6b770fB?tab=contract) |
@@ -226,7 +208,6 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Base | [`0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4`](https://basescan.org/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4#code) |
 | BNB Chain | [`0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4`](https://bscscan.com/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4#code) |
 | Polygon (PoS) | [`0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4`](https://polygonscan.com/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4#code) |
-| Blast | [`0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724`](https://blastexplorer.io/address/0x29b0E6D2C2884aEa3FB4CB5dD1C7002A8E10c724#code) |
 | Avalanche (C-Chain) | [`0x841A2bD2fc97DCB865b4Ddb352540148Bad2dB09`](https://snowtrace.io/address/0x841A2bD2fc97DCB865b4Ddb352540148Bad2dB09#code) |
 | Zora | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://explorer.zora.energy/address/0x3bc6B601196752497a68B2625DB4f2205C3b150b?tab=contract) |
 | Kaia | [`0x3bc6B601196752497a68B2625DB4f2205C3b150b`](https://kaiascan.io/account/0x3bc6B601196752497a68B2625DB4f2205C3b150b?tabId=contract) |
@@ -239,7 +220,6 @@ Deployments are grouped by contract. Expand a contract to view its chain address
 | Robinhood Chain | [`0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4`](https://robinhoodchain.blockscout.com/address/0x1349A9DdEe26Fe16D0D44E35B3CB9B0CA18213a4?tab=contract) |
 | Sepolia | [`0x0CD940395566d509168977Cf10E5296302efA57A`](https://sepolia.etherscan.io/address/0x0CD940395566d509168977Cf10E5296302efA57A#code) |
 | Base Sepolia | [`0xCbb23973235feA43E62C41a0c67717a92a2467f2`](https://sepolia.basescan.org/address/0xCbb23973235feA43E62C41a0c67717a92a2467f2#code) |
-| Blast Sepolia | [`0xCbb23973235feA43E62C41a0c67717a92a2467f2`](https://testnet.blastscan.io/address/0xCbb23973235feA43E62C41a0c67717a92a2467f2#code) |
 | Cyber Testnet | [`0xCbb23973235feA43E62C41a0c67717a92a2467f2`](https://testnet.cyberscan.co/address/0xCbb23973235feA43E62C41a0c67717a92a2467f2#contract) |
 | Over Testnet | [`0xCbb23973235feA43E62C41a0c67717a92a2467f2`](https://dolphin.view.over.network/address/0xCbb23973235feA43E62C41a0c67717a92a2467f2?tab=contract) |
 | Shibarium Puppynet | [`0xCbb23973235feA43E62C41a0c67717a92a2467f2`](https://puppyscan.shib.io/address/0xCbb23973235feA43E62C41a0c67717a92a2467f2?tab=contract) |
@@ -298,10 +278,6 @@ Supports exact-input and exact-output minting and burning, with optional swaps b
       <tr>
          <td><a href="https://snowtrace.io">Avalanche (C-Chain)</a></td>
          <td><a href="https://snowtrace.io/address/0xD0586d5F4ae18650340fFc6f3b1307AB2Ca334f4#code">0xD0586d5F4ae18650340fFc6f3b1307AB2Ca334f4</a></td>
-      </tr>
-      <tr>
-         <td>Blast</td>
-         <td>Unsupported</td>
       </tr>
       <tr>
          <td><a href="https://explorer.zora.energy">Zora</a></td>
@@ -394,10 +370,6 @@ The previous Base deployment at [`0x7d999874eAe10f170C4813270173363468A559cD`](h
          <td><a href="https://snowtrace.io/address/0x3a8a4BFCC487d0FE9D342B6180bf0323989f251B#code">0x3a8a4BFCC487d0FE9D342B6180bf0323989f251B</a></td>
       </tr>
       <tr>
-         <td>Blast</td>
-         <td><a href="https://blastexplorer.io/address/0x9a176d09b3824cf50417e348696cBbBc43d7818d#code">0x9a176d09b3824cf50417e348696cBbBc43d7818d</a></td>
-      </tr>
-      <tr>
          <td>Zora</td>
          <td><a href="https://explorer.zora.energy/address/0xa4021a8907197Df92341F1218B32E26b250F6798?tab=contract">0xa4021a8907197Df92341F1218B32E26b250F6798</a></td>
       </tr>
@@ -480,10 +452,6 @@ The previous Base deployment at [`0x7d999874eAe10f170C4813270173363468A559cD`](h
       <tr>
          <td>Avalanche (C-Chain)</td>
          <td><a href="https://snowtrace.io/address/0x68f54a53d3E69e2191bCF586fB507c81E5353413#code">0x68f54a53d3E69e2191bCF586fB507c81E5353413</a></td>
-      </tr>
-      <tr>
-         <td>Blast</td>
-         <td><a href="https://blastexplorer.io/address/0x68f54a53d3E69e2191bCF586fB507c81E5353413#code">0x68f54a53d3E69e2191bCF586fB507c81E5353413</a></td>
       </tr>
       <tr>
          <td>Zora</td>
@@ -570,10 +538,6 @@ This provides reverse calculations for the `MCV2_Bond.mint()` function, similar 
       <tr>
          <td>Avalanche (C-Chain)</td>
          <td><a href="https://snowtrace.io/address/0x5dff49313d616c30599F6007b04BAB71619C5687#code">0x5dff49313d616c30599F6007b04BAB71619C5687</a></td>
-      </tr>
-      <tr>
-         <td>Blast</td>
-         <td><a href="https://blastexplorer.io/address/0x5dff49313d616c30599F6007b04BAB71619C5687#code">0x5dff49313d616c30599F6007b04BAB71619C5687</a></td>
       </tr>
       <tr>
          <td>Zora</td>
@@ -664,6 +628,8 @@ npx hardhat test
 
 ### Coverage ☂️
 
+Historical snapshot, including retired contracts; these totals have not been regenerated for the current source tree.
+
 ```m
 --------------------------|----------|----------|----------|----------|----------------|
 File                      |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
@@ -698,6 +664,8 @@ npx hardhat compile && HARDHAT_NETWORK=ethsepolia node scripts/deploy.js
 ```
 
 ## Gas Consumption ⛽️
+
+Historical measurements, including retired contracts; this is not the active deployment list.
 
 ```m
 ························································································································

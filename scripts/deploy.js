@@ -47,10 +47,7 @@ async function main() {
     ` -> MCV2_MultiToken contract deployed at ${NFTImplementation.target}`
   );
 
-  let bondContract = "MCV2_Bond";
-  if (hre.network.name === "blastSepolia" || hre.network.name === "blast") {
-    bondContract = "MCV2_BlastBond";
-  }
+  const bondContract = "MCV2_Bond";
   const bond = await hre.ethers.deployContract(bondContract, [
     tokenImplementation.target,
     NFTImplementation.target,
@@ -111,7 +108,6 @@ main()
 
 npx hardhat compile && npx hardhat run --network sepolia scripts/deploy.js
 npx hardhat compile && npx hardhat run --network baseSepolia scripts/deploy.js
-npx hardhat compile && npx hardhat run --network blastSepolia scripts/deploy.js
 npx hardhat compile && npx hardhat run --network avalancheFujiTestnet scripts/deploy.js
 npx hardhat compile && npx hardhat run --network movementDevnet scripts/deploy.js
 npx hardhat compile && npx hardhat run --network cyberTestnet scripts/deploy.js
@@ -126,7 +122,6 @@ npx hardhat compile && npx hardhat run --network bsc scripts/deploy.js
 npx hardhat compile && npx hardhat run --network mainnet scripts/deploy.js
 
 npx hardhat compile && npx hardhat run --network avalanche scripts/deploy.js
-npx hardhat compile && npx hardhat run --network blast scripts/deploy.js
 npx hardhat compile && npx hardhat run --network zora scripts/deploy.js
 npx hardhat compile && npx hardhat run --network klaytn scripts/deploy.js
 npx hardhat compile && npx hardhat run --network cyber scripts/deploy.js
