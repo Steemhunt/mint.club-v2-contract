@@ -20,7 +20,6 @@ exports.getCreationFee = function (network) {
     polygon: 8n * 10n ** 18n, // 8 MATIC (~$2) - TODO: should update existing bond
     bsc: 5n * 10n ** 15n, // 0.005 BNB (~$2)
     avalanche: 5n * 10n ** 16n, // 0.05 AVAX (~$2)
-    blast: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     zora: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     klaytn: 8n * 10n ** 18n, // 8 KLAY (~$2)
     cyber: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
@@ -30,10 +29,10 @@ exports.getCreationFee = function (network) {
     unichain: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
     over: 50n * 10n ** 18n, // 50 OVER (~$1.4)
     robinhood: 7n * 10n ** 14n, // 0.0007 ETH (~$2)
+    elysium: 10n ** 16n, // 0.01 HYPE (~$0.7)
     // Testnets
     sepolia: 7n * 10n ** 14n, // 0.007 ETH - testnet
     baseSepolia: 0n, // 0 ETH - testnet
-    blastSepolia: 0n, // 0 ETH - testnet
     avalancheFujiTestnet: 0n, // 0 ETH - testnet
     movementDevnet: 0n, // 0 MOVE - testnet
     cyberTestnet: 0n, // 0 ETH - testnet
@@ -57,7 +56,6 @@ exports.getWETHAddress = function (network) {
     polygon: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270", // WMATIC
     bsc: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB
     avalanche: "0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7", // WAVAX
-    blast: "0x4300000000000000000000000000000000000004", // WETH
     zora: "0x4200000000000000000000000000000000000006", // WETH
     klaytn: "0x19Aac5f612f524B754CA7e7c41cbFa2E981A4432", // WKLAY - (ref: https://hrl.sh/g6ccv7)
     cyber: "0x4200000000000000000000000000000000000006", // WETH
@@ -67,10 +65,10 @@ exports.getWETHAddress = function (network) {
     unichain: "0x4200000000000000000000000000000000000006", // WETH
     over: "0x59c914C8ac6F212bb655737CC80d9Abc79A1e273", // WOVER
     robinhood: "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73", // WETH
+    elysium: "0xbA876237B0F021A6c6D852d6c26E107997cC5E81", // WHYPE - (ref: https://github.com/Uniswap/contracts/blob/main/deployments/json/99901.json)
     // Testnets
     sepolia: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14", // WETH
     baseSepolia: "0x4200000000000000000000000000000000000006", // WETH
-    blastSepolia: "0x4200000000000000000000000000000000000023", // WETH (yield accumulating)
     avalancheFujiTestnet: "0xd00ae08403B9bbb9124bB305C09058E32C39A48c", // WAVAX
     movementDevnet: "0x4200000000000000000000000000000000000023", // FIXME: WMOVE?
     cyberTestnet: "0xf760686C2b40F7C526D040b979641293D2F55816", // WETH - TODO: double check
@@ -93,7 +91,6 @@ exports.getBondAddress = function (network) {
     base: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     bsc: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     polygon: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
-    blast: "0x621c335b4BD8f2165E120DC70d3AfcAfc6628681",
     avalanche: "0x3Fd5B4DcDa968C8e22898523f5343177F94ccfd1",
     zora: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     klaytn: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
@@ -104,6 +101,7 @@ exports.getBondAddress = function (network) {
     unichain: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     over: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     robinhood: "0x91523b39813F3F4E406ECe406D0bEAaA9dE251fa",
+    elysium: "0xc5a076cad94176c2996B32d8466Be1cE757FAa27",
     sepolia: "0x8dce343A86Aa950d539eeE0e166AFfd0Ef515C0c",
     baseSepolia: "0x5dfA75b0185efBaEF286E80B847ce84ff8a62C2d",
     // skip other testnets
@@ -125,7 +123,6 @@ exports.getMaxSteps = function (network) {
     polygon: 1000n, // 30M gas limit
     bsc: 1000n, // 30M gas limit
     avalanche: 1000n, // 15M gas limit
-    blast: 1000n, // 30M gas limit
     zora: 1000n, // 30M gas limit
     klaytn: 1000n, // 100M execution cost (ref: https://hrl.sh/eylozo)
     cyber: 1000n, // 30M gas limit
@@ -135,10 +132,10 @@ exports.getMaxSteps = function (network) {
     unichain: 1000n, // 30M gas limit
     over: 1000n, // 30M gas limit
     robinhood: 1000n, // Arbitrum Nitro gas limit
+    elysium: 1000n, // Arbitrum Nitro gas limit
     // Testnets
     sepolia: 1000n, // 30M gas limit
     baseSepolia: 1000n, // 30M gas limit
-    blastSepolia: 1000n, // 30M gas limit
     avalancheFujiTestnet: 1000n, // ? gas limit
     movementDevnet: 1000n, // ? gas limit
     cyberTestnet: 1000n, // ? gas limit

@@ -10,6 +10,7 @@ subtask("verify:get-verification-subtasks").setAction(
     if (
       [
         "cyber",
+        "elysium",
         "hashkey",
         "over",
         "puppynet",
@@ -125,11 +126,6 @@ module.exports = {
       chainId: 43114,
       accounts: [process.env.MAINNET_PRIVATE_KEY],
     },
-    blast: {
-      url: process.env.RPC_BLAST,
-      chainId: 81457,
-      accounts: [process.env.MAINNET_PRIVATE_KEY],
-    },
     zora: {
       url: "https://rpc.zora.energy",
       chainId: 7777777,
@@ -175,6 +171,11 @@ module.exports = {
       chainId: 4663,
       accounts: [process.env.MAINNET_PRIVATE_KEY],
     },
+    elysium: {
+      url: process.env.RPC_ELYSIUM || "https://rpc.elysium.kinetiq.xyz",
+      chainId: 99901,
+      accounts: [process.env.MAINNET_PRIVATE_KEY],
+    },
     // Testnets
     sepolia: {
       url: process.env.RPC_SEPOLIA,
@@ -184,11 +185,6 @@ module.exports = {
     baseSepolia: {
       url: "https://base-sepolia-rpc.publicnode.com",
       chainId: 84532,
-      accounts: [process.env.TEST_PRIVATE_KEY],
-    },
-    blastSepolia: {
-      url: process.env.RPC_BLAST_SEPOLIA,
-      chainId: 168587773,
       accounts: [process.env.TEST_PRIVATE_KEY],
     },
     avalancheFujiTestnet: {
@@ -236,6 +232,14 @@ module.exports = {
         urls: {
           apiURL: "https://cyberscan.co/api",
           browserURL: "https://cyberscan.co",
+        },
+      },
+      {
+        network: "elysium",
+        chainId: 99901,
+        urls: {
+          apiURL: "https://elysium.kinetiq.xyz/api/verify",
+          browserURL: "https://elysium.kinetiq.xyz",
         },
       },
       {
@@ -293,15 +297,6 @@ module.exports = {
     apiKey: process.env.ETHERSCAN_API_KEY,
     customChains: [
       {
-        network: "blast",
-        chainId: 81457,
-        urls: {
-          apiURL:
-            "https://api.routescan.io/v2/network/mainnet/evm/81457/etherscan",
-          browserURL: "https://blastexplorer.io",
-        },
-      },
-      {
         network: "klaytn",
         chainId: 8217,
         urls: {
@@ -331,15 +326,6 @@ module.exports = {
         urls: {
           apiURL: "https://api-sepolia.basescan.org/api",
           browserURL: "https://sepolia.basescan.org",
-        },
-      },
-      {
-        network: "blastSepolia",
-        chainId: 168587773,
-        urls: {
-          apiURL:
-            "https://api.routescan.io/v2/network/testnet/evm/168587773/etherscan",
-          browserURL: "https://testnet.blastscan.io",
         },
       },
       {
