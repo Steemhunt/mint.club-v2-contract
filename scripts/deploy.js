@@ -11,6 +11,10 @@ const MAX_STEPS = getMaxSteps(hre.network.name);
 const CREATION_FEE = getCreationFee(hre.network.name);
 const WETH_ADDRESS = getWETHAddress(hre.network.name);
 
+if (!hre.ethers.isAddress(PROTOCOL_BENEFICIARY) || hre.ethers.getAddress(PROTOCOL_BENEFICIARY) === hre.ethers.ZeroAddress) {
+  throw new Error("Set PROTOCOL_BENEFICIARY to a nonzero address before deployment");
+}
+
 console.log(`--------------------------------------------------`);
 console.log(
   `NETWORK: ${hre.network.name} | PROTOCOL_BENEFICIARY: ${PROTOCOL_BENEFICIARY}`
@@ -26,7 +30,7 @@ async function main() {
   console.log(
     `Deploy from account: ${deployer} - Balance: ${
       Number(await hre.ethers.provider.getBalance(deployer)) / 1e18
-    } ETH`
+    } ${hre.network.name === "elysium" ? "HYPE" : "ETH"}`
   );
 
   const tokenImplementation = await hre.ethers.deployContract("MCV2_Token");
@@ -117,6 +121,7 @@ npx hardhat compile && npx hardhat run --network puppynet scripts/deploy.js
 npx hardhat compile && npx hardhat run --network optimisticEthereum scripts/deploy.js
 npx hardhat compile && npx hardhat run --network arbitrumOne scripts/deploy.js
 npx hardhat compile && npx hardhat run --network base scripts/deploy.js
+npx hardhat compile && npx hardhat run --network elysium scripts/deploy.js
 npx hardhat compile && npx hardhat run --network polygon scripts/deploy.js
 npx hardhat compile && npx hardhat run --network bsc scripts/deploy.js
 npx hardhat compile && npx hardhat run --network mainnet scripts/deploy.js

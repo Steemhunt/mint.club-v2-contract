@@ -11,6 +11,14 @@ exports.MAX_ROYALTY_RANGE = 5000n; // 50%
 const PROTOCOL_CUT = 2000n; // 20% of the royalty
 
 exports.getCreationFee = function (network) {
+  if (network === "elysium") {
+    const fee = process.env.ELYSIUM_CREATION_FEE_HYPE;
+    if (!fee || !/^(0|[1-9]\d*)(\.\d{1,18})?$/.test(fee)) {
+      throw new Error("Set ELYSIUM_CREATION_FEE_HYPE to a non-negative decimal with at most 18 decimal places");
+    }
+    return BigInt(web3.utils.toWei(fee, "ether"));
+  }
+
   // Collect a little bit of asset creation fee to prevent spam
   const CREATION_FEE = {
     mainnet: 2n * 10n ** 15n, // 0.002 ETH (~$6)
@@ -47,6 +55,16 @@ exports.getCreationFee = function (network) {
 };
 
 exports.getWETHAddress = function (network) {
+  if (network === "elysium") {
+    const address = process.env.ELYSIUM_WRAPPED_NATIVE;
+    const normalized = address && web3.utils.isAddress(address)
+      ? web3.utils.toChecksumAddress(address) : null;
+    if (!normalized || normalized === exports.NULL_ADDRESS) {
+      throw new Error("Set ELYSIUM_WRAPPED_NATIVE to the verified nonzero mainnet WHYPE address");
+    }
+    return normalized;
+  }
+
   const WETH_ADDRESS = {
     mainnet: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH
     optimisticEthereum: "0x4200000000000000000000000000000000000006", // WETH
@@ -111,8 +129,15 @@ exports.getBondAddress = function (network) {
 };
 
 exports.getMaxSteps = function (network) {
-  // 1,000 steps measured about 25.3M gas in ElysiumReadiness.test.js
-  // (local Cancun VM, Paris release bytecode); verify each chain's actual tx cap.
+  if (network === "elysium") {
+    const steps = process.env.ELYSIUM_MAX_STEPS;
+    if (!steps || !/^[1-9]\d*$/.test(steps) || BigInt(steps) > 1000n) {
+      throw new Error("Set ELYSIUM_MAX_STEPS to an integer from 1 to 1000 after verifying the transaction gas limit");
+    }
+    return BigInt(steps);
+  }
+
+  // Check the actual transaction gas limit before selecting a chain's max steps.
   const MAX_STEPS = {
     mainnet: 1000n, // 30M gas limit
     optimisticEthereum: 1000n, // 30M gas limit

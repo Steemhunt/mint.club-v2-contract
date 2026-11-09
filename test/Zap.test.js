@@ -117,6 +117,21 @@ for (let tokenParams of [BABY_TOKEN, BABY_NFT]) {
       this.initialEthBalance = await ethers.provider.getBalance(alice.address);
     });
 
+    it('should refund excess native payment without retaining native or wrapped balances', async function () {
+      const required = tokenParams.mintPredicted.ethRequired;
+      const tx = await Zap.connect(alice).mintWithEth(
+        this.token.target,
+        tokenParams.mintPredicted.tokensToMint,
+        alice.address,
+        { value: required + wei(1) }
+      );
+      const receipt = await tx.wait();
+      const balance = await ethers.provider.getBalance(alice.address);
+      expect(this.initialEthBalance - balance - receipt.fee).to.equal(required);
+      expect(await ethers.provider.getBalance(Zap.target)).to.equal(0n);
+      expect(await Weth.balanceOf(Zap.target)).to.equal(0n);
+    });
+
     describe('mintWithEth', function () {
       beforeEach(async function () {
         await Zap.connect(alice).mintWithEth(
@@ -143,6 +158,8 @@ for (let tokenParams of [BABY_TOKEN, BABY_NFT]) {
 
       it('should add WETH to bond', async function () {
         expect(await Weth.balanceOf(Bond.target)).to.equal(tokenParams.mintPredicted.ethRequired);
+        expect(await ethers.provider.getBalance(Zap.target)).to.equal(0n);
+        expect(await Weth.balanceOf(Zap.target)).to.equal(0n);
       });
 
       it('should add reserve balance correctly', async function () {
@@ -198,6 +215,8 @@ for (let tokenParams of [BABY_TOKEN, BABY_NFT]) {
         it('should deduct reserve balance correctly', async function () {
           const tokenBond = await Bond.tokenBond(this.token.target);
           expect(tokenBond.reserveBalance).to.equal(0); // - ethFromBond
+          expect(await ethers.provider.getBalance(Zap.target)).to.equal(0n);
+          expect(await Weth.balanceOf(Zap.target)).to.equal(0n);
         });
 
         it('should add creator royalty to the owner', async function () {

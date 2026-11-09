@@ -7,8 +7,6 @@ typechain-types
 # Hardhat files
 cache
 artifacts
-cache-elysium-local
-artifacts-elysium-local
 
 # MacOS
 .DS_Store

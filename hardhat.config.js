@@ -170,6 +170,11 @@ module.exports = {
       chainId: 4663,
       accounts: [process.env.MAINNET_PRIVATE_KEY],
     },
+    elysium: {
+      url: process.env.RPC_ELYSIUM || "https://rpc.elysium.kinetiq.xyz",
+      chainId: 99901,
+      accounts: [process.env.MAINNET_PRIVATE_KEY],
+    },
     // Testnets
     sepolia: {
       url: process.env.RPC_SEPOLIA,
